@@ -28,16 +28,14 @@ public class AwsLearningApplication implements CommandLineRunner {
 	public void run(String... args) {
 		Optional<User> userOptional = userRepository.findByEmail("admin@odc.com");
 		if (userOptional.isEmpty()) {
-			User user = User
-					.builder()
-					.fullName("Admin ODC")
-					.role(Role.ADMIN)
-					.email("admin@odc.com")
-					.phone("77114120")
-					.password(passwordEncoder.encode("77114120"))
-					.activate(true)
-					.admin(true)
-					.build();
+			User user = new User();
+			user.setFullName("Admin ODC");
+			user.setRole(Role.ADMIN);
+			user.setEmail("admin@odc.com");
+			user.setPhone("77114120");
+			user.setPassword(passwordEncoder.encode("77114120"));
+			user.setActivate(true);
+			user.setAdmin(true);
 			userRepository.save(user);
 		}
 	}

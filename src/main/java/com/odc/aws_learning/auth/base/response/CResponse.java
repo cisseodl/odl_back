@@ -1,6 +1,5 @@
 package com.odc.aws_learning.auth.base.response;
 
-import lombok.Data;
 import org.springframework.http.ResponseEntity;
 
 import java.io.Serializable;
@@ -10,7 +9,6 @@ import static java.util.Objects.nonNull;
 import static org.springframework.http.ResponseEntity.badRequest;
 import static org.springframework.http.ResponseEntity.ok;
 
-@Data
 public class CResponse<T> implements Serializable {
     private T data;
     private boolean ok;
@@ -25,6 +23,22 @@ public class CResponse<T> implements Serializable {
     private CResponse(String message, boolean ok) {
         this.message = message;
         this.ok = ok;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public static <E> CResponse<E> success(E e, String message) {
@@ -44,7 +58,7 @@ public class CResponse<T> implements Serializable {
     }
 
     public ResponseEntity<CResponse<T>> wrap(Function<CResponse<T>, ResponseEntity<CResponse<T>>> successFunc, Function<CResponse<T>, ResponseEntity<CResponse<T>>> errorFunc) {
-        return isOk() ? nonNull(successFunc) ? successFunc.apply(this) : ok(this) : nonNull(errorFunc) ? errorFunc.apply(this) : badRequest().body(this);
+        return isSuccess() ? nonNull(successFunc) ? successFunc.apply(this) : ok(this) : nonNull(errorFunc) ? errorFunc.apply(this) : badRequest().body(this);
     }
 
     public ResponseEntity<CResponse<T>> wrap(Function<CResponse<T>, ResponseEntity<CResponse<T>>> successFunc) {
@@ -61,11 +75,11 @@ public class CResponse<T> implements Serializable {
      * mais nous l'ajoutons explicitement pour garantir sa disponibilité au moment de la compilation.
      * @return true si la réponse est un succès, false sinon
      */
-    public boolean isOk() {
+    public boolean isSuccess() {
         return ok;
     }
 
-    public boolean isKo() {
-        return !isOk();
+    public boolean isFailed() {
+        return !isSuccess();
     }
 }

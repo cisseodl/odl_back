@@ -4,36 +4,55 @@ import com.odc.aws_learning.app.service.DashboardService;
 import com.odc.aws_learning.app.wrapper.DashboardStatsDTO;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
+import com.odc.aws_learning.auth.repository.UserRepository; // Added
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails; // Added
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional; // Added
+
 @RestController
-@RequestMapping("/dashboard")
+@RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final UserRepository userRepository; // Added
 
-    @GetMapping("/summary")
-    @PreAuthorize("isAuthenticated()")
-    public CResponse<DashboardStatsDTO> getDashboardSummary() {
+    @GetMapping("/student")
+    @PreAuthorize("hasAnyRole('USER', 'LEARNER')")
+    public CResponse<DashboardStatsDTO> getDashboardForStudent() {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             return CResponse.error("Utilisateur non authentifié");
         }
         DashboardStatsDTO stats = dashboardService.getDashboardForUser(currentUser);
-        return CResponse.success(stats, "Statistiques du tableau de bord");
+        return CResponse.success(stats, "Statistiques du tableau de bord étudiant");
+    }
+
+    @GetMapping("/instructor")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public CResponse<DashboardStatsDTO> getDashboardForInstructor() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        // Assuming dashboardService.getDashboardForInstructor will be implemented to provide specific instructor stats
+        DashboardStatsDTO stats = dashboardService.getInstructorStats(currentUser);
+        return CResponse.success(stats, "Statistiques du tableau de bord instructeur");
     }
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof User) {
-            return (User) authentication.getPrincipal();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
+            return userOptional.orElse(null);
         }
         return null;
     }

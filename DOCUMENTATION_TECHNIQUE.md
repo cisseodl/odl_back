@@ -74,7 +74,7 @@ odc_learning_api-master/
 │   │   │       │   │   ├── CohorteRepository.java
 │   │   │       │   │   ├── ConfigurationRepository.java
 │   │   │       │   │   ├── CoursesRepository.java
-│   │   │       │   │   ├── DetailsCourseRepository.java
+│   │   │       │   │   ├── DetailsCourseRepo.java
 │   │   │       │   │   ├── EvaluationsRepository.java
 │   │   │       │   │   ├── InfotestRepository.java
 │   │   │       │   │   ├── LabDefinitionRepository.java # ⭐ Nouveau
@@ -96,7 +96,7 @@ odc_learning_api-master/
 │   │   │       │   │   ├── ChapterService.java
 │   │   │       │   │   ├── CohorteService.java
 │   │   │       │   │   ├── ConfigurationService.java
-│   │   │       │   │   ├── CoursesService.java          # ⭐ Ajout : enrollUserInCourse()
+│   │   │       │   │   ├── CourseService.java
 │   │   │       │   │   ├── DashboardService.java
 │   │   │       │   │   ├── EvaluationsService.java
 │   │   │       │   │   ├── LabService.java              # ⭐ Nouveau : Gestion des labs
@@ -192,7 +192,7 @@ odc_learning_api-master/
 - **Contrôleurs** : 20 (17 dans `app.controller` + 3 dans `auth.controller`)
 - **Entités** : 20 (héritent de `BaseEntity`)
 - **Repositories** : 20
-- **Services** : 18
+- **Services** : 17
 - **DTOs** : 11
 
 ---
@@ -226,13 +226,11 @@ http://localhost:8080/awsodclearning
 
 | Méthode | Endpoint | Description | Sécurité |
 |---------|----------|-------------|----------|
-| `POST` | `/courses/save/{catId}` | Créer un cours (avec image) | `ADMIN` |
-| `GET` | `/courses/read/{id}` | Récupérer un cours par ID | `permitAll()` |
-| `PUT` | `/courses/update` | Mettre à jour un cours | `ADMIN` |
-| `DELETE` | `/courses/delete/{id}` | Supprimer un cours | `ADMIN` |
-| `GET` | `/courses/read` | Liste de tous les cours | `USER, ADMIN, LEARNER` |
-| `GET` | `/courses/page/{page}/{size}` | Liste paginée des cours | `USER, ADMIN, LEARNER` |
-| `GET` | `/courses/read/by-category/{catId}` | Cours par catégorie | `USER, ADMIN, LEARNER` |
+| `POST` | `/courses/save/{catId}` | Créer un cours (avec image et CourseCreationRequest) | `ADMIN` |
+| `GET` | `/courses/read/{id}` | Récupérer un cours par ID (retourne CourseDto) | `permitAll()` |
+| `PUT` | `/courses/{id}` | Mettre à jour un cours (avec image et CourseUpdateRequest) | `ADMIN` |
+| `DELETE` | `/courses/delete/{id}` | Supprimer un cours (retourne CResponse<?>) | `ADMIN` |
+| `GET` | `/courses/read` | Liste de tous les cours (avec filtre et pagination) | `USER, ADMIN, LEARNER` |
 | `POST` | `/courses/enroll/{courseId}` | ⭐ **S'inscrire à un cours (gratuit)** | `USER, ADMIN, LEARNER` |
 
 ---

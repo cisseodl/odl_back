@@ -41,6 +41,12 @@ public class QuizController {
     public CResponse<List<QuizDTO>> getQuizzesByCourse(@PathVariable Long courseId) {
         return quizService.getQuizzesByCourse(courseId);
     }
+
+    @GetMapping("/{quizId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    public CResponse<QuizDTO> getQuizById(@PathVariable Long quizId) {
+        return quizService.getQuizById(quizId);
+    }
     
     /**
      * Soumettre ses réponses et recevoir son score (USER/ADMIN/LEARNER)

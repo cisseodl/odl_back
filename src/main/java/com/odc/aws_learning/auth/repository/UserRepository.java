@@ -10,8 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    // Since email is unique, we'll find users by email
     Optional<User> findByEmail(String email);
-    Page<User> findAllByActivateAndAdmin(boolean b, boolean admin, Pageable paging);
-//    boolean existsByUsername(String username);
+    Page<User> findAllByActivateAndAdmin(boolean activate, boolean admin, Pageable pageable);
 }

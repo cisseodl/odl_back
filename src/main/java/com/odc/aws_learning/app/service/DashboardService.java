@@ -1,7 +1,9 @@
 package com.odc.aws_learning.app.service;
 
 import com.odc.aws_learning.app.repository.CoursesRepository;
+import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
+import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.wrapper.DashboardStatsDTO;
 import com.odc.aws_learning.auth.entities.Role;
 import com.odc.aws_learning.auth.entities.User;
@@ -16,6 +18,8 @@ public class DashboardService {
     private final UserRepository userRepository;
     private final CoursesRepository coursesRepository;
     private final UserQuizAttemptRepository userQuizAttemptRepository;
+    private final DetailsCourseRepo detailsCourseRepo;
+    private final ReviewRepository reviewRepository;
 
     /**
      * Statistiques pour un étudiant (USER / LEARNER)
@@ -64,9 +68,35 @@ public class DashboardService {
      */
     public DashboardStatsDTO getDashboardForUser(User user) {
         Role role = user.getRole();
-        if (role == Role.ADMIN || role == Role.SUPERADMIN) {
+        if (role == Role.ADMIN) {
             return getAdminStats();
+        } else if (role == Role.INSTRUCTOR) {
+            return getInstructorStats(user);
         }
         return getStudentStats(user);
+    }
+
+    /**
+     * Statistiques pour un instructeur (INSTRUCTOR)
+     */
+    public DashboardStatsDTO getInstructorStats(User instructor) {
+        long instructorId = instructor.getId();
+
+        // Nombre de cours créés par l'instructeur
+        long coursesCreated = coursesRepository.countByInstructorId(instructorId);
+
+        long totalStudentsInInstructorCourses = detailsCourseRepo.countDistinctLearnersByInstructorCourses(instructorId);
+
+        Double averageCourseRating = reviewRepository.findAverageRatingByInstructorCourses(instructorId);
+        if (averageCourseRating == null) {
+            averageCourseRating = 0.0;
+        }
+
+        return DashboardStatsDTO.builder()
+                .coursesCreated(coursesCreated)
+                .totalStudentsInInstructorCourses(totalStudentsInInstructorCourses)
+                .averageCourseRating(averageCourseRating)
+                .mode("INSTRUCTOR")
+                .build();
     }
 }

@@ -6,19 +6,36 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.odc.aws_learning.app.entity.Quiz;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
+import com.odc.aws_learning.app.entity.Certificate;
+import com.odc.aws_learning.app.entity.Courses;
+import com.odc.aws_learning.app.service.S3Service;
 import com.odc.aws_learning.auth.entities.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import com.odc.aws_learning.app.repository.CertificateRepository;
+import java.util.Optional;
+import com.odc.aws_learning.auth.base.response.CResponse;
+import java.util.UUID;
+
+
 
 @Service
-@RequiredArgsConstructor
 public class CertificateService {
 
-    public byte[] generateCertificate(User user, Quiz quiz, UserQuizAttempt attempt) {
+    private final CertificateRepository certificateRepository;
+    private final S3Service s3Service; // Added
+
+    public CertificateService(CertificateRepository certificateRepository, S3Service s3Service) {
+        this.certificateRepository = certificateRepository;
+        this.s3Service = s3Service;
+    }
+    public CResponse<Certificate> generateCertificate(User user, Courses course, Quiz quiz, UserQuizAttempt attempt) {
         try {
             Document document = new Document(PageSize.A4, 50, 50, 50, 50);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -63,14 +80,14 @@ public class CertificateService {
             name.setSpacingAfter(20f);
             document.add(name);
 
-            String quizTitle = quiz.getTitre() != null ? quiz.getTitre() : "Module de formation";
-            Paragraph forQuiz = new Paragraph(
-                    "Pour avoir réussi le module : " + quizTitle,
+            String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation"; // Utiliser le titre du cours
+            Paragraph forCourse = new Paragraph(
+                    "Pour avoir réussi le cours : " + courseTitle,
                     textFont
             );
-            forQuiz.setAlignment(Element.ALIGN_CENTER);
-            forQuiz.setSpacingAfter(15f);
-            document.add(forQuiz);
+            forCourse.setAlignment(Element.ALIGN_CENTER);
+            forCourse.setSpacingAfter(15f);
+            document.add(forCourse);
 
             int scoreObtenu = attempt.getScore() != null ? attempt.getScore().intValue() : 0;
             int scoreTotal = attempt.getScoreTotal() != null ? attempt.getScoreTotal() : 0;
@@ -96,9 +113,41 @@ public class CertificateService {
 
             document.close();
 
-            return out.toByteArray();
+            byte[] pdfBytes = out.toByteArray();
+
+            // Générer un nom de fichier unique pour le certificat sur S3
+            String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
+
+            // Uploader le PDF vers S3
+            ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
+            String certificateUrl = s3Service.saveFile(bis, pdfBytes.length, "application/pdf", certificateFileName, "certificates");
+
+            if (certificateUrl == null) {
+                return CResponse.error("Erreur lors de l'upload du certificat vers S3.");
+            }
+
+            // Enregistrer l'entité Certificate dans la base de données
+            Certificate certificate = new Certificate();
+            certificate.setUniqueCode(UUID.randomUUID().toString()); // Générer un code unique pour le certificat
+            certificate.setUser(user);
+            certificate.setCourse(course);
+            certificate.setIssuedAt(java.time.Instant.now());
+            certificate.setCertificateUrl(certificateUrl);
+            certificateRepository.save(certificate);
+
+            return CResponse.success(certificate, "Certificat généré et enregistré avec succès.");
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la génération du certificat PDF", e);
         }
+    }
+
+    public CResponse<?> getCertificateByUniqueCode(String uniqueCode) {
+        Optional<com.odc.aws_learning.app.entity.Certificate> certificateOptional = certificateRepository.findByUniqueCode(uniqueCode);
+        if (certificateOptional.isEmpty()) {
+            return CResponse.error("Certificat non trouvé avec le code unique : " + uniqueCode);
+        }
+        // Pour des raisons de sécurité et de performance, ne pas retourner le PDF directement
+        // Retourner les informations du certificat (user, course, issuedAt, certificateUrl)
+        return CResponse.success(certificateOptional.get(), "Certificat récupéré avec succès");
     }
 }

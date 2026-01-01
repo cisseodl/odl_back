@@ -1,8 +1,13 @@
 package com.odc.aws_learning.app.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.odc.aws_learning.app.constante.CourseLevel; // Added
+import com.odc.aws_learning.app.dto.CourseCreationRequest;
+import com.odc.aws_learning.app.dto.CourseDto;
+import com.odc.aws_learning.app.dto.CourseUpdateRequest; // Added
 import com.odc.aws_learning.app.entity.Courses;
-import com.odc.aws_learning.app.service.CoursesService;
+import com.odc.aws_learning.app.service.CourseService;
+import com.odc.aws_learning.app.service.S3Service; // Added
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -24,71 +29,88 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 public class CoursesController {
-    private final CoursesService coursesService;
+    private final CourseService courseService;
     private final UserRepository userRepository;
+    private final S3Service s3Service; // Injected
+    private final ObjectMapper objectMapper; // Injected
 
 
     @PostMapping("/save/{catId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public CResponse<?> addCourseWithImage(
             @PathVariable Long catId,
             @RequestParam("courses") String coursestring,
             @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
-        Courses courses = new ObjectMapper().readValue(coursestring, Courses.class);
-//        System.out.println("Bonjour!");
-        return coursesService.addCourseWithImage(courses, image, catId);
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+
+        CourseCreationRequest request = objectMapper.readValue(coursestring, CourseCreationRequest.class);
+
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = s3Service.saveFile(image, "courses");
+            request.setImagePath(imageUrl);
+        }
+
+        request.setInstructorId(currentUser.getId());
+        request.setCategoryId(catId);
+
+        CourseDto createdCourse = courseService.createCourse(request);
+        return CResponse.success(createdCourse, "Cours enregistré avec succès");
     }
 
      @GetMapping("/read/{id}")
-    public CResponse<?> getCourseById(@PathVariable Long id) {
-        return coursesService.getCourseById(id);
+    public CResponse<CourseDto> getCourseById(@PathVariable Long id) {
+        CourseDto courseDto = courseService.getCourseById(id);
+        return CResponse.success(courseDto);
     }
 
 
-       @PutMapping("/update")
-       @PreAuthorize("hasRole('ADMIN')")
-       public ResponseEntity<String> updateCourse(
+       @PutMapping("/{id}")
+       @PreAuthorize("hasRole('INSTRUCTOR')")
+       public CResponse<CourseDto> updateCourse(@PathVariable Long id,
                                                   @RequestParam("courses") String coursestring,
-                                                  @RequestParam("image") MultipartFile image) {
+                                                  @RequestParam(value = "image", required = false) MultipartFile image) {
            try {
-               Courses courses = new ObjectMapper().readValue(coursestring, Courses.class);
-               coursesService.updateCourse(courses, image);
-               return ResponseEntity.ok().body("Le cours a été mis à jour avec succès.");
+               CourseUpdateRequest request = objectMapper.readValue(coursestring, CourseUpdateRequest.class);
+               if (image != null && !image.isEmpty()) {
+                   String imageUrl = s3Service.saveFile(image, "courses");
+                   request.setImagePath(imageUrl);
+               }
+               CourseDto updatedCourse = courseService.updateCourse(id, request);
+               return CResponse.success(updatedCourse, "Le cours a été mis à jour avec succès.");
            } catch (IOException e) {
                System.out.println(e);
-               return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur s'est produite lors de la modification.");
+               return CResponse.error("Une erreur s'est produite lors de la modification: " + e.getMessage());
            }
        }
 
 
     @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteCourse(@PathVariable Long id) {
-        if (coursesService.deleteCourse(id)) {
-            return ResponseEntity.ok().body("Le cours a été supprimé avec succès.");
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public CResponse<?> deleteCourse(@PathVariable Long id) {
+        courseService.deleteCourse(id);
+        return CResponse.success("Le cours a été supprimé avec succès.");
     }
 
     // Récupérer tous les cours
     @GetMapping("/read")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
-    public List<Courses> getAllCourses() {
-        return coursesService.getAllCourses();
+    public CResponse<List<CourseDto>> getAllCourses(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) CourseLevel level,
+            @RequestParam(required = false) String language,
+            @RequestParam(required = false) Boolean bestseller,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+        List<CourseDto> courses = courseService.getAllCourses(category, level, language, bestseller, page, size, sortBy, sortDir);
+        return CResponse.success(courses, "Liste des cours récupérée avec succès");
     }
 
-    @GetMapping("/page/{page}/{size}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
-    public CResponse<?> getCoursesByPage(@PathVariable int page, @PathVariable int size)  {
-        return coursesService.getCoursesByPage(page, size);
-    }
-    // Récupérer tous les cours par categorie
-    @GetMapping("/read/by-category/{catId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
-    public List<Courses> getCoursesByCategory(@PathVariable Long catId) {
-        return coursesService.getCoursesByCategory(catId);
-    }
+
 
     /**
      * S'inscrire à un cours (inscription gratuite directe).
@@ -103,7 +125,7 @@ public class CoursesController {
             return ResponseEntity.ok(CResponse.error("Utilisateur non authentifié"));
         }
         
-        CResponse<?> response = coursesService.enrollUserInCourse(currentUser, courseId);
+        CResponse<?> response = courseService.enrollUserInCourse(currentUser, courseId);
         return ResponseEntity.ok(response);
     }
 

@@ -1,6 +1,8 @@
 package com.odc.aws_learning.app.controller;
 
+import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.entity.Quiz;
+import com.odc.aws_learning.app.entity.Certificate;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.app.repository.QuizRepository;
 import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
@@ -22,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/certificates")
+@RequestMapping("/api/certificates")
 @RequiredArgsConstructor
 public class CertificateController {
 
@@ -44,33 +46,35 @@ public class CertificateController {
         }
         Quiz quiz = quizOptional.get();
 
-        // Meilleure tentative de l'utilisateur pour ce quiz (score le plus élevé)
         Optional<UserQuizAttempt> bestAttemptOpt = userQuizAttemptRepository
                 .findFirstByUserIdAndQuizIdOrderByScoreDesc(currentUser.getId(), quizId);
-
-        if (bestAttemptOpt.isEmpty()) {
-            return new ResponseEntity<>(CResponse.error("Aucune tentative trouvée pour ce quiz"), HttpStatus.FORBIDDEN);
-        }
-
         UserQuizAttempt attempt = bestAttemptOpt.get();
+        Courses course = quiz.getCourse(); // Récupérer le cours
+        // ...
+        CResponse<Certificate> response = certificateService.generateCertificate(currentUser, course, quiz, attempt);
 
-        // Vérifier si le score atteint le minimum requis
-        Integer scoreMinimum = quiz.getScoreMinimum();
-        double score = attempt.getScore() != null ? attempt.getScore() : 0.0;
-        if (scoreMinimum != null && score < scoreMinimum) {
-            return new ResponseEntity<>(
-                    CResponse.error("Score insuffisant pour obtenir le certificat"),
-                    HttpStatus.FORBIDDEN
-            );
+        if (response.isSuccess()) {
+            Certificate generatedCertificate = response.getData();
+            if (generatedCertificate != null && generatedCertificate.getCertificateUrl() != null) {
+                // Au lieu de retourner le PDF directement, rediriger vers l'URL S3
+                HttpHeaders headers = new HttpHeaders();
+                headers.add(HttpHeaders.LOCATION, generatedCertificate.getCertificateUrl());
+                return new ResponseEntity<>(headers, HttpStatus.FOUND); // HTTP 302 Found pour redirection
+            } else {
+                return new ResponseEntity<>(CResponse.error("Erreur lors de la génération du certificat: URL non trouvée."), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            return new ResponseEntity<>(CResponse.error(response.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
 
-        byte[] pdfBytes = certificateService.generateCertificate(currentUser, quiz, attempt);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificat-" + quizId + ".pdf");
-        headers.add(HttpHeaders.CONTENT_TYPE, "application/pdf");
-
-        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    @GetMapping("/{uniqueCode}")
+    public ResponseEntity<CResponse<?>> verifyCertificate(@PathVariable String uniqueCode) {
+        CResponse<?> response = certificateService.getCertificateByUniqueCode(uniqueCode);
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     private User getCurrentUser() {

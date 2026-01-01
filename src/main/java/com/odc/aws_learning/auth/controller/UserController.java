@@ -27,4 +27,10 @@ public class UserController {
     public CResponse<?> checkUserByPhone(@PathVariable String phone) {
         return userService.checkUserByPhone(phone);
     }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'INSTRUCTOR')")
+    public CResponse<?> getUserById(@PathVariable Long id) {
+        return userService.getUserById(id);
+    }
 }

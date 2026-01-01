@@ -116,7 +116,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             user.setFullName(apprenantSaved.getPrenom() + " " + apprenantSaved.getNom());
             user.setPhone(apprenantSaved.getNumero());
             user.setEmail(apprenantSaved.getEmail());
-            user.setRole(Role.LEARNER);
+            user.setRole(Role.USER);
             user.setAdmin(false);
             user.setActivate(true);
             user.setPassword(passwordEncoder.encode(passwordGenerated));

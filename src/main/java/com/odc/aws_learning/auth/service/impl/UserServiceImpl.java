@@ -57,4 +57,18 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public CResponse<?> getUserById(Long id) {
+        try {
+            Optional<User> userOptional = userRepository.findById(id);
+            if (userOptional.isPresent()) {
+                return CResponse.success(userOptional.get());
+            } else {
+                return CResponse.error("User not found with ID: " + id);
+            }
+        } catch (Exception e) {
+            return CResponse.error("Error retrieving user: " + e.getMessage());
+        }
+    }
+
 }

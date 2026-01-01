@@ -9,4 +9,6 @@ public interface UserService {
     CResponse<?> getAll(int page, int size);
 
     public CResponse<?> checkUserByPhone(String phone);
+
+    public CResponse<?> getUserById(Long id);
 }

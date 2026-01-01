@@ -91,6 +91,18 @@ public class QuizService {
             return CResponse.error("Erreur lors de la récupération des quiz: " + e.getMessage());
         }
     }
+
+    public CResponse<QuizDTO> getQuizById(Long quizId) {
+        try {
+            Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+            if (quizOptional.isEmpty()) {
+                return CResponse.error("Quiz non trouvé avec l'ID: " + quizId);
+            }
+            return CResponse.success(convertToDTO(quizOptional.get()), "Quiz récupéré avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération du quiz: " + e.getMessage());
+        }
+    }
     
     /**
      * Méthode critique : Calcule le score en comparant les réponses de l'étudiant avec les bonnes réponses

@@ -1,7 +1,7 @@
 package com.odc.aws_learning.app.controller;
 
 import com.odc.aws_learning.app.service.S3Service;
-import lombok.RequiredArgsConstructor;
+import com.odc.aws_learning.auth.base.response.CResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import lombok.RequiredArgsConstructor;
 
 @CrossOrigin
 @RestController
@@ -62,6 +63,21 @@ public class FileController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de l'upload du fichier vers S3");
+        }
+    }
+
+    @GetMapping("/presigned-url")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CResponse<?>> getPresignedUrl(
+            @RequestParam String fileName,
+            @RequestParam String fileType,
+            @RequestParam(value = "folder", defaultValue = "") String folder) {
+        String presignedUrl = s3Service.generatePresignedUrl(fileName, fileType, folder);
+        if (presignedUrl != null) {
+            return ResponseEntity.ok(CResponse.success(presignedUrl, "URL pré-signée générée avec succès"));
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CResponse.error("Erreur lors de la génération de l'URL pré-signée"));
         }
     }
 }

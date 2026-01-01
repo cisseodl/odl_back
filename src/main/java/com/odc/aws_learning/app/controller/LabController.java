@@ -76,7 +76,7 @@ public class LabController {
         CResponse<LabSession> response = labService.stopLab(sessionId);
         
         // Vérification supplémentaire : s'assurer que l'utilisateur est propriétaire de la session
-        if (response.isOk() && response.getData() != null) {
+        if (response.isSuccess() && response.getData() != null) {
             LabSession session = response.getData();
             if (!session.getUser().getId().equals(currentUser.getId())) {
                 return ResponseEntity.ok(CResponse.error("Vous n'êtes pas autorisé à arrêter cette session"));
@@ -107,7 +107,7 @@ public class LabController {
         CResponse<LabSession> response = labService.submitLab(sessionId, reportUrl);
         
         // Vérification supplémentaire : s'assurer que l'utilisateur est propriétaire de la session
-        if (response.isOk() && response.getData() != null) {
+        if (response.isSuccess() && response.getData() != null) {
             LabSession session = response.getData();
             if (!session.getUser().getId().equals(currentUser.getId())) {
                 return ResponseEntity.ok(CResponse.error("Vous n'êtes pas autorisé à soumettre cette session"));
