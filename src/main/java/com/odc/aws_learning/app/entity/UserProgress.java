@@ -2,13 +2,11 @@ package com.odc.aws_learning.app.entity;
 
 import com.odc.aws_learning.auth.base.entity.BaseEntity;
 import com.odc.aws_learning.auth.entities.User;
-import com.odc.aws_learning.auth.base.entity.BaseEntity;
-import com.odc.aws_learning.auth.entities.User;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonBackReference; // Added
 
 @Entity
 @Table(name = "user_progress")
@@ -16,16 +14,19 @@ public class UserProgress extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @JsonBackReference // Added (assuming User has a List<UserProgress>)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_id")
+    @JsonBackReference // Added (assuming Lesson has a List<UserProgress>)
     private Lesson lesson;
 
-    private LocalDateTime completedAt;
+    private LocalDateTime completedAt; // Kept as it's semantically different from createdAt
 
     // NoArgsConstructor
     public UserProgress() {
+        super();
     }
 
     // AllArgsConstructor
@@ -61,12 +62,7 @@ public class UserProgress extends BaseEntity {
         this.completedAt = completedAt;
     }
 
-    @PrePersist
-    protected void onCreate() {
-        if (completedAt == null) {
-            completedAt = LocalDateTime.now();
-        }
-    }
+    // Removed @PrePersist method as completedAt should be explicitly set or handled by service
 
     @Override
     public boolean equals(Object o) {
@@ -82,5 +78,15 @@ public class UserProgress extends BaseEntity {
     @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(), user, lesson, completedAt);
+    }
+
+    @Override
+    public String toString() {
+        return "UserProgress{" +
+               "user=" + (user != null ? user.getId() : "null") +
+               ", lesson=" + (lesson != null ? lesson.getId() : "null") +
+               ", completedAt=" + completedAt +
+               ", id=" + id +
+               '}';
     }
 }

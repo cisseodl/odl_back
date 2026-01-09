@@ -37,13 +37,13 @@ public class QuizController {
      * Récupérer tous les quiz d'un cours (USER/ADMIN/LEARNER)
      */
     @GetMapping("/course/{courseId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<List<QuizDTO>> getQuizzesByCourse(@PathVariable Long courseId) {
         return quizService.getQuizzesByCourse(courseId);
     }
 
     @GetMapping("/{quizId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<QuizDTO> getQuizById(@PathVariable Long quizId) {
         return quizService.getQuizById(quizId);
     }
@@ -52,7 +52,7 @@ public class QuizController {
      * Soumettre ses réponses et recevoir son score (USER/ADMIN/LEARNER)
      */
     @PostMapping("/submit")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> submitQuiz(@RequestBody QuizSubmissionDTO submission) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {

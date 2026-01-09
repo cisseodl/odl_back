@@ -2,13 +2,16 @@ package com.odc.aws_learning;
 
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+// import lombok.RequiredArgsConstructor; // RequiredArgsConstructor should be kept if other fields are final. For logger, we need explicit constructor.
+// import lombok.extern.slf4j.Slf4j; // Removed
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+
+import org.slf4j.Logger; // Added
+import org.slf4j.LoggerFactory; // Added
 
 /**
  * Runner temporaire pour réinitialiser le mot de passe de l'utilisateur admin
@@ -19,13 +22,20 @@ import java.util.Optional;
  * 
  * TODO: Désactiver ou supprimer ce runner après avoir vérifié que le login fonctionne.
  */
-@Slf4j
+// @Slf4j // Removed
 @Component
-@RequiredArgsConstructor
+// @RequiredArgsConstructor // If @Slf4j is removed, we must provide explicit constructor
 public class PasswordResetRunner implements CommandLineRunner {
     
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetRunner.class); // Manually added logger
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    
+    public PasswordResetRunner(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
     
     @Override
     public void run(String... args) {

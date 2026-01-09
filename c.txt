@@ -1,0 +1,179 @@
+
+## Statistiques et Données Récapitulatives
+
+### 1. `GET /api/analytics/user-growth`
+- **Description :** Récupère les données de croissance des utilisateurs.
+- **Paramètres de requête :** `timeFilter` (String, ex: `MONTHLY`), `startDate` (Instant, optionnel), `endDate` (Instant, optionnel)
+- **Rôles requis :** `ADMIN`
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "data": [
+      { "period": "2025-12", "newUsers": 50, "totalUsers": 500 },
+      { "period": "2026-01", "newUsers": 60, "totalUsers": 560 }
+    ]
+  }
+  ```
+
+### 2. `GET /api/analytics/course-performance`
+- **Description :** Récupère les données de performance des cours.
+- **Paramètres de requête :** `timeFilter` (String, ex: `MONTHLY`), `startDate` (Instant, optionnel), `endDate` (Instant, optionnel)
+- **Rôles requis :** `ADMIN`, `INSTRUCTOR`
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "data": [
+      { "courseId": 1, "title": "Dev Backend", "enrollments": 120, "completionRate": 0.75 },
+      { "courseId": 2, "title": "Dev Frontend", "enrollments": 80, "completionRate": 0.60 }
+    ]
+  }
+  ```
+
+### 3. `GET /api/analytics/comparison-stats`
+- **Description :** Récupère des statistiques comparatives.
+- **Paramètres de requête :** `period` (String, optionnel), `timeFilter` (String, optionnel)
+- **Rôles requis :** `ADMIN`
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "currentPeriod": { "sales": 1000, "users": 100 },
+      "previousPeriod": { "sales": 800, "users": 80 }
+    }
+  }
+  ```
+
+### 4. `GET /api/analytics/instructor-activity`
+- **Description :** Récupère l'activité récente d'un instructeur.
+- **Paramètres de requête :** `instructorId` (Long), `limit` (int, par défaut `10`)
+- **Rôles requis :** `ADMIN`, `INSTRUCTOR`
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "data": [
+      { "activityType": "COURSE_CREATED", "courseId": 1, "timestamp": "2026-07-07T10:00:00Z" }
+    ]
+  }
+  ```
+
+### 5. `GET /api/analytics/moderation/summary`
+- **Description :** Récupère un résumé des activités de modération.
+- **Rôles requis :** `ADMIN`
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "pendingReviews": 5,
+      "flaggedContent": 10
+    }
+  }
+  ```
+
+### 6. `GET /api/analytics/instructor-dashboard-performance`
+- **Description :** Récupère les performances du tableau de bord de l'instructeur.
+- **Paramètres de requête :** `instructorId` (Long)
+- **Rôles requis :** `ADMIN`, `INSTRUCTOR`
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "courseId": 1,
+      "enrollments": 120,
+      "averageRating": 4.5
+    }
+  }
+  ```
+
+### 7. `GET /api/dashboard/student`
+- **Description :** Récupère les statistiques du tableau de bord pour un étudiant.
+- **Rôles requis :** `USER`, `LEARNER`
+- **JSON de réponse (exemple - DashboardStatsDTO) :**
+  ```json
+  {
+    "success": true,
+    "message": "Statistiques du tableau de bord étudiant",
+    "data": {
+      "totalCoursesEnrolled": 5,
+      "completedCourses": 2,
+      "inProgressCourses": 3,
+      "certificatesEarned": 1,
+      "quizzesPassed": 3
+    }
+  }
+  ```
+
+### 8. `GET /api/dashboard/instructor`
+- **Description :** Récupère les statistiques du tableau de bord pour un instructeur.
+- **Rôles requis :** `INSTRUCTOR`
+- **JSON de réponse (exemple - DashboardStatsDTO) :**
+  ```json
+  {
+    "success": true,
+    "message": "Statistiques du tableau de bord instructeur",
+    "data": {
+      "totalCoursesCreated": 3,
+      "totalStudents": 250,
+      "averageRating": 4.5,
+      "totalRevenue": 15000.00
+    }
+  }
+  ```
+
+### 9. `GET /api/v1/leaderboard/overall`
+- **Description : Récupère le classement général des apprenants.
+- **Rôles requis :** Aucun (Public)
+- **JSON de réponse (exemple - Liste de LeaderboardEntry) :**
+  ```json
+  {
+    "success": true,
+    "message": "Classement général récupéré avec succès.",
+    "data": [
+      { "userId": 1, "fullName": "Alice", "score": 1500 },
+      { "userId": 2, "fullName": "Bob", "score": 1200 }
+    ]
+  }
+  ```
+
+### 10. `GET /api/v1/leaderboard/monthly`
+- **Description :** Placeholder pour le classement mensuel (non implémenté).
+- **Rôles requis :** Aucun (Public)
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "message": "Endpoint non implémenté.",
+    "data": []
+  }
+  ```
+
+### 11. `GET /api/v1/leaderboard/course/{courseId}`
+- **Description :** Placeholder pour le classement par cours (non implémenté).
+- **Paramètres d'URL :** `{courseId}` (ex: `1`)
+- **Rôles requis :** Aucun (Public)
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "message": "Endpoint non implémenté.",
+    "data": []
+  }
+  ```
+
+### 12. `GET /api/v1/leaderboard/user/{userId}/details`
+- **Description :** Placeholder pour les détails de l'utilisateur dans le classement (non implémenté).
+- **Paramètres d'URL :** `{userId}` (ex: `1`)
+- **Rôles requis :** Aucun (Public)
+- **JSON de réponse (exemple) :**
+  ```json
+  {
+    "success": true,
+    "message": "Endpoint non implémenté.",
+    "data": null
+  }
+  ```

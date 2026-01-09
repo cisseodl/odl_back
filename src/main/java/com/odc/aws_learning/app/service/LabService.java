@@ -8,8 +8,8 @@ import com.odc.aws_learning.app.repository.LabSessionRepository;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+// import lombok.RequiredArgsConstructor; // Removed @Slf4j, so RequiredArgsConstructor might be okay or replaced.
+// import lombok.extern.slf4j.Slf4j; // Removed
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,17 +19,29 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger; // Added
+import org.slf4j.LoggerFactory; // Added
+
+
 /**
  * Service pour la gestion du cycle de vie des Labs (sessions pratiques).
  */
 @Service
-@Slf4j
-@RequiredArgsConstructor
+// @Slf4j // Removed
+// @RequiredArgsConstructor // If @Slf4j is removed, we must provide explicit constructor
 public class LabService {
+    
+    private static final Logger log = LoggerFactory.getLogger(LabService.class); // Manually added logger
     
     private final LabDefinitionRepository labDefinitionRepository;
     private final LabSessionRepository labSessionRepository;
     private final UserRepository userRepository;
+
+    public LabService(LabDefinitionRepository labDefinitionRepository, LabSessionRepository labSessionRepository, UserRepository userRepository) {
+        this.labDefinitionRepository = labDefinitionRepository;
+        this.labSessionRepository = labSessionRepository;
+        this.userRepository = userRepository;
+    }
     
     /**
      * Récupère toutes les définitions de labs disponibles.

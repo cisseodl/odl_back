@@ -25,7 +25,7 @@ public class DashboardController {
     private final UserRepository userRepository; // Added
 
     @GetMapping("/student")
-    @PreAuthorize("hasAnyRole('USER', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT')")
     public CResponse<DashboardStatsDTO> getDashboardForStudent() {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
@@ -36,13 +36,17 @@ public class DashboardController {
     }
 
     @GetMapping("/instructor")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("isAuthenticated()") // Permettre à tous les utilisateurs authentifiés, on vérifie le profil après
     public CResponse<DashboardStatsDTO> getDashboardForInstructor() {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             return CResponse.error("Utilisateur non authentifié");
         }
-        // Assuming dashboardService.getDashboardForInstructor will be implemented to provide specific instructor stats
+        // Vérifier que l'utilisateur a un profil Instructor
+        if (currentUser.getInstructor() == null) {
+            return CResponse.error("L'utilisateur n'a pas de profil instructeur. Veuillez créer un profil instructeur d'abord.");
+        }
+        // Retourner les stats de l'instructeur
         DashboardStatsDTO stats = dashboardService.getInstructorStats(currentUser);
         return CResponse.success(stats, "Statistiques du tableau de bord instructeur");
     }

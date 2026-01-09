@@ -2,13 +2,11 @@ package com.odc.aws_learning.app.entity;
 
 import com.odc.aws_learning.auth.base.entity.BaseEntity;
 import com.odc.aws_learning.auth.entities.User;
-import com.odc.aws_learning.auth.base.entity.BaseEntity;
-import com.odc.aws_learning.auth.entities.User;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
+import java.time.LocalDateTime; // Keep only if other LocalDateTime fields are used
 import java.util.Objects;
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonBackReference; // Added
 
 @Entity
 @Table(name = "reviews")
@@ -21,25 +19,29 @@ public class Review extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @JsonBackReference // Added (assuming User has a List<Review>)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
+    @JsonBackReference // Added (assuming Courses has a List<Review>)
     private Courses course;
 
-    private LocalDateTime createdAt;
+    // Removed redundant createdAt field - inherited from BaseEntity
+    // Removed @PrePersist method - BaseEntity @CreatedDate handles it
 
     // NoArgsConstructor
     public Review() {
+        super();
     }
 
     // AllArgsConstructor
-    public Review(Integer rating, String comment, User user, Courses course, LocalDateTime createdAt) {
+    public Review(Integer rating, String comment, User user, Courses course) { // Removed createdAt from constructor
         this.rating = rating;
         this.comment = comment;
         this.user = user;
         this.course = course;
-        this.createdAt = createdAt;
+        // this.createdAt = createdAt; // Inherited from BaseEntity
     }
 
     // Getters
@@ -59,9 +61,8 @@ public class Review extends BaseEntity {
         return course;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    // Removed getCreatedAt() - inherited from BaseEntity
+    // Use getCreatedAt() from BaseEntity instead
 
     // Setters
     public void setRating(Integer rating) {
@@ -80,16 +81,9 @@ public class Review extends BaseEntity {
         this.course = course;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    // Removed setCreatedAt() - inherited from BaseEntity
 
-    @PrePersist
-    protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-    }
+    // Removed @PrePersist method
 
     @Override
     public boolean equals(Object o) {
@@ -100,12 +94,24 @@ public class Review extends BaseEntity {
         return Objects.equals(rating, review.rating) &&
                Objects.equals(comment, review.comment) &&
                Objects.equals(user, review.user) &&
-               Objects.equals(course, review.course) &&
-               Objects.equals(createdAt, review.createdAt);
+               Objects.equals(course, review.course);
+               // Objects.equals(createdAt, review.createdAt); // Inherited from BaseEntity
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), rating, comment, user, course, createdAt);
+        return Objects.hash(super.hashCode(), rating, comment, user, course); // Removed createdAt
+    }
+
+    @Override
+    public String toString() {
+        return "Review{" +
+               "rating=" + rating +
+               ", comment='" + comment + '\'' +
+               ", user=" + (user != null ? user.getId() : "null") +
+               ", course=" + (course != null ? course.getId() : "null") +
+               ", createdAt=" + getCreatedAt() + // Use inherited method
+               ", id=" + id +
+               '}';
     }
 }

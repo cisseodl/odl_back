@@ -1,6 +1,7 @@
 package com.odc.aws_learning.app.service;
 
 import com.odc.aws_learning.app.constante.CourseLevel;
+import com.odc.aws_learning.app.constante.CourseStatus;
 import com.odc.aws_learning.app.dto.CourseCreationRequest;
 import com.odc.aws_learning.app.dto.CourseDto;
 import com.odc.aws_learning.app.dto.CourseUpdateRequest;
@@ -24,6 +25,7 @@ import com.odc.aws_learning.app.repository.ModuleRepository;
 import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
+import com.odc.aws_learning.app.repository.CertificateRepository; // Added
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -53,8 +55,9 @@ public class CourseService {
     private final DetailsCourseRepo detailsCourseRepo;
     private final ModuleRepository moduleRepository;
     private final LessonRepository lessonRepository;
+    private final CertificateRepository certificateRepository; // Injected
 
-    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository) {
+    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository) {
         this.coursesRepository = coursesRepository;
         this.courseMapper = courseMapper;
         this.instructorMapper = instructorMapper;
@@ -66,6 +69,7 @@ public class CourseService {
         this.detailsCourseRepo = detailsCourseRepo;
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
+        this.certificateRepository = certificateRepository;
     }
 
     public CourseDto getCourseById(Long id) {
@@ -78,7 +82,7 @@ public class CourseService {
     }
 
     public List<CourseDto> getAllCourses(
-            String category, CourseLevel level, String language, Boolean bestseller,
+            String category, CourseLevel level, String language, Boolean bestseller, CourseStatus status,
             int page, int size, String sortBy, String sortDir) {
 
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() :
@@ -87,7 +91,9 @@ public class CourseService {
 
         Page<Courses> coursesPage;
         // Basic filtering logic, can be expanded for more complex queries
-        if (category != null && !category.isEmpty()) {
+        if (status != null) {
+            coursesPage = this.coursesRepository.findByStatus(status, pageable);
+        } else if (category != null && !category.isEmpty()) {
             // Find category by title (needs a method in CategorieRepository)
             Optional<Categorie> cat = this.categorieRepository.findByTitle(category);
             if (cat.isPresent()) {
@@ -112,6 +118,16 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
+    public List<CourseDto> getCoursesByInstructorId(Long instructorId) {
+        List<Courses> courses = coursesRepository.findByInstructor_Id(instructorId);
+        return courses.stream()
+                .map(course -> {
+                    CourseDto dto = courseMapper.toDto(course);
+                    populateCalculatedFields(dto, course);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
 
     public CourseDto createCourse(CourseCreationRequest request) {
         Courses course = new Courses();
@@ -177,6 +193,10 @@ public class CourseService {
         existingCourse.setFeatures(request.getFeatures());
         existingCourse.setBestseller(request.getBestseller());
         existingCourse.setLastModifiedAt(LocalDateTime.now()); // Set modification date
+
+        if (request.getStatus() != null) {
+            existingCourse.setStatus(request.getStatus());
+        }
 
         User instructor = userRepository.findById(request.getInstructorId())
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
@@ -251,10 +271,49 @@ public class CourseService {
         return courseMapper.toDto(updatedCourse);
     }
 
+    public CourseDto validateCourse(Long courseId, com.odc.aws_learning.app.dto.CourseValidationRequest request) {
+        Courses course = coursesRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found with id: " + courseId));
+
+        switch (request.getAction()) {
+            case APPROVE:
+                // Si le cours est en BROUILLON, l'instructeur le soumet pour validation (IN_REVIEW)
+                // Si le cours est en IN_REVIEW, l'admin l'approuve (PUBLIE)
+                if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.BROUILLON) {
+                    course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW);
+                    course.setRejectionReason(null);
+                } else if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW) {
+                    course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.PUBLIE);
+                    course.setRejectionReason(null);
+                } else {
+                    throw new IllegalArgumentException("Le cours ne peut pas être approuvé dans son état actuel.");
+                }
+                break;
+            case REJECT:
+                if (request.getReason() == null || request.getReason().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Rejection reason cannot be empty when rejecting a course.");
+                }
+                // Si le cours est en IN_REVIEW, l'admin le rejette (BROUILLON)
+                // Si le cours est en BROUILLON, l'instructeur le retire de la validation (reste BROUILLON)
+                if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW) {
+                    course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.BROUILLON);
+                    course.setRejectionReason(request.getReason());
+                } else if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.BROUILLON) {
+                    // L'instructeur retire son cours de la validation, reste en BROUILLON
+                    course.setRejectionReason(request.getReason());
+                } else {
+                    throw new IllegalArgumentException("Le cours ne peut pas être rejeté dans son état actuel.");
+                }
+                break;
+        }
+
+        Courses savedCourse = coursesRepository.save(course);
+        return courseMapper.toDto(savedCourse);
+    }
+
     public void deleteCourse(Long id) {
         coursesRepository.deleteById(id);
     }
-
     private void populateCalculatedFields(CourseDto dto, Courses course) {
         // Calculate rating and review count
         Double avgRating = reviewRepository.findAverageRatingByCourse(course);
@@ -277,6 +336,12 @@ public class CourseService {
     // NOUVEAU: Inscrit un utilisateur à un cours
     public CResponse<?> enrollUserInCourse(User user, Long courseId) {
         try {
+            // Vérifier le nombre de cours en cours
+            long activeCourses = detailsCourseRepo.countByLearnerIdAndCourseStatut(user.getId(), com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
+            if (activeCourses >= 3) {
+                return CResponse.error("Vous ne pouvez pas être inscrit à plus de 3 cours simultanément.");
+            }
+
             // Vérifier que le cours existe
             Optional<Courses> courseOptional = coursesRepository.findById(courseId);
             if (courseOptional.isEmpty()) {

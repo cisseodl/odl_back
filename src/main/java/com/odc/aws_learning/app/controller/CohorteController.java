@@ -5,6 +5,9 @@ import com.odc.aws_learning.app.service.CohorteService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.media.Content; // Added
+import io.swagger.v3.oas.annotations.media.ExampleObject; // Added
+import io.swagger.v3.oas.annotations.parameters.RequestBody; // Added
 
 @RequestMapping("/cohorte")
 @RestController
@@ -18,13 +21,13 @@ public class CohorteController {
     }
 
     @GetMapping("/read")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> getAllCohortes() {
         return cohorteService.getAllCohortes();
     }
 
     @GetMapping("/read/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> getCohorteById(@PathVariable Long id) {
         return cohorteService.getCohorteById(id);
 
@@ -32,14 +35,27 @@ public class CohorteController {
 
     @PostMapping("/save")
     @PreAuthorize("hasRole('ADMIN')")
-    public CResponse<?> createCohorte(@RequestBody Cohorte cohorte) {
+    @RequestBody(
+        description = "Données pour la création d'une nouvelle Cohorte (les champs d'audit sont générés automatiquement)",
+        required = true,
+        content = @Content(
+            mediaType = "application/json",
+            examples = {
+                @ExampleObject(
+                    name = "Création de Cohorte",
+                    value = "{\"nom\": \"Nouvelle Cohorte\", \"description\": \"Description détaillée de la cohorte.\", \"dateDebut\": \"2026-01-04T12:00:00\", \"dateFin\": \"2026-01-04T18:00:00\"}"
+                )
+            }
+        )
+    )
+    public CResponse<?> createCohorte(@org.springframework.web.bind.annotation.RequestBody Cohorte cohorte) {
            return cohorteService.createCohorte(cohorte);
 
     }
 
     @PutMapping("/update")
     @PreAuthorize("hasRole('ADMIN')")
-    public CResponse<?> updateCohorte(@RequestBody Cohorte cohorte) {
+    public CResponse<?> updateCohorte(@org.springframework.web.bind.annotation.RequestBody Cohorte cohorte) {
        return cohorteService.updateCohorte(cohorte);
 
 

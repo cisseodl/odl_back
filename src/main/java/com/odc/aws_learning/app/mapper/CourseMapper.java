@@ -19,6 +19,8 @@ public interface CourseMapper {
     @Mapping(target = "duration", source = "modules", qualifiedByName = "calculateCourseDuration")
     @Mapping(target = "imageUrl", source = "imagePath")
     @Mapping(target = "lastUpdated", source = "lastModifiedAt", qualifiedByName = "formatLastUpdated")
+    @Mapping(target = "status", source = "status")
+    @Mapping(target = "rejectionReason", source = "rejectionReason")
     // Mappings for calculated fields (rating, reviewCount, enrolledCount) will be handled in the service
     @Mapping(target = "rating", ignore = true)
     @Mapping(target = "reviewCount", ignore = true)

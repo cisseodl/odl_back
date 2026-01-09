@@ -4,6 +4,7 @@ import com.odc.aws_learning.auth.service.UserService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,8 +30,17 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'INSTRUCTOR', 'APPRENANT')") // Updated roles
     public CResponse<?> getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
+    }
+
+    /**
+     * Supprime un utilisateur et toutes ses entités liées en cascade (Admin, Instructor, Apprenant, etc.)
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')") // Seuls les admins peuvent supprimer des utilisateurs
+    public CResponse<?> deleteUser(@PathVariable Long id) {
+        return userService.deleteUser(id);
     }
 }

@@ -27,6 +27,7 @@ public class FileController {
     private String uploadDir;
 
     private final S3Service s3Service;
+    private final UploadFileService uploadFileService;
 
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
@@ -55,14 +56,31 @@ public class FileController {
     public ResponseEntity<String> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "folderName", required = false, defaultValue = "test") String folderName) {
+        
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Le fichier est vide ou null");
+        }
 
-        String url = s3Service.saveFile(file, folderName);
-        if (url != null) {
-            return ResponseEntity.ok(url);
-        } else {
+        try {
+            String url = s3Service.saveFile(file, folderName);
+            if (url != null && !url.isEmpty()) {
+                return ResponseEntity.ok(url);
+            } else {
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Erreur lors de l'upload du fichier vers S3: Le service a retourné null. Vérifiez les logs du serveur et la configuration AWS (credentials, bucket, région).");
+            }
+        } catch (RuntimeException e) {
+            // Les exceptions sont maintenant propagées depuis S3Service
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de l'upload du fichier vers S3");
+                    .body("Erreur lors de l'upload du fichier vers S3: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur inattendue lors de l'upload: " + e.getMessage());
         }
     }
 

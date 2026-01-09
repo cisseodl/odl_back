@@ -1,5 +1,6 @@
 package com.odc.aws_learning.app.controller;
 
+import com.odc.aws_learning.app.dto.CategorieRequest;
 import com.odc.aws_learning.app.entity.Categorie;
 import com.odc.aws_learning.app.service.CategorieService;
 import com.odc.aws_learning.auth.base.response.CResponse;
@@ -7,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
 
 @RequestMapping("/api/categories")
 @RestController
@@ -19,13 +21,13 @@ public class CategorieController {
     }
 
     @GetMapping("/read")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> getAllCategories() {
         return categorieService.getAllCategories();
     }
 
     @GetMapping("/read/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<Categorie> getCategoryById(@PathVariable Long id) {
         Categorie categorie = categorieService.getCategoryById(id);
         if (categorie != null) {
@@ -35,21 +37,26 @@ public class CategorieController {
         }
     }
 
-    @PostMapping("/save")
+    @PostMapping(value = "/save", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public CResponse<Categorie> createCategory(@RequestBody Categorie categorie) {
+    public CResponse<Categorie> createCategory(@org.springframework.web.bind.annotation.RequestBody CategorieRequest request) {
+        Categorie categorie = new Categorie();
+        categorie.setTitle(request.getTitle());
+        categorie.setDescription(request.getDescription());
         Categorie createdCategory = categorieService.createCategorie(categorie);
         return CResponse.success(createdCategory, "Categorie enregistrée");
     }
 
     @PutMapping("/update")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> updateCategory(@RequestBody Categorie categorie) {
+    public ResponseEntity<String> updateCategory(@org.springframework.web.bind.annotation.RequestBody CategorieRequest request) {
         try {
-            if (categorie != null) {
-                categorieService.updateCategorie(categorie);
-                return ResponseEntity.ok().body("Le cours a été mis à jour avec succès.");
-                //categorieService.updateCategorie(categorie);
+            Categorie existingCategorie = categorieService.getCategoryById(request.getId()); // Supposons que CategorieRequest a un getId()
+            if (existingCategorie != null) {
+                existingCategorie.setTitle(request.getTitle());
+                existingCategorie.setDescription(request.getDescription());
+                categorieService.updateCategorie(existingCategorie);
+                return ResponseEntity.ok().body("La catégorie a été mise à jour avec succès.");
             } else {
                 return ResponseEntity.notFound().build();
             }
@@ -57,9 +64,6 @@ public class CategorieController {
             System.out.println(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur s'est produite lors de la modification.");
         }
-
-
-
     }
 
     @DeleteMapping("/delete/{id}")

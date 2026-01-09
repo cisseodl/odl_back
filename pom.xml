@@ -17,7 +17,7 @@
 	<properties>
 		<java.version>11</java.version>
 		<org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
-
+		<lombok.version>1.18.20</lombok.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -59,10 +59,16 @@
 			<artifactId>mysql-connector-j</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- Dépendance H2 pour la base de données en mémoire (développement/tests) -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<optional>true</optional>
+			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
@@ -159,8 +165,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-					<source>${java.version}</source>
-					<target>${java.version}</target>
+					<source>14</source>
+					<target>14</target>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.projectlombok</groupId>

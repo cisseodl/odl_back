@@ -66,11 +66,15 @@ public class S3Service {
                 return fileUrl;
             }
         } catch (AmazonServiceException e) {
-            log.error("Erreur AWS lors de l'upload du fichier vers S3: {}", e.getMessage(), e);
-            return null;
-        } catch (IOException e) { // Attraper IOException ici
+            log.error("Erreur AWS lors de l'upload du fichier vers S3. Code d'erreur: {}, Message: {}, Détails: {}", 
+                e.getErrorCode(), e.getMessage(), e.getErrorMessage(), e);
+            throw new RuntimeException("Erreur AWS S3: " + e.getMessage() + " (Code: " + e.getErrorCode() + ")", e);
+        } catch (IOException e) {
             log.error("Erreur IO lors de l'obtention de l'InputStream ou de la fermeture: {}", e.getMessage(), e);
-            return null;
+            throw new RuntimeException("Erreur IO lors de l'upload: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Erreur inattendue lors de l'upload du fichier vers S3: {}", e.getMessage(), e);
+            throw new RuntimeException("Erreur inattendue lors de l'upload: " + e.getMessage(), e);
         }
     }
 
@@ -174,5 +178,29 @@ public class S3Service {
             }
         }
         return normalizedFolder + uuid + extension;
+    }
+
+    /**
+     * Supprime un fichier de S3 en utilisant son URL complète.
+     * @param fileUrl L'URL complète du fichier à supprimer.
+     */
+    public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.isEmpty() || !fileUrl.contains(bucketName)) {
+            log.warn("URL de fichier invalide ou vide fournie pour la suppression: {}", fileUrl);
+            return;
+        }
+
+        try {
+            // Extrait la clé de l'objet à partir de l'URL
+            // L'URL est généralement de la forme : https://<bucket-name>.s3.<region>.amazonaws.com/<key>
+            String key = fileUrl.substring(fileUrl.indexOf(bucketName + "/") + bucketName.length() + 1);
+
+            amazonS3.deleteObject(bucketName, key);
+            log.info("Fichier supprimé de S3 avec la clé: {}", key);
+        } catch (AmazonServiceException e) {
+            log.error("Erreur AWS lors de la suppression du fichier de S3: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Erreur inattendue lors de la suppression du fichier de S3: {}", e.getMessage(), e);
+        }
     }
 }

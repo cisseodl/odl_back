@@ -14,6 +14,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonBackReference; // Added
+
 @Entity
 @Table(name = "certificates")
 public class Certificate extends BaseEntity {
@@ -22,6 +24,7 @@ public class Certificate extends BaseEntity {
     private String uniqueCode;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JsonBackReference // Added
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

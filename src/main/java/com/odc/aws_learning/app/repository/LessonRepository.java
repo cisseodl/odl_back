@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
     List<Lesson> findByModuleId(Long moduleId);
     Optional<Lesson> findByActivateAndId(boolean activate, Long id);
+    long countByModule_Course_Id(Long courseId);
 }

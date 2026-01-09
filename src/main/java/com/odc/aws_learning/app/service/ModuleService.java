@@ -3,8 +3,10 @@ package com.odc.aws_learning.app.service;
 import com.odc.aws_learning.app.constante.UploadLink;
 import com.odc.aws_learning.app.entity.Module;
 import com.odc.aws_learning.app.entity.Courses;
+import com.odc.aws_learning.app.entity.Lesson;
 import com.odc.aws_learning.app.repository.ModuleRepository;
 import com.odc.aws_learning.app.repository.CoursesRepository;
+import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.app.wrapper.ModuleAndCoursePayload;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import org.springframework.stereotype.Service;
@@ -21,11 +23,13 @@ public class ModuleService {
     private final ModuleRepository moduleRepository;
     private final CoursesRepository coursesRepository;
     private final UploadFileService uploadFileService;
+    private final LessonRepository lessonRepository;
 
-    public ModuleService(ModuleRepository moduleRepository, CoursesRepository coursesRepository, UploadFileService uploadFileService) {
+    public ModuleService(ModuleRepository moduleRepository, CoursesRepository coursesRepository, UploadFileService uploadFileService, LessonRepository lessonRepository) {
         this.moduleRepository = moduleRepository;
         this.coursesRepository = coursesRepository;
         this.uploadFileService = uploadFileService;
+        this.lessonRepository = lessonRepository;
     }
 
     public CResponse<?> saveModule(ModuleAndCoursePayload moduleAndCoursePayload, MultipartFile pdfFile) {
@@ -42,12 +46,29 @@ public class ModuleService {
                         moduleToSave.setCourse(coursesOptional.get());
                         moduleToSave.setDescription(module.getDescription());
                         moduleToSave.setTitle(module.getTitle());
+                        moduleToSave.setModuleOrder(module.getModuleOrder());
 
-
-                        moduleList.add(moduleToSave);
+                        Module savedModule = moduleRepository.save(moduleToSave);
+                        
+                        // Si le module a des leçons, les sauvegarder
+                        if (module.getLessons() != null && !module.getLessons().isEmpty()) {
+                            List<Lesson> lessonsToSave = new ArrayList<>();
+                            module.getLessons().forEach(lesson -> {
+                                Lesson lessonToSave = new Lesson();
+                                lessonToSave.setTitle(lesson.getTitle());
+                                lessonToSave.setLessonOrder(lesson.getLessonOrder());
+                                lessonToSave.setType(lesson.getType());
+                                lessonToSave.setContentUrl(lesson.getContentUrl());
+                                lessonToSave.setDuration(lesson.getDuration());
+                                lessonToSave.setModule(savedModule);
+                                lessonsToSave.add(lessonToSave);
+                            });
+                            lessonRepository.saveAll(lessonsToSave);
+                        }
+                        
+                        moduleList.add(savedModule);
                     });
-                    List<Module> moduleListSaved = moduleRepository.saveAll(moduleList);
-                    return CResponse.success(moduleListSaved.size(), "Modules enregistrés avec succès");
+                    return CResponse.success(moduleList.size(), "Modules et leçons enregistrés avec succès");
                 }
 
 

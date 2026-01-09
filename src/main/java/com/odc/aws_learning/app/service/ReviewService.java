@@ -56,4 +56,9 @@ public class ReviewService {
         List<Review> reviews = reviewRepository.findByCourseIdAndActivateIsTrue(courseId);
         return CResponse.success(reviews, "Reviews fetched successfully");
     }
+
+    public CResponse<?> getAllReviews() {
+        List<Review> reviews = reviewRepository.findAll();
+        return CResponse.success(reviews, "All reviews fetched successfully");
+    }
 }

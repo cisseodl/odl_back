@@ -1,0 +1,236 @@
+# Guide de Gestion des Utilisateurs et des Rôles
+
+Ce guide explique le workflow de création, promotion et gestion des utilisateurs dans le système, en tenant compte des rôles (User, Instructeur, Admin, Apprenant) et de l'interaction avec une interface Next.js.
+
+---
+
+## Contexte : Le Modèle Utilisateur-Rôle
+
+Le système utilise un modèle où un utilisateur est d'abord créé comme un "User" de base. Ensuite, cet utilisateur peut être promu ou lié à un profil spécifique (Admin, Instructeur, Apprenant) en fonction des besoins. L'authentification par JWT est centrale pour toutes les opérations sécurisées.
+
+Le JWT (JSON Web Token) obtenu après connexion contient désormais les rôles de l'utilisateur, ce qui permet à l'application Next.js de gérer l'accès aux différentes pages (ex: page d'administration, page instructeur, etc.).
+
+---
+
+## Phase 1 : Création de l'utilisateur de base (`User`)
+
+Chaque personne accédant au système commence par être un `User` simple.
+
+### 1.1 Inscription d'un nouvel utilisateur
+
+- **Endpoint :** `POST /auth/signup`
+- **Description :** Crée un nouvel utilisateur. C'est la porte d'entrée pour toute personne dans le système.
+- **Type de contenu :** `multipart/form-data`
+- **Rôles requis :** Aucun (public)
+- **Champs :** `user` (JSON string), `avatar` (fichier image optionnel)
+
+**JSON pour le champ `user` :**
+```json
+{
+  "fullName": "Alou Dia",
+  "email": "alou@gmail.com",
+  "password": "alou",
+  "phone": "0612345678"
+}
+```
+
+### 1.2 Connexion et Récupération du JWT
+
+Une fois l'utilisateur créé, il doit se connecter pour obtenir son token JWT. Ce token sera utilisé pour toutes les requêtes authentifiées.
+
+- **Endpoint :** `POST /auth/signin`
+- **Description :** Authentifie l'utilisateur et retourne un token JWT.
+- **Type de contenu :** `application/json`
+- **Rôles requis :** Aucun (public)
+
+**JSON pour le corps de la requête :**
+```json
+{
+  "email": "alice.durand@example.com",
+  "password": "passwordA1#"
+}
+```
+**Réponse (exemple) :**
+```json
+{
+  "success": true,
+  "message": "Connexion réussie",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiI...",
+    "user": {
+      "id": 1,
+      "email": "alice.durand@example.com",
+      "fullName": "Alice Durand",
+      "roles": ["USER"] // Le token contiendra désormais les rôles
+    }
+  }
+}
+```
+---
+
+## Phase 2 : Promotion de l'utilisateur existant à un rôle spécifique
+
+Ces opérations nécessitent un JWT avec le rôle `ADMIN`. Le frontend Next.js afficherait ces options uniquement sur une page accessible aux administrateurs.
+
+### 2.1 Promotion en Administrateur
+
+Un `User` existant est lié à un profil `Admin`.
+
+- **Endpoint :** `POST /admins/create`
+- **Description :** Crée un nouveau profil administrateur et le lie à un utilisateur existant.
+- **Type de contenu :** `application/json`
+- **Rôles requis :** `ADMIN`
+
+**JSON pour le corps de la requête :**
+```json
+{
+  "id": 1 // L'ID de l'utilisateur (Alice Durand) à promouvoir en Admin
+}
+```
+
+### 2.2 Promotion en Instructeur
+
+Un `User` existant est lié à un profil `Instructor`.
+
+- **Endpoint :** `POST /instructors/create`
+- **Description :** Crée un nouveau profil instructeur et le lie à un utilisateur existant.
+- **Type de contenu :** `application/json`
+- **Rôles requis :** `ADMIN` (ou `isAuthenticated()` si un utilisateur peut créer son propre profil instructeur, comme indiqué dans le code)
+
+**JSON pour le corps de la requête :**
+```json
+{
+  "userId": 1, // L'ID de l'utilisateur à promouvoir en Instructeur
+  "biography": "Expert en développement web et mobile.",
+  "specialization": "Fullstack Java/React"
+}
+```
+
+### 2.3 Création du profil Apprenant
+
+Un `User` existant est lié à un profil `Apprenant`. Cette opération est souvent effectuée par l'utilisateur lui-même après son inscription, ou par un administrateur.
+
+- **Endpoint :** `POST /apprenants/create`
+- **Description :** Crée un nouveau profil Apprenant et le lie à l'utilisateur authentifié.
+- **Type de contenu :** `application/json`
+- **Rôles requis :** `isAuthenticated()`
+
+**JSON pour le corps de la requête :**
+```json
+{
+  "nom": "Durand",
+  "prenom": "Alice",
+  "email": "alice.durand@example.com",
+  "numero": "0612345678",
+  "profession": "Développeuse Junior",
+  "niveauEtude": "Licence",
+  "filiere": "Informatique",
+  "attentes": "Apprendre AWS et le Cloud",
+  "satisfaction": true,
+  "cohorteId": 1 // ID de la cohorte à laquelle l'apprenant appartient (si applicable)
+}
+```
+
+---
+
+## Phase 3 : Gestion (CRUD) des Utilisateurs et Rôles
+
+Le frontend Next.js affichera différentes vues de gestion selon le rôle de l'utilisateur connecté.
+
+### 3.1 Gestion des Utilisateurs Génériques (via Admin)
+
+- **Lister tous les utilisateurs :** `GET /users/get-all/{page}/{size}`
+  - **Rôles requis :** `ADMIN`
+- **Voir un utilisateur par ID :** `GET /users/{id}`
+  - **Rôles requis :** `ADMIN`, `USER`, `INSTRUCTOR`, `APPRENANT` (si l'ID est le leur)
+  - **Réponse JSON (exemple) :**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": 1,
+        "fullName": "Alice Durand",
+        "email": "alice.durand@example.com",
+        "roles": ["USER", "INSTRUCTOR"]
+      }
+    }
+    ```
+
+### 3.2 Gestion des Administrateurs (CRUD)
+
+- **Lister tous les administrateurs :** `GET /admins/get-all`
+  - **Rôles requis :** `ADMIN`
+- **Voir un administrateur par ID :** `GET /admins/{id}`
+  - **Rôles requis :** `ADMIN`
+- **Mettre à jour un administrateur :** `PUT /admins/{id}`
+  - **Rôles requis :** `ADMIN`
+  - **JSON (corps de la requête) :** `{ "fullName": "Alice D. Admin", "phone": "0600000000" }` (Champs de l'utilisateur lié)
+- **Supprimer un administrateur (délie le rôle) :** `DELETE /admins/{id}`
+  - **Rôles requis :** `ADMIN`
+
+### 3.3 Gestion des Instructeurs (CRUD)
+
+- **Lister tous les instructeurs :** `GET /instructors/get-all`
+  - **Rôles requis :** `ADMIN`, `INSTRUCTOR`
+- **Voir un instructeur par ID :** `GET /instructors/{id}`
+  - **Rôles requis :** `ADMIN`, `INSTRUCTOR`
+- **Mettre à jour un instructeur :** `PUT /instructors/{id}`
+  - **Rôles requis :** `ADMIN`, `INSTRUCTOR`
+  - **JSON (corps de la requête) :** `{ "biography": "Nouvelle biographie", "specialization": "AWS Cloud" }`
+- **Supprimer un instructeur (délie le rôle) :** `DELETE /instructors/{id}`
+  - **Rôles requis :** `ADMIN`
+
+### 3.4 Gestion des Apprenants (CRUD)
+
+- **Lister tous les apprenants :** `GET /apprenants/get-all`
+  - **Rôles requis :** `ADMIN`, `APPRENANT`
+- **Voir un apprenant par ID :** `GET /apprenants/{id}`
+  - **Rôles requis :** `ADMIN`, `APPRENANT`
+- **Lister les apprenants par cohorte :** `GET /apprenants/get-by-cohorte/{cohorteId}/{page}/{size}`
+  - **Rôles requis :** `ADMIN`, `APPRENANT`
+- **Mettre à jour un apprenant :** `PUT /apprenants/{id}`
+  - **Rôles requis :** `ADMIN`, `APPRENANT`
+  - **JSON (corps de la requête) :** `{ "nom": "Nouveau Nom", "cohorteId": 2 }` (Peut mettre à jour les infos user et apprenant)
+- **Supprimer un apprenant (délie le rôle) :** `DELETE /apprenants/{id}`
+  - **Rôles requis :** `ADMIN`
+
+---
+
+## Phase 4 : Auto-Gestion du Profil par l'utilisateur
+
+Un utilisateur peut gérer ses propres informations de profil.
+
+### 4.1 Voir son profil
+
+- **Endpoint :** `GET /api/profile/me`
+- **Description :** Récupère les informations du profil de l'utilisateur authentifié.
+- **Rôles requis :** Authentifié
+- **Réponse JSON (exemple) :**
+  ```json
+  {
+    "id": 1,
+    "fullName": "Alice Durand",
+    "email": "alice.durand@example.com",
+    "roles": ["USER", "INSTRUCTOR"]
+  }
+  ```
+
+### 4.2 Mettre à jour son profil
+
+- **Endpoint :** `PUT /api/profile/me`
+- **Description :** Met à jour les informations du profil de l'utilisateur authentifié.
+- **Type de contenu :** `application/json`
+- **Rôles requis :** Authentifié
+- **JSON pour le corps de la requête :**
+  ```json
+  {
+    "fullName": "Alice D. Maj",
+    "phone": "0789012345"
+  }
+  ```
+
+---
+
+
+
+Cette approche garantit que l'interface utilisateur ne présente que les options pertinentes et que les requêtes API sont correctement autorisées côté backend.

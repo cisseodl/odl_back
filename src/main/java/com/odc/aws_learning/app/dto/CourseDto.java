@@ -25,11 +25,13 @@ public class CourseDto {
     private Set<String> features;
     private List<ModuleDto> curriculum;
     private long enrolledCount;
+    private com.odc.aws_learning.app.constante.CourseStatus status;
+    private String rejectionReason;
 
     public CourseDto() {
     }
 
-    public CourseDto(Long id, String title, String subtitle, String description, String imageUrl, InstructorDto instructor, String category, CourseLevel level, double rating, int reviewCount, String duration, String language, String lastUpdated, boolean bestseller, Set<String> objectives, Set<String> features, List<ModuleDto> curriculum, long enrolledCount) {
+    public CourseDto(Long id, String title, String subtitle, String description, String imageUrl, InstructorDto instructor, String category, CourseLevel level, double rating, int reviewCount, String duration, String language, String lastUpdated, boolean bestseller, Set<String> objectives, Set<String> features, List<ModuleDto> curriculum, long enrolledCount, com.odc.aws_learning.app.constante.CourseStatus status, String rejectionReason) {
         this.id = id;
         this.title = title;
         this.subtitle = subtitle;
@@ -48,6 +50,24 @@ public class CourseDto {
         this.features = features;
         this.curriculum = curriculum;
         this.enrolledCount = enrolledCount;
+        this.status = status;
+        this.rejectionReason = rejectionReason;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+    public com.odc.aws_learning.app.constante.CourseStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(com.odc.aws_learning.app.constante.CourseStatus status) {
+        this.status = status;
     }
 
     public Long getId() {
@@ -217,6 +237,8 @@ public class CourseDto {
         private Set<String> features;
         private List<ModuleDto> curriculum;
         private long enrolledCount;
+        private com.odc.aws_learning.app.constante.CourseStatus status;
+        private String rejectionReason;
 
         CourseDtoBuilder() {
         }
@@ -311,12 +333,22 @@ public class CourseDto {
             return this;
         }
 
+        public CourseDtoBuilder status(com.odc.aws_learning.app.constante.CourseStatus status) {
+            this.status = status;
+            return this;
+        }
+
+        public CourseDtoBuilder rejectionReason(String rejectionReason) {
+            this.rejectionReason = rejectionReason;
+            return this;
+        }
+
         public CourseDto build() {
-            return new CourseDto(id, title, subtitle, description, imageUrl, instructor, category, level, rating, reviewCount, duration, language, lastUpdated, bestseller, objectives, features, curriculum, enrolledCount);
+            return new CourseDto(id, title, subtitle, description, imageUrl, instructor, category, level, rating, reviewCount, duration, language, lastUpdated, bestseller, objectives, features, curriculum, enrolledCount, status, rejectionReason);
         }
 
         public String toString() {
-            return "CourseDto.CourseDtoBuilder(id=" + this.id + ", title=" + this.title + ", subtitle=" + this.subtitle + ", description=" + this.description + ", imageUrl=" + this.imageUrl + ", instructor=" + this.instructor + ", category=" + this.category + ", level=" + this.level + ", rating=" + this.rating + ", reviewCount=" + this.reviewCount + ", duration=" + this.duration + ", language=" + this.language + ", lastUpdated=" + this.lastUpdated + ", bestseller=" + this.bestseller + ", objectives=" + this.objectives + ", features=" + this.features + ", curriculum=" + this.curriculum + ", enrolledCount=" + this.enrolledCount + ")";
+            return "CourseDto.CourseDtoBuilder(id=" + this.id + ", title=" + this.title + ", subtitle=" + this.subtitle + ", description=" + this.description + ", imageUrl=" + this.imageUrl + ", instructor=" + this.instructor + ", category=" + this.category + ", level=" + this.level + ", rating=" + this.rating + ", reviewCount=" + this.reviewCount + ", duration=" + this.duration + ", language=" + this.language + ", lastUpdated=" + this.lastUpdated + ", bestseller=" + this.bestseller + ", objectives=" + this.objectives + ", features=" + this.features + ", curriculum=" + this.curriculum + ", enrolledCount=" + this.enrolledCount + ", status=" + this.status + ", rejectionReason=" + this.rejectionReason + ")";
         }
     }
 }

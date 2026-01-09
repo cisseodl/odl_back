@@ -1,15 +1,14 @@
 package com.odc.aws_learning.app.service;
 
-import com.odc.aws_learning.app.repository.CoursesRepository;
-import com.odc.aws_learning.app.repository.ReviewRepository;
-import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
-import com.odc.aws_learning.app.repository.DetailsCourseRepo;
+import com.odc.aws_learning.app.constante.CourseStatus;
+import com.odc.aws_learning.app.repository.*;
 import com.odc.aws_learning.app.wrapper.DashboardStatsDTO;
-import com.odc.aws_learning.auth.entities.Role;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -20,82 +19,112 @@ public class DashboardService {
     private final UserQuizAttemptRepository userQuizAttemptRepository;
     private final DetailsCourseRepo detailsCourseRepo;
     private final ReviewRepository reviewRepository;
+    private final CertificateRepository certificateRepository;
+    private final QuizRepository quizRepository;
 
-    /**
-     * Statistiques pour un étudiant (USER / LEARNER)
-     */
+
     public DashboardStatsDTO getStudentStats(User user) {
         Long userId = user.getId();
 
-        long coursesJoined = userQuizAttemptRepository.countDistinctCoursesByUserId(userId);
-        long certificatesObtained = userQuizAttemptRepository.countCertificatesByUserId(userId);
-        long totalQuizAttempts = userQuizAttemptRepository.countByUserId(userId);
+        long coursesJoined = detailsCourseRepo.countByLearnerId(userId);
+        long certificatesObtained = certificateRepository.countByUser(user);
         Double avgScore = userQuizAttemptRepository.averageScorePercentageByUserId(userId);
 
-        if (avgScore == null) {
-            avgScore = 0.0;
-        }
-
-        return DashboardStatsDTO.builder()
+        DashboardStatsDTO.StudentStats studentStats = DashboardStatsDTO.StudentStats.builder()
                 .coursesJoined(coursesJoined)
                 .certificatesObtained(certificatesObtained)
-                .totalQuizAttempts(totalQuizAttempts)
-                .averageScore(avgScore)
+                .averageScore(avgScore != null ? avgScore : 0.0)
+                .totalQuizAttempts(userQuizAttemptRepository.countByUserId(userId))
+                .build();
+
+        return DashboardStatsDTO.builder()
+                .studentStats(studentStats)
                 .mode("STUDENT")
                 .build();
     }
 
-    /**
-     * Statistiques globales pour un administrateur (ADMIN / SUPERADMIN)
-     */
+
     public DashboardStatsDTO getAdminStats() {
-        long totalUsers = userRepository.count();
-        long totalCourses = coursesRepository.count();
-        long totalQuizAttemptsGlobal = userQuizAttemptRepository.count();
-        long totalCertificatesGlobal = userQuizAttemptRepository.countAllCertificates();
+        // This is a placeholder. The full implementation will be in a dedicated AdminAnalyticsService.
+        DashboardStatsDTO.AdminStats adminStats = DashboardStatsDTO.AdminStats.builder()
+                .totalUsers(userRepository.count())
+                .totalCourses(coursesRepository.count())
+                .totalEnrollments(detailsCourseRepo.count())
+                .totalQuizzes(quizRepository.count())
+                .build();
 
         return DashboardStatsDTO.builder()
-                .totalUsers(totalUsers)
-                .totalCourses(totalCourses)
-                .totalQuizAttemptsGlobal(totalQuizAttemptsGlobal)
-                .totalCertificatesGlobal(totalCertificatesGlobal)
+                .adminStats(adminStats)
                 .mode("ADMIN")
                 .build();
     }
 
-    /**
-     * Routeur en fonction du rôle de l'utilisateur
-     */
+
     public DashboardStatsDTO getDashboardForUser(User user) {
-        Role role = user.getRole();
-        if (role == Role.ADMIN) {
+        if (user.getAdmin() != null) {
             return getAdminStats();
-        } else if (role == Role.INSTRUCTOR) {
+        } else if (user.getInstructor() != null) {
             return getInstructorStats(user);
+        } else { // Handles both Apprenant and generic USER roles
+            return getStudentStats(user);
         }
-        return getStudentStats(user);
     }
 
-    /**
-     * Statistiques pour un instructeur (INSTRUCTOR)
-     */
-    public DashboardStatsDTO getInstructorStats(User instructor) {
-        long instructorId = instructor.getId();
 
-        // Nombre de cours créés par l'instructeur
-        long coursesCreated = coursesRepository.countByInstructorId(instructorId);
+    public DashboardStatsDTO getInstructorStats(User instructorUser) {
+        Long instructorId = instructorUser.getId();
+        LocalDateTime now = LocalDateTime.now();
 
-        long totalStudentsInInstructorCourses = detailsCourseRepo.countDistinctLearnersByInstructorCourses(instructorId);
+        // Course stats
+        long totalCourses = coursesRepository.countByInstructorId(instructorId);
+        long publishedCourses = coursesRepository.countByInstructorIdAndStatus(instructorId, CourseStatus.PUBLIE);
+        long draftCourses = coursesRepository.countByInstructorIdAndStatus(instructorId, CourseStatus.BROUILLON);
 
-        Double averageCourseRating = reviewRepository.findAverageRatingByInstructorCourses(instructorId);
-        if (averageCourseRating == null) {
-            averageCourseRating = 0.0;
-        }
+        // Enrollment stats
+        long totalEnrollments = detailsCourseRepo.countByCourse_Instructor_Id(instructorId);
+        long newEnrollments7Days = detailsCourseRepo.countByCourse_Instructor_IdAndCreatedAtAfter(instructorId, now.minusDays(7));
+        long newEnrollments30Days = detailsCourseRepo.countByCourse_Instructor_IdAndCreatedAtAfter(instructorId, now.minusDays(30));
+
+        // Learner activity
+        long activeLearners = detailsCourseRepo.countDistinctLearnerByCourse_Instructor_IdAndLastModifiedAtAfter(instructorId, now.minusDays(30));
+
+        // Performance stats
+        long completedEnrollments = detailsCourseRepo.countByCourse_Instructor_IdAndCompleted(instructorId, true);
+        double averageCompletionRate = (totalEnrollments > 0) ? ((double) completedEnrollments / totalEnrollments) * 100.0 : 0.0;
+        Double averageQuizScore = userQuizAttemptRepository.findAverageScoreByInstructorId(instructorId);
+
+        // Interaction stats
+        long newComments = reviewRepository.countByCourse_Instructor_IdAndCreatedAtAfter(instructorId, now.minusDays(30));
+
+        // Average rating for instructor's courses
+        Double averageRating = reviewRepository.findAverageRatingByInstructorCourses(instructorId);
+        
+        // Total unique students (learners enrolled in instructor's courses)
+        Long totalStudentsLong = detailsCourseRepo.countDistinctLearnersByInstructorCourses(instructorId);
+        long totalStudents = totalStudentsLong != null ? totalStudentsLong : 0;
+        
+        // Total revenue (assuming courses are free for now, set to 0.0)
+        // TODO: Implement revenue calculation if courses become paid
+        double totalRevenue = 0.0;
+
+        DashboardStatsDTO.InstructorStats instructorStats = DashboardStatsDTO.InstructorStats.builder()
+                .totalCourses(totalCourses)
+                .publishedCourses(publishedCourses)
+                .draftCourses(draftCourses)
+                .totalEnrollments(totalEnrollments)
+                .newEnrollmentsLast7Days(newEnrollments7Days)
+                .newEnrollmentsLast30Days(newEnrollments30Days)
+                .activeLearners(activeLearners)
+                .averageCompletionRate(averageCompletionRate)
+                .averageQuizScore(averageQuizScore != null ? averageQuizScore : 0.0)
+                .newComments(newComments)
+                .averageRating(averageRating != null ? averageRating : 0.0)
+                .totalStudents(totalStudents)
+                .totalRevenue(totalRevenue)
+                .build();
 
         return DashboardStatsDTO.builder()
-                .coursesCreated(coursesCreated)
-                .totalStudentsInInstructorCourses(totalStudentsInInstructorCourses)
-                .averageCourseRating(averageCourseRating)
+                .instructorStats(instructorStats)
                 .mode("INSTRUCTOR")
                 .build();
     }

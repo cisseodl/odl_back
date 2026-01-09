@@ -17,32 +17,82 @@ import java.util.Calendar;
 @Service
 public class UploadFileService {
     public String uploadFile(MultipartFile photo, String link) throws IOException {
-        Path path = Paths.get(link);
+        Path uploadPath = Paths.get(link); // 'link' is "../Image/ODLearning"
+
+        // Create the directory if it does not exist
+        if (!Files.exists(uploadPath)) {
+            try {
+                Files.createDirectories(uploadPath);
+            } catch (IOException e) {
+                // Log the error and rethrow or handle appropriately
+                System.err.println("Error creating upload directories: " + uploadPath.toString() + " - " + e.getMessage());
+                throw new IOException("Could not create upload directory: " + uploadPath.toString(), e);
+            }
+        }
+
         Calendar cal = Calendar.getInstance();
         Long millisDate = cal.getTimeInMillis();
         String extension = StringUtils.getFilenameExtension(photo.getOriginalFilename());
         String filename = millisDate.toString() + "." + extension;
-        InputStream inputStream = photo.getInputStream();
-        Files.copy(inputStream, path.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
-        return filename;
+        
+        Path filePath = uploadPath.resolve(filename); // Resolve the full file path
 
-//        Files.copy(inputStream, path.resolve(millisDate + photo.getOriginalFilename()), StandardCopyOption.REPLACE_EXISTING);
-//        return millisDate.toString() + photo.getOriginalFilename();
+        try (InputStream inputStream = photo.getInputStream()) {
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING); // Copy to the full file path
+        } catch (IOException e) {
+            System.err.println("Error saving file: " + filePath.toString() + " - " + e.getMessage());
+            throw new IOException("Could not save file: " + filePath.toString(), e);
+        }
+        
+        return filename;
     }
 
     public String updateFile(MultipartFile photo, String link, String fileName) throws IOException {
-        Path path = Paths.get(link);
-        InputStream inputStream = photo.getInputStream();
-        Files.copy(inputStream, path.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
+        Path uploadPath = Paths.get(link); // 'link' is "../Image/ODLearning"
+        
+        // Ensure the directory exists for update operations as well
+        if (!Files.exists(uploadPath)) {
+            try {
+                Files.createDirectories(uploadPath);
+            } catch (IOException e) {
+                System.err.println("Error creating upload directories for update: " + uploadPath.toString() + " - " + e.getMessage());
+                throw new IOException("Could not create upload directory for update: " + uploadPath.toString(), e);
+            }
+        }
+
+        Path filePath = uploadPath.resolve(fileName);
+        try (InputStream inputStream = photo.getInputStream()) {
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("Error updating file: " + filePath.toString() + " - " + e.getMessage());
+            throw new IOException("Could not update file: " + filePath.toString(), e);
+        }
         return fileName;
     }
 
     public String uploadBase64File(String base64File, String link, String fileType) throws IOException {
+        Path uploadPath = Paths.get(link);
+        if (!Files.exists(uploadPath)) {
+            try {
+                Files.createDirectories(uploadPath);
+            } catch (IOException e) {
+                System.err.println("Error creating upload directories for base64: " + uploadPath.toString() + " - " + e.getMessage());
+                throw new IOException("Could not create upload directory for base64: " + uploadPath.toString(), e);
+            }
+        }
+
         Calendar cal = Calendar.getInstance();
         Long millisDate = cal.getTimeInMillis();
-        String path = link + "/" + millisDate.toString() + "." + fileType;
-        byte[] imageByte= Base64.decodeBase64(base64File);
-        new FileOutputStream(path).write(imageByte);
-        return millisDate + "." + fileType;
+        String filename = millisDate.toString() + "." + fileType;
+        Path filePath = uploadPath.resolve(filename);
+
+        byte[] imageByte = Base64.decodeBase64(base64File);
+        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) { // Convert Path to File
+            fos.write(imageByte);
+        } catch (IOException e) {
+            System.err.println("Error saving base64 file: " + filePath.toString() + " - " + e.getMessage());
+            throw new IOException("Could not save base64 file: " + filePath.toString(), e);
+        }
+        return filename;
     }
 }

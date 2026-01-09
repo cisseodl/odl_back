@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -24,4 +25,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.course = :course")
     Long countByCourse(@Param("course") Courses course);
+
+    long countByCourse_Instructor_IdAndCreatedAtAfter(Long instructorId, LocalDateTime date);
+
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.course.id = :courseId AND r.createdAt BETWEEN :start AND :end")
+    Double findAverageRatingByCourseIdAndCreatedAtBetween(@Param("courseId") Long courseId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

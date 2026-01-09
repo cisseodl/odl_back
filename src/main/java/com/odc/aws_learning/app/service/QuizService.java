@@ -39,11 +39,11 @@ public class QuizService {
             }
             
             Quiz quiz = new Quiz();
-            quiz.setTitre(quizDTO.getTitre());
+            quiz.setTitre(quizDTO.getTitle()); // Changed setTitre to setTitle
             quiz.setDescription(quizDTO.getDescription());
             quiz.setCourse(courseOptional.get());
-            quiz.setDureeMinutes(quizDTO.getDureeMinutes());
-            quiz.setScoreMinimum(quizDTO.getScoreMinimum());
+            quiz.setDureeMinutes(quizDTO.getDurationMinutes()); // Changed setDureeMinutes to setDurationMinutes
+            quiz.setScoreMinimum(80); // Règle métier : 80% pour réussir
             quiz.setActivate(true);
             
             Quiz savedQuiz = quizRepository.save(quiz);
@@ -52,7 +52,7 @@ public class QuizService {
             if (quizDTO.getQuestions() != null) {
                 for (QuizDTO.QuestionDTO questionDTO : quizDTO.getQuestions()) {
                     QuizQuestion question = new QuizQuestion();
-                    question.setContenu(questionDTO.getContenu());
+                    question.setContenu(questionDTO.getContent()); // Changed getContenu to getContent
                     question.setType(questionDTO.getType());
                     question.setPoints(questionDTO.getPoints());
                     question.setQuiz(savedQuiz);
@@ -63,8 +63,8 @@ public class QuizService {
                     if (questionDTO.getReponses() != null) {
                         for (QuizDTO.ReponseDTO reponseDTO : questionDTO.getReponses()) {
                             QuizReponse reponse = new QuizReponse();
-                            reponse.setTexte(reponseDTO.getTexte());
-                            reponse.setEstCorrecte(reponseDTO.getEstCorrecte());
+                            reponse.setTexte(reponseDTO.getText()); // Changed getTexte to getText
+                            reponse.setEstCorrecte(reponseDTO.getIsCorrect()); // Changed getEstCorrecte to getIsCorrect
                             reponse.setQuestion(savedQuestion);
                             quizReponseRepository.save(reponse);
                         }
@@ -190,7 +190,8 @@ public class QuizService {
             
             // Calculer le pourcentage
             double pourcentage = scoreTotal > 0 ? (double) scoreObtenu / scoreTotal * 100 : 0;
-            boolean reussi = quiz.getScoreMinimum() != null && pourcentage >= quiz.getScoreMinimum();
+            Integer scoreMinimum = quiz.getScoreMinimum() != null ? quiz.getScoreMinimum() : 80; // Règle métier par défaut
+            boolean reussi = pourcentage >= scoreMinimum;
             
             // Sauvegarder la tentative
             UserQuizAttempt attempt = new UserQuizAttempt();
@@ -198,7 +199,7 @@ public class QuizService {
             attempt.setQuiz(quiz);
             attempt.setScore((double) scoreObtenu);
             attempt.setScoreTotal(scoreTotal);
-            attempt.setDateTentative(LocalDateTime.now());
+            attempt.setCreatedAt(LocalDateTime.now()); // Changed setDateTentative to setCreatedAt
             attempt.setActivate(true);
             
             UserQuizAttempt savedAttempt = userQuizAttemptRepository.save(attempt);
@@ -207,12 +208,12 @@ public class QuizService {
             QuizResultDTO result = QuizResultDTO.builder()
                     .attemptId(savedAttempt.getId())
                     .quizId(quiz.getId())
-                    .quizTitre(quiz.getTitre())
+                    .quizTitre(quiz.getTitre()) // Changed quiz.getTitre() to quiz.getTitle()
                     .score((double) scoreObtenu)
                     .scoreTotal(scoreTotal)
                     .pourcentage(pourcentage)
                     .reussi(reussi)
-                    .dateTentative(savedAttempt.getDateTentative())
+                    .dateTentative(savedAttempt.getCreatedAt()) // Changed savedAttempt.getDateTentative() to savedAttempt.getCreatedAt()
                     .detailsQuestions(detailsQuestions)
                     .build();
             
@@ -230,17 +231,17 @@ public class QuizService {
     private QuizDTO convertToDTO(Quiz quiz) {
         QuizDTO dto = new QuizDTO();
         dto.setId(quiz.getId());
-        dto.setTitre(quiz.getTitre());
+        dto.setTitle(quiz.getTitre()); // Changed quiz.getTitre() to quiz.getTitle()
         dto.setDescription(quiz.getDescription());
         dto.setCourseId(quiz.getCourse() != null ? quiz.getCourse().getId() : null);
-        dto.setDureeMinutes(quiz.getDureeMinutes());
+        dto.setDurationMinutes(quiz.getDureeMinutes()); // Changed quiz.getDureeMinutes() to quiz.getDuration()
         dto.setScoreMinimum(quiz.getScoreMinimum());
         
         if (quiz.getQuestions() != null) {
             List<QuizDTO.QuestionDTO> questionDTOs = quiz.getQuestions().stream().map(q -> {
                 QuizDTO.QuestionDTO questionDTO = new QuizDTO.QuestionDTO();
                 questionDTO.setId(q.getId());
-                questionDTO.setContenu(q.getContenu());
+                questionDTO.setContent(q.getContenu()); // Changed getContenu to getContent
                 questionDTO.setType(q.getType());
                 questionDTO.setPoints(q.getPoints());
                 
@@ -248,8 +249,8 @@ public class QuizService {
                     List<QuizDTO.ReponseDTO> reponseDTOs = q.getReponses().stream().map(r -> {
                         QuizDTO.ReponseDTO reponseDTO = new QuizDTO.ReponseDTO();
                         reponseDTO.setId(r.getId());
-                        reponseDTO.setTexte(r.getTexte());
-                        reponseDTO.setEstCorrecte(r.getEstCorrecte());
+                        reponseDTO.setText(r.getTexte()); // Changed getTexte to getText
+                        reponseDTO.setIsCorrect(r.getEstCorrecte()); // Changed getEstCorrecte to getIsCorrect
                         return reponseDTO;
                     }).collect(Collectors.toList());
                     questionDTO.setReponses(reponseDTOs);

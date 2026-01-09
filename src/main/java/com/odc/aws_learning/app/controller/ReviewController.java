@@ -3,6 +3,7 @@ package com.odc.aws_learning.app.controller;
 import com.odc.aws_learning.app.service.ReviewService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,5 +31,11 @@ public class ReviewController {
     @GetMapping("/{courseId}/reviews")
     public CResponse<?> getReviewsByCourse(@PathVariable Long courseId) {
         return reviewService.getReviewsByCourse(courseId);
+    }
+
+    @GetMapping("/reviews/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CResponse<?> getAllReviews() {
+        return reviewService.getAllReviews();
     }
 }

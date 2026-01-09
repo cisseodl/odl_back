@@ -28,7 +28,7 @@ public class ModuleController {
     }
 
     @GetMapping("/course/{courseId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> getModulesByCourse(@PathVariable Long courseId) {
         return moduleService.getModulesByCourse(courseId);
     }

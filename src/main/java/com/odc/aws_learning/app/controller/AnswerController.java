@@ -24,14 +24,14 @@ public class AnswerController {
     }
 
     @PostMapping("/save-learner-test")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> saveLearnerTest(@RequestBody Evaluations_QuestionsReponses evaluations_questionsReponses) {
         System.err.println(evaluations_questionsReponses.getEvaluationId());
         return answerService.saveLearnerTest(evaluations_questionsReponses);
     }
 
     @GetMapping("/get-all")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> getAll() {
         return answerService.getAll();
     }

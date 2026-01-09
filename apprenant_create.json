@@ -1,0 +1,9 @@
+{
+  "nom": "Dupont",
+  "prenom": "Jean",
+  "profession": "Etudiant",
+  "niveauEtude": "Master",
+  "filiere": "Informatique",
+  "attentes": "Apprendre le développement backend avec Spring Boot",
+  "satisfaction": true
+}

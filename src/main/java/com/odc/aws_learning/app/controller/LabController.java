@@ -35,7 +35,7 @@ public class LabController {
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN)
      */
     @GetMapping("/")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<CResponse<List<LabDefinition>>> getAllLabs() {
         CResponse<List<LabDefinition>> response = labService.getAllLabs();
         return ResponseEntity.ok(response);
@@ -47,7 +47,7 @@ public class LabController {
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN)
      */
     @PostMapping("/start/{labId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<CResponse<LabSession>> startLab(@PathVariable Long labId) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
@@ -64,7 +64,7 @@ public class LabController {
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN)
      */
     @PostMapping("/stop/{sessionId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<CResponse<LabSession>> stopLab(@PathVariable Long sessionId) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
@@ -93,7 +93,7 @@ public class LabController {
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN)
      */
     @PostMapping("/submit/{sessionId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<CResponse<LabSession>> submitLab(
             @PathVariable Long sessionId,
             @RequestBody(required = false) SubmitLabRequest request) {
@@ -123,7 +123,7 @@ public class LabController {
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN)
      */
     @GetMapping("/my-sessions")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<CResponse<List<LabSession>>> getMySessions() {
         User currentUser = getCurrentUser();
         if (currentUser == null) {

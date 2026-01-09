@@ -2,7 +2,7 @@ package com.odc.aws_learning.auth.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.odc.aws_learning.app.entity.Apprenant;
+
 import com.odc.aws_learning.auth.dao.request.SignUpRequest;
 import com.odc.aws_learning.auth.dao.request.SigninRequest;
 import com.odc.aws_learning.auth.dao.request.UpdatePass;
@@ -14,12 +14,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 
+import org.springframework.http.MediaType;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
-    @PostMapping("/signup")
+    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CResponse<JwtAuthenticationResponse> signup(@RequestParam("user") String userString,
                                                        @RequestParam(value = "avatar", required = false)MultipartFile avatar) throws JsonProcessingException {
         SignUpRequest request = new ObjectMapper().readValue(userString, SignUpRequest.class);
@@ -41,11 +43,7 @@ public class AuthenticationController {
         return authenticationService.updatePassword(updatePass);
     }
 
-    @PostMapping("/create-learner/{cohorteId}")
-    CResponse<?> createLearner(@RequestParam("learner") String apprenantString, @RequestParam("photo") MultipartFile photo, @PathVariable Long cohorteId) throws JsonProcessingException {
-        Apprenant apprenant = new ObjectMapper().readValue(apprenantString, Apprenant.class);
-        return authenticationService.createLearner(apprenant, photo, cohorteId);
-    }
+
 
     @GetMapping("/check-availability")
     public String availability() {

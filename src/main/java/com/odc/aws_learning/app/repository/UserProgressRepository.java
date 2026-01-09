@@ -22,4 +22,6 @@ public interface UserProgressRepository extends JpaRepository<UserProgress, Long
     // Méthode manquante
     @Query("SELECT COUNT(DISTINCT up.user) FROM UserProgress up WHERE up.lesson.module.course = :course")
     long countDistinctUsersByCourse(@Param("course") Courses course);
+
+    long countByUser_IdAndLesson_Module_Course_Id(Long userId, Long courseId);
 }

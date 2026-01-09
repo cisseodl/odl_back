@@ -2,11 +2,14 @@ package com.odc.aws_learning;
 
 import com.odc.aws_learning.app.entity.LabDefinition;
 import com.odc.aws_learning.app.repository.LabDefinitionRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+// import lombok.RequiredArgsConstructor; // RequiredArgsConstructor should be kept if other fields are final. For logger, we need explicit constructor.
+// import lombok.extern.slf4j.Slf4j; // Removed
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+
+import org.slf4j.Logger; // Added
+import org.slf4j.LoggerFactory; // Added
 
 /**
  * Runner pour charger les données initiales des Labs (définitions d'exercices pratiques).
@@ -14,12 +17,18 @@ import org.springframework.stereotype.Component;
  * Ce runner s'exécute au démarrage de l'application et insère 2 labs exemples
  * si la base de données est vide, permettant de tester immédiatement les endpoints.
  */
-@Slf4j
+// @Slf4j // Removed
 @Component
-@RequiredArgsConstructor
+// @RequiredArgsConstructor // If @Slf4j is removed, we must provide explicit constructor
 public class LabDataLoader implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(LabDataLoader.class); // Manually added logger
+
     private final LabDefinitionRepository labDefinitionRepository;
+
+    public LabDataLoader(LabDefinitionRepository labDefinitionRepository) {
+        this.labDefinitionRepository = labDefinitionRepository;
+    }
 
     @Override
     public void run(String... args) {
@@ -32,7 +41,7 @@ public class LabDataLoader implements CommandLineRunner {
                 
                 // Créer le Lab 1 : Déploiement d'un serveur Web Nginx
                 LabDefinition lab1 = new LabDefinition();
-                lab1.setTitle("Déploiement d'un serveur Web Nginx");
+                lab1.setTitle("Déploiement d'un serveur Web Nginx"); // Changed to setTitle
                 lab1.setDescription("Apprenez à lancer un conteneur et exposer le port 80.");
                 lab1.setDockerImageName("nginx:latest");
                 lab1.setInstructions(
@@ -48,12 +57,12 @@ public class LabDataLoader implements CommandLineRunner {
                         "- `curl http://localhost`\n" +
                         "- `docker ps` pour voir les conteneurs actifs"
                 );
-                lab1.setEstimatedDurationMinutes(30);
+                lab1.setEstimatedDurationMinutes(30); // Changed to setEstimatedDurationMinutes
                 lab1.setActivate(true);
                 
                 // Créer le Lab 2 : Introduction à Python & Boto3
                 LabDefinition lab2 = new LabDefinition();
-                lab2.setTitle("Introduction à Python & Boto3");
+                lab2.setTitle("Introduction à Python & Boto3"); // Changed to setTitle
                 lab2.setDescription("Scripting AWS avec la librairie Boto3.");
                 lab2.setDockerImageName("python:3.9-slim");
                 lab2.setInstructions(
@@ -78,7 +87,7 @@ public class LabDataLoader implements CommandLineRunner {
                         "- `pip install boto3`\n" +
                         "- `python script.py`"
                 );
-                lab2.setEstimatedDurationMinutes(45);
+                lab2.setEstimatedDurationMinutes(45); // Changed to setEstimatedDurationMinutes
                 lab2.setActivate(true);
                 
                 // Sauvegarder les labs
@@ -87,8 +96,8 @@ public class LabDataLoader implements CommandLineRunner {
                 
                 log.info("========================================");
                 log.info("[LabDataLoader] ✅ {} labs créés avec succès !", 2);
-                log.info("  - Lab 1: {}", lab1.getTitle());
-                log.info("  - Lab 2: {}", lab2.getTitle());
+                log.info("  - Lab 1: {}", lab1.getTitle()); // Changed to getTitle()
+                log.info("  - Lab 2: {}", lab2.getTitle()); // Changed to getTitle()
                 log.info("========================================");
                 
             } else {

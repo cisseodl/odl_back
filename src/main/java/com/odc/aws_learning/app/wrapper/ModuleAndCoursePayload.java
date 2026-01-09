@@ -1,13 +1,13 @@
 package com.odc.aws_learning.app.wrapper;
 
 import com.odc.aws_learning.app.constante.CourseLevel;
-import com.odc.aws_learning.app.entity.Module;
+import com.odc.aws_learning.app.dto.ModuleCreationRequest;
 
 import java.util.List;
 
 public class ModuleAndCoursePayload {
     public Long courseId;
-    public List<Module> modules;
+    public List<ModuleCreationRequest> modules;
     public CourseLevel courseType;
 
     public CourseLevel getCourseType() {
@@ -26,11 +26,11 @@ public class ModuleAndCoursePayload {
         this.courseId = courseId;
     }
 
-    public List<Module> getModules() {
+    public List<ModuleCreationRequest> getModules() {
         return modules;
     }
 
-    public void setModules(List<Module> modules) {
+    public void setModules(List<ModuleCreationRequest> modules) {
         this.modules = modules;
     }
 }

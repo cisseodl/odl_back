@@ -1,0 +1,103 @@
+Merci pour les détails 👍
+Tu fais bien, ça aide beaucoup pour le diagnostic.
+
+Tu obtiens une erreur 500 (Internal Server Error), donc le problème vient du backend, pas de ta requête côté client.
+
+🔍 Ce que ça signifie
+
+Le serveur reçoit bien la requête, mais une exception se produit côté application (Spring Boot probablement).
+
+{
+  "status": 500,
+  "error": "Internal Server Error",
+  "path": "/awsodclearning/api/admin/reports/audit/logs"
+}
+
+
+👉 Donc :
+
+Token OK (sinon 401)
+
+Endpoint OK (sinon 404)
+
+Problème dans le code Java
+
+✅ Étapes pour corriger
+1️⃣ Vérifie les logs du serveur (TRÈS IMPORTANT)
+
+Dans la console où tourne ton backend :
+
+Exception...
+NullPointerException
+SQL error
+Invalid column
+...
+
+
+👉 Copie-colle moi le message d’erreur exact
+
+2️⃣ Problèmes fréquents pour ce endpoint
+🔴 a) Mauvais paramètre sort
+
+Tu envoies :
+
+sort=string
+
+
+➡️ Spring attend normalement :
+
+sort=field,asc
+
+
+Essaie :
+
+curl -X GET \
+"http://localhost:8080/awsodclearning/api/admin/reports/audit/logs?page=0&size=1&sort=timestamp,desc"
+
+🔴 b) Repository mal configuré
+
+Souvent l’erreur vient de :
+
+findAll(Pageable pageable)
+
+
+ou
+
+@Query(...)
+
+
+Colonne inexistante
+
+Mauvais mapping Entity
+
+Date mal parsée
+
+🔴 c) Problème avec les dates
+
+Tu as :
+
+startDate
+endDate
+
+
+Si ton code parse LocalDate :
+
+LocalDate.parse(startDate)
+
+
+➡️ Il faut format :
+
+2025-01-09
+
+🔴 d) Mauvaise gestion des filtres optionnels
+
+Si tu fais :
+
+if(action.equals("LOGIN")) { ... }
+
+
+➡️ mais action = null → NullPointerException
+
+Solution :
+
+if("LOGIN".equals(action)) { ... }

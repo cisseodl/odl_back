@@ -1,15 +1,13 @@
 package com.odc.aws_learning.app.dto;
 
-
 import java.util.List;
+import java.util.Objects;
 
 public class ProfileDto {
     private Long id;
     private String fullName;
     private String email;
     private String avatar;
-    // Assuming we will create a simplified Course DTO for these lists
-    // For now, using strings as placeholders
     private List<String> enrolledCourses;
     private List<String> completedCourses;
     private List<String> certificates;
@@ -83,63 +81,35 @@ public class ProfileDto {
         this.certificates = certificates;
     }
 
-    public static ProfileDtoBuilder builder() {
-        return new ProfileDtoBuilder();
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ProfileDto that = (ProfileDto) o;
+        return Objects.equals(id, that.id) &&
+               Objects.equals(fullName, that.fullName) &&
+               Objects.equals(email, that.email) &&
+               Objects.equals(avatar, that.avatar) &&
+               Objects.equals(enrolledCourses, that.enrolledCourses) &&
+               Objects.equals(completedCourses, that.completedCourses) &&
+               Objects.equals(certificates, that.certificates);
     }
 
-    public static class ProfileDtoBuilder {
-        private Long id;
-        private String fullName;
-        private String email;
-        private String avatar;
-        private List<String> enrolledCourses;
-        private List<String> completedCourses;
-        private List<String> certificates;
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, fullName, email, avatar, enrolledCourses, completedCourses, certificates);
+    }
 
-        ProfileDtoBuilder() {
-        }
-
-        public ProfileDtoBuilder id(Long id) {
-            this.id = id;
-            return this;
-        }
-
-        public ProfileDtoBuilder fullName(String fullName) {
-            this.fullName = fullName;
-            return this;
-        }
-
-        public ProfileDtoBuilder email(String email) {
-            this.email = email;
-            return this;
-        }
-
-        public ProfileDtoBuilder avatar(String avatar) {
-            this.avatar = avatar;
-            return this;
-        }
-
-        public ProfileDtoBuilder enrolledCourses(List<String> enrolledCourses) {
-            this.enrolledCourses = enrolledCourses;
-            return this;
-        }
-
-        public ProfileDtoBuilder completedCourses(List<String> completedCourses) {
-            this.completedCourses = completedCourses;
-            return this;
-        }
-
-        public ProfileDtoBuilder certificates(List<String> certificates) {
-            this.certificates = certificates;
-            return this;
-        }
-
-        public ProfileDto build() {
-            return new ProfileDto(id, fullName, email, avatar, enrolledCourses, completedCourses, certificates);
-        }
-
-        public String toString() {
-            return "ProfileDto.ProfileDtoBuilder(id=" + this.id + ", fullName=" + this.fullName + ", email=" + this.email + ", avatar=" + this.avatar + ", enrolledCourses=" + this.enrolledCourses + ", completedCourses=" + this.completedCourses + ", certificates=" + this.certificates + ")";
-        }
+    @Override
+    public String toString() {
+        return "ProfileDto{" +
+               "id=" + id +
+               ", fullName='" + fullName + '\'' +
+               ", email='" + email + '\'' +
+               ", avatar='" + avatar + '\'' +
+               ", enrolledCourses=" + enrolledCourses +
+               ", completedCourses=" + completedCourses +
+               ", certificates=" + certificates +
+               '}';
     }
 }

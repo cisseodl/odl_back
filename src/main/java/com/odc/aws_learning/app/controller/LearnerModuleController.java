@@ -19,7 +19,7 @@ public class LearnerModuleController {
     }
 
     @PostMapping("/save")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'LEARNER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public CResponse<?> saveLearner(ValidateModule validateModule){
         return learnerService.saveLearner(validateModule);
     }

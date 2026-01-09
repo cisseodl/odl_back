@@ -38,100 +38,72 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final UploadFileService uploadFileService;
     private final SendEmailService sendEmailService;
-    private final ApprenantRepository apprenantRepository;
-    private final CohorteRepository cohorteRepository;
+
 
     @Override
     public CResponse<JwtAuthenticationResponse> signup(SignUpRequest request, MultipartFile avatar) {
-        request.setRole(Role.USER);
        try {
-           if (request.getId() != null) {
-               Optional<User> userOptional = userRepository.findById(request.getId());
-               if (userOptional.isPresent()) {
-                   // update user
-                   User oldUser = userOptional.get();
-
-                   oldUser.setRole(request.getRole());
-                   oldUser.setFullName(request.getFullName());
-                   oldUser.setPhone(request.getPhone());
-                   oldUser.setEmail(request.getPhone());
-//                   oldUser.setFirstName(request.getFirstName());
-                   oldUser.setAdmin(true);
-                   oldUser.setActivate(true);
-                   oldUser.setPassword(passwordEncoder.encode(request.getPassword()));
-
-                   if (avatar != null) {
-                       // update avatar
-                       oldUser.setAvatar(uploadFileService.updateFile(avatar, UploadLink.DOWNLOAD_LINK, oldUser.getAvatar()));
-                   }
-
-                   Optional<User> userOptionalFounForExistMail = userRepository.findByEmail(request.getEmail());
-                   if (userOptionalFounForExistMail.isPresent()) {
-                       return CResponse.error("Cette adresse email est déjà utilisée pour un autre compte");
-                   }
-                   userRepository.save(oldUser);
-                   var jwt = jwtService.generateToken(oldUser);
-                   JwtAuthenticationResponse authenticationResponse = JwtAuthenticationResponse.builder().token(jwt).user(oldUser).build();
-                   return CResponse.success(authenticationResponse, "Authentification réussie");
-               }
+           // Check if user with this email already exists
+           if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+               return CResponse.error("Cette adresse email est déjà utilisée pour un autre compte");
            }
 
-//           if (avatar == null) {
-//               return CResponse.error("Veuillez charger une photo de l'utilisateur");
-//           }
            // save new user
            User user = new User();
-           user.setRole(request.getRole());
-           user.setFullName(request.getFullName());
-           user.setPhone(request.getPhone());
-           user.setEmail(request.getPhone());
-//           user.setFirstName(request.getFirstName());
-           user.setAdmin(true);
-           user.setActivate(true);
+           // Vérifier que les données essentielles sont présentes
+           if (request.getFullName() == null || request.getFullName().trim().isEmpty()) {
+               return CResponse.error("Le nom complet est requis.");
+           }
+           if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+               return CResponse.error("L'email est requis.");
+           }
+           if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+               return CResponse.error("Le mot de passe est requis.");
+           }
+           
+           user.setFullName(request.getFullName().trim());
+           user.setEmail(request.getEmail().trim());
+           // Phone est optionnel, donc on peut le laisser null si non fourni
+           if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+               user.setPhone(request.getPhone().trim());
+           }
+           // user.setAdmin(true); // Removed as role is determined by linked entity
+           user.setActivate(true); // User is active by default upon signup
            user.setPassword(passwordEncoder.encode(request.getPassword()));
            if (avatar != null) {
                user.setAvatar(uploadFileService.uploadFile(avatar, UploadLink.DOWNLOAD_LINK + "/avatar"));
            }
 
-           userRepository.save(user);
-           var jwt = jwtService.generateToken(user);
-           JwtAuthenticationResponse authenticationResponse = JwtAuthenticationResponse.builder().token(jwt).user(user).build();
+           User savedUser = userRepository.save(user);
+           // Flush pour s'assurer que l'utilisateur est bien sauvegardé avant de continuer
+           userRepository.flush();
+           
+           // Recharger l'utilisateur depuis la base pour s'assurer qu'il a toutes les données
+           savedUser = userRepository.findById(savedUser.getId())
+                   .orElseThrow(() -> new RuntimeException("Erreur lors de la sauvegarde de l'utilisateur"));
+           
+           // Log pour déboguer - vérifier que les données sont bien sauvegardées
+           System.out.println("User saved with ID: " + savedUser.getId());
+           System.out.println("User fullName: " + savedUser.getFullName());
+           System.out.println("User email: " + savedUser.getEmail());
+           System.out.println("User phone: " + savedUser.getPhone());
+           
+           // Vérifier que fullName n'est pas null avant de continuer
+           if (savedUser.getFullName() == null || savedUser.getFullName().trim().isEmpty()) {
+               System.err.println("WARNING: User saved but fullName is null or empty! User ID: " + savedUser.getId());
+           }
+           
+           var jwt = jwtService.generateToken(savedUser);
+           JwtAuthenticationResponse authenticationResponse = new JwtAuthenticationResponse(jwt, savedUser);
            return CResponse.success(authenticationResponse, "Création de l'utilisateur réussie");
        } catch (Exception e) {
            System.err.println(e);
+           e.printStackTrace(); // For debugging
            return CResponse.error("Erreur de création de compte");
        }
     }
 
-    @Override
-    public CResponse<?> createLearner(Apprenant apprenant, MultipartFile photo, Long cohorteId) {
-        try {
-            Optional<Cohorte> cohorteOptional = cohorteRepository.findById(cohorteId);
-            cohorteOptional.ifPresent(apprenant::setCohorte);
-            String passwordGenerated = makePassword(6);
-            Apprenant apprenantSaved = apprenantRepository.save(apprenant);
-            User user = new User();
-            user.setLearner(apprenantSaved);
-            user.setAvatar(uploadFileService.uploadFile(photo, UploadLink.DOWNLOAD_LINK + "/avatar"));
-            user.setFullName(apprenantSaved.getPrenom() + " " + apprenantSaved.getNom());
-            user.setPhone(apprenantSaved.getNumero());
-            user.setEmail(apprenantSaved.getEmail());
-            user.setRole(Role.USER);
-            user.setAdmin(false);
-            user.setActivate(true);
-            user.setPassword(passwordEncoder.encode(passwordGenerated));
 
-            User userSaved = userRepository.save(user);
-
-            // Email désactivé pour le développement local
-            // sendEmailService.sendEmailWithAttachment(userSaved.getEmail(), sendEmailService.mailTemplatePassword(passwordGenerated), "CONNEXION À ORANGE DIGITAL LEARNING");
-            System.out.println("DEBUG - Mot de passe généré pour l'apprenant: " + passwordGenerated);
-
-            return CResponse.success(userSaved, "Apprenant enregistré avec succès");
-        } catch (Exception e) {
-            return CResponse.error("Erreur de création de l'apprenant");
-        }
-    }
 
     @Override
     public CResponse<?> updatePassword(UpdatePass updatePass) {
@@ -171,10 +143,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             
             // Générer le token JWT
         var jwt = jwtService.generateToken(user);
-            JwtAuthenticationResponse authenticationResponse = JwtAuthenticationResponse.builder()
-                    .token(jwt)
-                    .user(user)
-                    .build();
+            JwtAuthenticationResponse authenticationResponse = new JwtAuthenticationResponse(jwt, user);
             
             System.out.println("DEBUG - Connexion réussie pour: " + request.getEmail());
         return CResponse.success(authenticationResponse, "Authentification réussie");

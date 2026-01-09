@@ -1,23 +1,19 @@
 package com.odc.aws_learning.auth.base.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.Objects;
 
 @EntityListeners(AuditingEntityListener.class)
@@ -31,21 +27,21 @@ public class BaseEntity implements CEntity {
     @Column(name = "created_by")
     protected String createdBy;
 
-    @CreatedBy
+    @LastModifiedBy
     @Column(name = "modified_by")
     protected String lastModifiedBy;
 
     private boolean activate = true;
 
     @CreatedDate
-    @Column(name = "created_at", columnDefinition = "DATETIME")
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     protected LocalDateTime createdAt = LocalDateTime.now();
 
     @LastModifiedDate
-    @Column(name = "last_modified_at", columnDefinition = "DATETIME")
+    @Column(name = "last_modified_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
@@ -55,6 +51,7 @@ public class BaseEntity implements CEntity {
     }
 
     @Override
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public Long getId() {
         return id;
     }
@@ -65,6 +62,7 @@ public class BaseEntity implements CEntity {
     }
 
     @Override
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public String getCreatedBy() {
         return createdBy;
     }
@@ -75,6 +73,7 @@ public class BaseEntity implements CEntity {
     }
 
     @Override
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public String getLastModifiedBy() {
         return lastModifiedBy;
     }
@@ -93,6 +92,7 @@ public class BaseEntity implements CEntity {
     }
 
     @Override
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -103,6 +103,7 @@ public class BaseEntity implements CEntity {
     }
 
     @Override
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public LocalDateTime getLastModifiedAt() {
         return lastModifiedAt;
     }

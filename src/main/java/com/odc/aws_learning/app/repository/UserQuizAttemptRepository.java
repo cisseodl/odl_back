@@ -18,7 +18,7 @@ public interface UserQuizAttemptRepository extends JpaRepository<UserQuizAttempt
 
     List<UserQuizAttempt> findByUserIdAndQuizId(Long userId, Long quizId);
 
-    Optional<UserQuizAttempt> findFirstByUserIdAndQuizIdOrderByDateTentativeDesc(Long userId, Long quizId);
+    Optional<UserQuizAttempt> findFirstByUserIdAndQuizIdOrderByCreatedAtDesc(Long userId, Long quizId);
 
     Optional<UserQuizAttempt> findFirstByUserIdAndQuizIdOrderByScoreDesc(Long userId, Long quizId);
 
@@ -53,4 +53,9 @@ public interface UserQuizAttemptRepository extends JpaRepository<UserQuizAttempt
      */
     @Query("SELECT COUNT(a) FROM UserQuizAttempt a WHERE a.score >= a.quiz.scoreMinimum")
     long countAllCertificates();
+
+    @Query("SELECT AVG((a.score / a.scoreTotal) * 100.0) FROM UserQuizAttempt a WHERE a.quiz.course.instructor.id = :instructorId AND a.scoreTotal > 0")
+    Double findAverageScoreByInstructorId(@Param("instructorId") Long instructorId);
+
+    Optional<UserQuizAttempt> findFirstByUser_IdAndQuiz_Course_IdOrderByScoreDesc(Long userId, Long courseId);
 }

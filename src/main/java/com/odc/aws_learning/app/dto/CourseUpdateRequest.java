@@ -25,11 +25,12 @@ public class CourseUpdateRequest {
     private Set<String> features;
     private Boolean bestseller;
     private List<ModuleUpdateRequest> modules;
+    private com.odc.aws_learning.app.constante.CourseStatus status;
 
     public CourseUpdateRequest() {
     }
 
-    public CourseUpdateRequest(String title, String subtitle, String description, String imagePath, Long instructorId, Long categoryId, CourseLevel level, String language, Set<String> objectives, Set<String> features, Boolean bestseller, List<ModuleUpdateRequest> modules) {
+    public CourseUpdateRequest(String title, String subtitle, String description, String imagePath, Long instructorId, Long categoryId, CourseLevel level, String language, Set<String> objectives, Set<String> features, Boolean bestseller, List<ModuleUpdateRequest> modules, com.odc.aws_learning.app.constante.CourseStatus status) {
         this.title = title;
         this.subtitle = subtitle;
         this.description = description;
@@ -42,8 +43,17 @@ public class CourseUpdateRequest {
         this.features = features;
         this.bestseller = bestseller;
         this.modules = modules;
+        this.status = status;
     }
     // ... (getters/setters existants)
+
+    public com.odc.aws_learning.app.constante.CourseStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(com.odc.aws_learning.app.constante.CourseStatus status) {
+        this.status = status;
+    }
 
     public List<ModuleUpdateRequest> getModules() {
         return modules;

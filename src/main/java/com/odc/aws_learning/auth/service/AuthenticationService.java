@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface AuthenticationService {
     CResponse<JwtAuthenticationResponse> signup(SignUpRequest request, MultipartFile avatar);
 
-    CResponse<?> createLearner(Apprenant apprenant, MultipartFile photo, Long cohorteId);
+
 
     CResponse<?> updatePassword(UpdatePass updatePass);
 
