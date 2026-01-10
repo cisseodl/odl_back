@@ -64,7 +64,7 @@ public class SecurityConfiguration {
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:*",
             "http://127.0.0.1:*",
-            "http://odc-learning-backend-env.eba-ruizssvt.us-east-1.elasticbeanstalk.com"
+            "https://main.d7kfdxiyupcrp.amplifyapp.com"
         ));
         // Méthodes HTTP explicites incluant OPTIONS pour les requêtes preflight
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

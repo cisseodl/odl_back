@@ -9,11 +9,19 @@ public enum CourseLevel {
 
     @JsonCreator
     public static CourseLevel fromString(String value) {
-        return switch (value.toUpperCase()) {
-            case "BEGINNER", "DEBUTANT" -> DEBUTANT;
-            case "INTERMEDIATE", "INTERMEDIAIRE" -> INTERMEDIAIRE;
-            case "ADVANCED", "AVANCE" -> AVANCE;
-            default -> throw new IllegalArgumentException("Niveau invalide: " + value);
-        };
+        String upperValue = value.toUpperCase();
+        switch (upperValue) {
+            case "BEGINNER":
+            case "DEBUTANT":
+                return DEBUTANT;
+            case "INTERMEDIATE":
+            case "INTERMEDIAIRE":
+                return INTERMEDIAIRE;
+            case "ADVANCED":
+            case "AVANCE":
+                return AVANCE;
+            default:
+                throw new IllegalArgumentException("Niveau invalide: " + value);
+        }
     }
 }
