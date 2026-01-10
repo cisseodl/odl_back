@@ -63,7 +63,7 @@ public class InstructorController {
     public CResponse<?> updateInstructor(@PathVariable Long id,
                                           @org.springframework.web.bind.annotation.RequestBody InstructorUpdateRequest request) { // Utilisation du DTO
         // Additional logic might be needed here to ensure an instructor can only update their own profile
-        return instructorService.updateInstructor(id, request.getBiography(), request.getSpecialization());
+        return instructorService.updateInstructor(id, request);
     }
 
     // Endpoint for deleting an Instructor (unlinking the Instructor entity from the User)

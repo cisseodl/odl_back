@@ -73,84 +73,129 @@ public class CourseService {
     }
 
     public CourseDto getCourseById(Long id) {
-        Courses course = coursesRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Course not found with id: " + id)); // Custom exception needed
+        try {
+            Courses course = coursesRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Course not found with id: " + id)); // Custom exception needed
 
-        CourseDto courseDto = courseMapper.toDto(course);
-        populateCalculatedFields(courseDto, course);
-        return courseDto;
+            CourseDto courseDto = courseMapper.toDto(course);
+            populateCalculatedFields(courseDto, course);
+            return courseDto;
+        } catch (Exception e) {
+            System.err.println("Error in getCourseById for id " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Erreur lors de la récupération du cours: " + e.getMessage(), e);
+        }
     }
 
     public List<CourseDto> getAllCourses(
             String category, CourseLevel level, String language, Boolean bestseller, CourseStatus status,
             int page, int size, String sortBy, String sortDir) {
+        try {
+            Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() :
+                    Sort.by(sortBy).descending();
+            Pageable pageable = PageRequest.of(page, size, sort);
 
-        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() :
-                Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<Courses> coursesPage;
-        // Basic filtering logic, can be expanded for more complex queries
-        if (status != null) {
-            coursesPage = this.coursesRepository.findByStatus(status, pageable);
-        } else if (category != null && !category.isEmpty()) {
-            // Find category by title (needs a method in CategorieRepository)
-            Optional<Categorie> cat = this.categorieRepository.findByTitle(category);
-            if (cat.isPresent()) {
-                coursesPage = this.coursesRepository.findByCategorieId(cat.get().getId(), pageable);
+            Page<Courses> coursesPage;
+            // Basic filtering logic, can be expanded for more complex queries
+            if (status != null) {
+                coursesPage = this.coursesRepository.findByStatus(status, pageable);
+            } else if (category != null && !category.isEmpty()) {
+                // Find category by title (needs a method in CategorieRepository)
+                Optional<Categorie> cat = this.categorieRepository.findByTitle(category);
+                if (cat.isPresent()) {
+                    coursesPage = this.coursesRepository.findByCategorieId(cat.get().getId(), pageable);
+                } else {
+                    coursesPage = Page.empty();
+                }
+            } else if (level != null) {
+                coursesPage = this.coursesRepository.findByLevel(level, pageable);
+            } else if (bestseller != null) {
+                coursesPage = this.coursesRepository.findByBestseller(bestseller, pageable);
             } else {
-                coursesPage = Page.empty();
+                coursesPage = this.coursesRepository.findAll(pageable);
             }
-        } else if (level != null) {
-            coursesPage = this.coursesRepository.findByLevel(level, pageable);
-        } else if (bestseller != null) {
-            coursesPage = this.coursesRepository.findByBestseller(bestseller, pageable);
-        } else {
-            coursesPage = this.coursesRepository.findAll(pageable);
+            
+            return coursesPage.getContent().stream()
+                    .map(course -> {
+                        try {
+                            CourseDto dto = this.courseMapper.toDto(course);
+                            if (dto != null) {
+                                populateCalculatedFields(dto, course);
+                            }
+                            return dto;
+                        } catch (Exception e) {
+                            System.err.println("Error processing course " + (course != null ? course.getId() : "null") + ": " + e.getMessage());
+                            e.printStackTrace();
+                            // Essayer de retourner un DTO minimal en cas d'erreur
+                            try {
+                                CourseDto dto = this.courseMapper.toDto(course);
+                                return dto;
+                            } catch (Exception e2) {
+                                System.err.println("Critical error: Cannot create DTO for course " + (course != null ? course.getId() : "null") + ": " + e2.getMessage());
+                                e2.printStackTrace();
+                                // Retourner null et filtrer plus tard
+                                return null;
+                            }
+                        }
+                    })
+                    .filter(dto -> dto != null) // Filtrer les DTOs null
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error in getAllCourses: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Erreur lors de la récupération des cours: " + e.getMessage(), e);
         }
-        
-        return coursesPage.getContent().stream()
-                .map(course -> {
-                    CourseDto dto = this.courseMapper.toDto(course);
-                    populateCalculatedFields(dto, course);
-                    return dto;
-                })
-                .collect(Collectors.toList());
     }
 
     public List<CourseDto> getCoursesByInstructorId(Long instructorId) {
-        List<Courses> courses = coursesRepository.findByInstructor_Id(instructorId);
-        return courses.stream()
-                .map(course -> {
-                    CourseDto dto = courseMapper.toDto(course);
-                    populateCalculatedFields(dto, course);
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        try {
+            List<Courses> courses = coursesRepository.findByInstructor_Id(instructorId);
+            return courses.stream()
+                    .map(course -> {
+                        try {
+                            CourseDto dto = courseMapper.toDto(course);
+                            populateCalculatedFields(dto, course);
+                            return dto;
+                        } catch (Exception e) {
+                            System.err.println("Error processing course " + course.getId() + ": " + e.getMessage());
+                            e.printStackTrace();
+                            // Retourner un DTO minimal en cas d'erreur
+                            CourseDto dto = courseMapper.toDto(course);
+                            return dto;
+                        }
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error in getCoursesByInstructorId: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Erreur lors de la récupération des cours de l'instructeur: " + e.getMessage(), e);
+        }
     }
 
     public CourseDto createCourse(CourseCreationRequest request) {
-        Courses course = new Courses();
-        course.setTitle(request.getTitle());
-        course.setSubtitle(request.getSubtitle());
-        course.setDescription(request.getDescription());
-        course.setImagePath(request.getImagePath());
-        course.setLevel(request.getLevel());
-        course.setLanguage(request.getLanguage());
+        try {
+            Courses course = new Courses();
+            course.setTitle(request.getTitle());
+            course.setSubtitle(request.getSubtitle());
+            course.setDescription(request.getDescription());
+            course.setImagePath(request.getImagePath());
+            course.setLevel(request.getLevel());
+            course.setLanguage(request.getLanguage());
+            course.setStatus(CourseStatus.BROUILLON); // Définir le statut par défaut
 
-        course.setObjectives(request.getObjectives());
-        course.setFeatures(request.getFeatures());
-        course.setCreatedAt(LocalDateTime.now()); // Set creation date
+            course.setObjectives(request.getObjectives());
+            course.setFeatures(request.getFeatures());
+            course.setCreatedAt(LocalDateTime.now()); // Set creation date
 
-        User instructor = userRepository.findById(request.getInstructorId())
-                .orElseThrow(() -> new RuntimeException("Instructor not found"));
-        course.setInstructor(instructor);
+            User instructor = userRepository.findById(request.getInstructorId())
+                    .orElseThrow(() -> new RuntimeException("Instructor not found with id: " + request.getInstructorId()));
+            course.setInstructor(instructor);
 
-        Categorie category = categorieRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
-        course.setCategorie(category);
+            Categorie category = categorieRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+            course.setCategorie(category);
 
-        Courses savedCourse = coursesRepository.save(course);
+            Courses savedCourse = coursesRepository.save(course);
 
         // Enregistrer les modules et leçons associées
         if (request.getModules() != null && !request.getModules().isEmpty()) {
@@ -177,6 +222,11 @@ public class CourseService {
             });
         }
         return courseMapper.toDto(savedCourse); // Calculated fields will be null here
+        } catch (RuntimeException e) {
+            throw e; // Re-throw RuntimeException avec le message d'erreur
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la création du cours: " + e.getMessage(), e);
+        }
     }
 
     public CourseDto updateCourse(Long id, CourseUpdateRequest request) {
@@ -315,21 +365,55 @@ public class CourseService {
         coursesRepository.deleteById(id);
     }
     private void populateCalculatedFields(CourseDto dto, Courses course) {
-        // Calculate rating and review count
-        Double avgRating = reviewRepository.findAverageRatingByCourse(course);
-        Long reviewCount = reviewRepository.countByCourse(course);
-        dto.setRating(avgRating != null ? avgRating : 0.0);
-        dto.setReviewCount(reviewCount != null ? reviewCount.intValue() : 0);
+        try {
+            // Calculate rating and review count
+            Double avgRating = null;
+            Long reviewCount = null;
+            try {
+                avgRating = reviewRepository.findAverageRatingByCourse(course);
+                reviewCount = reviewRepository.countByCourse(course);
+            } catch (Exception e) {
+                System.err.println("Error calculating rating/review count for course " + course.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            dto.setRating(avgRating != null ? avgRating : 0.0);
+            dto.setReviewCount(reviewCount != null ? reviewCount.intValue() : 0);
 
-        // Calculate enrolled count
-        long enrolledCount = userProgressRepository.countDistinctUsersByCourse(course);
-        dto.setEnrolledCount(enrolledCount);
+            // Calculate enrolled count
+            long enrolledCount = 0;
+            try {
+                enrolledCount = userProgressRepository.countDistinctUsersByCourse(course);
+            } catch (Exception e) {
+                System.err.println("Error calculating enrolled count for course " + course.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            dto.setEnrolledCount(enrolledCount);
 
-        // Populate InstructorDto
-        if (course.getInstructor() != null) {
-            instructorProfileRepository.findByUser(course.getInstructor()).ifPresent(
-                profile -> dto.setInstructor(instructorMapper.toDto(course.getInstructor(), profile))
-            );
+            // Populate InstructorDto
+            if (course.getInstructor() != null) {
+                try {
+                    instructorProfileRepository.findByUser(course.getInstructor()).ifPresent(
+                        profile -> {
+                            try {
+                                dto.setInstructor(instructorMapper.toDto(course.getInstructor(), profile));
+                            } catch (Exception e) {
+                                System.err.println("Error mapping instructor for course " + course.getId() + ": " + e.getMessage());
+                                e.printStackTrace();
+                            }
+                        }
+                    );
+                } catch (Exception e) {
+                    // Si le profil instructeur n'existe pas, on continue sans erreur
+                    // L'instructeur sera null dans le DTO
+                    System.err.println("Instructor profile not found for user " + course.getInstructor().getId() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            // Catch-all pour éviter que toute exception dans cette méthode ne bloque la requête
+            System.err.println("Unexpected error in populateCalculatedFields for course " + (course != null ? course.getId() : "null") + ": " + e.getMessage());
+            e.printStackTrace();
+            // On continue avec les valeurs par défaut
         }
     }
 

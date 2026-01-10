@@ -41,37 +41,70 @@ public class ModuleService {
                 coursesRepository.save(coursesOptional.get());
                 if(!moduleAndCoursePayload.getModules().isEmpty()) {
                     List<Module> moduleList = new ArrayList<>();
-                    moduleAndCoursePayload.getModules().forEach(module -> {
+                    int totalLessons = 0;
+                    
+                    for (com.odc.aws_learning.app.dto.ModuleCreationRequest module : moduleAndCoursePayload.getModules()) {
+                        System.out.println("=== Traitement du module: " + module.getTitle() + " ===");
+                        System.out.println("Nombre de leçons dans le module: " + (module.getLessons() != null ? module.getLessons().size() : 0));
+                        
                         Module moduleToSave = new Module();
                         moduleToSave.setCourse(coursesOptional.get());
                         moduleToSave.setDescription(module.getDescription());
                         moduleToSave.setTitle(module.getTitle());
                         moduleToSave.setModuleOrder(module.getModuleOrder());
+                        moduleToSave.setActivate(true); // S'assurer que le module est activé
 
                         Module savedModule = moduleRepository.save(moduleToSave);
+                        System.out.println("Module sauvegardé avec ID: " + savedModule.getId());
                         
                         // Si le module a des leçons, les sauvegarder
                         if (module.getLessons() != null && !module.getLessons().isEmpty()) {
+                            System.out.println("Début de la sauvegarde des leçons pour le module: " + savedModule.getId());
                             List<Lesson> lessonsToSave = new ArrayList<>();
-                            module.getLessons().forEach(lesson -> {
+                            for (com.odc.aws_learning.app.dto.LessonCreationRequest lesson : module.getLessons()) {
+                                System.out.println("Traitement de la leçon: " + lesson.getTitle() + ", Type: " + lesson.getType() + ", Order: " + lesson.getLessonOrder());
+                                
                                 Lesson lessonToSave = new Lesson();
                                 lessonToSave.setTitle(lesson.getTitle());
                                 lessonToSave.setLessonOrder(lesson.getLessonOrder());
-                                lessonToSave.setType(lesson.getType());
-                                lessonToSave.setContentUrl(lesson.getContentUrl());
-                                lessonToSave.setDuration(lesson.getDuration());
+                                lessonToSave.setType(lesson.getType()); // Le type doit être correctement défini
+                                lessonToSave.setContentUrl(lesson.getContentUrl() != null && !lesson.getContentUrl().trim().isEmpty() ? lesson.getContentUrl() : null);
+                                // La durée peut être null si non fournie, mais on essaie de la définir si elle existe
+                                if (lesson.getDuration() != null && lesson.getDuration() > 0) {
+                                    lessonToSave.setDuration(lesson.getDuration());
+                                } else {
+                                    // Si la durée n'est pas fournie, on peut la mettre à null ou 0
+                                    lessonToSave.setDuration(null);
+                                }
                                 lessonToSave.setModule(savedModule);
+                                lessonToSave.setActivate(true); // S'assurer que la leçon est activée
                                 lessonsToSave.add(lessonToSave);
-                            });
-                            lessonRepository.saveAll(lessonsToSave);
+                                System.out.println("Leçon ajoutée à la liste: " + lessonToSave.getTitle());
+                            }
+                            if (!lessonsToSave.isEmpty()) {
+                                System.out.println("Sauvegarde de " + lessonsToSave.size() + " leçons dans la base de données...");
+                                try {
+                                    List<Lesson> savedLessons = lessonRepository.saveAll(lessonsToSave);
+                                    System.out.println("Leçons sauvegardées avec succès: " + savedLessons.size());
+                                    totalLessons += savedLessons.size();
+                                } catch (Exception e) {
+                                    System.err.println("ERREUR lors de la sauvegarde des leçons: " + e.getMessage());
+                                    e.printStackTrace();
+                                    throw e; // Re-lancer l'exception pour qu'elle soit capturée par le catch principal
+                                }
+                            } else {
+                                System.out.println("Aucune leçon à sauvegarder (liste vide)");
+                            }
+                        } else {
+                            System.out.println("Aucune leçon dans ce module (lessons est null ou vide)");
                         }
                         
                         moduleList.add(savedModule);
-                    });
-                    return CResponse.success(moduleList.size(), "Modules et leçons enregistrés avec succès");
+                    }
+                    
+                    String message = String.format("Modules (%d) et leçons (%d) enregistrés avec succès", moduleList.size(), totalLessons);
+                    return CResponse.success(moduleList.size(), message);
                 }
-
-
 
                 return CResponse.error("Attention, la liste des modules est vide");
 
@@ -79,17 +112,37 @@ public class ModuleService {
             return CResponse.error("Cours introuvable");
 
         } catch (Exception e) {
-            return CResponse.error("Error d'enregistrement");
+            e.printStackTrace(); // Log l'erreur pour le débogage
+            return CResponse.error("Erreur d'enregistrement: " + e.getMessage());
         }
     }
 
     void removeOldModuleToCourse(Long courseId) {
-        List<Module> modulesToRemove = moduleRepository.findAllByActivateAndCourseId(true, courseId);
+        // Ne supprimer que les modules qui ont déjà des leçons (modules complets)
+        // Les modules sans leçons seront simplement mis à jour avec leurs nouvelles leçons
+        List<Module> allModules = moduleRepository.findAllByActivateAndCourseId(true, courseId);
+        List<Module> modulesToRemove = new ArrayList<>();
+        
+        for (Module module : allModules) {
+            // Supprimer seulement les modules qui ont déjà des leçons
+            // Cela évite de supprimer les modules fraîchement créés sans leçons
+            if (module.getLessons() != null && !module.getLessons().isEmpty()) {
+                modulesToRemove.add(module);
+            }
+        }
+        
         if (!modulesToRemove.isEmpty()) {
-            modulesToRemove.forEach(module -> {
-                module.setCourse(null);
-                moduleRepository.save(module);
-            });
+            System.out.println("Suppression de " + modulesToRemove.size() + " anciens modules avec leçons");
+            // Supprimer les leçons associées d'abord
+            for (Module module : modulesToRemove) {
+                if (module.getLessons() != null && !module.getLessons().isEmpty()) {
+                    lessonRepository.deleteAll(module.getLessons());
+                }
+            }
+            // Ensuite supprimer les modules
+            moduleRepository.deleteAll(modulesToRemove);
+        } else {
+            System.out.println("Aucun ancien module avec leçons à supprimer");
         }
     }
 
@@ -97,12 +150,14 @@ public class ModuleService {
         try {
             Optional<Courses> coursesOptional = coursesRepository.findById(courseId);
             if (coursesOptional.isPresent()) {
-                List<Module> modules = moduleRepository.findAllByActivateAndCourseId(true, courseId);
+                // Utiliser la méthode qui charge les leçons avec les modules
+                List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
                 return CResponse.success(modules, "Modules");
             }
             return CResponse.error("Cours introuvable");
         } catch (Exception e) {
-            return CResponse.error("Erreur de récupération");
+            e.printStackTrace();
+            return CResponse.error("Erreur de récupération: " + e.getMessage());
         }
     }
 }

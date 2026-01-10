@@ -52,7 +52,7 @@ public class AdminController {
     }
 
     // Endpoint for updating an Admin (and potentially linked User details)
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public CResponse<?> updateAdmin(@PathVariable Long id, @org.springframework.web.bind.annotation.RequestBody User userDetails) {
         return adminService.updateAdmin(id, userDetails);

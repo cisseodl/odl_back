@@ -23,7 +23,27 @@ public class ModuleController {
     @PreAuthorize("hasRole('ADMIN')")
     public CResponse<?> saveModule(@RequestParam("module") String moduleAndCoursePayloadsString,
                                     @RequestParam(value = "pdfFile", required = false) MultipartFile pdfFile) throws JsonProcessingException {
+        System.out.println("=== RECEPTION DU PAYLOAD MODULES ===");
+        System.out.println("Payload JSON reçu: " + moduleAndCoursePayloadsString);
+        
         ModuleAndCoursePayload moduleAndCoursePayload = new ObjectMapper().readValue(moduleAndCoursePayloadsString, ModuleAndCoursePayload.class);
+        
+        System.out.println("CourseId: " + moduleAndCoursePayload.getCourseId());
+        System.out.println("Nombre de modules: " + (moduleAndCoursePayload.getModules() != null ? moduleAndCoursePayload.getModules().size() : 0));
+        
+        if (moduleAndCoursePayload.getModules() != null) {
+            for (int i = 0; i < moduleAndCoursePayload.getModules().size(); i++) {
+                var m = moduleAndCoursePayload.getModules().get(i);
+                System.out.println("Module " + i + ": " + m.getTitle() + ", Leçons: " + (m.getLessons() != null ? m.getLessons().size() : 0));
+                if (m.getLessons() != null) {
+                    for (int j = 0; j < m.getLessons().size(); j++) {
+                        var l = m.getLessons().get(j);
+                        System.out.println("  Leçon " + j + ": " + l.getTitle() + ", Type: " + l.getType());
+                    }
+                }
+            }
+        }
+        
         return moduleService.saveModule(moduleAndCoursePayload, pdfFile);
     }
 

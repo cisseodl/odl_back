@@ -9,10 +9,13 @@ import com.odc.aws_learning.app.dto.CourseUpdateRequest; // Added
 import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.service.CourseService;
 import com.odc.aws_learning.app.service.S3Service; // Added
+import com.odc.aws_learning.app.service.UploadFileService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +31,7 @@ import java.util.Optional;
 
 import org.springframework.http.MediaType;
 
+@Slf4j
 @RequestMapping("/courses")
 @RestController
 @RequiredArgsConstructor
@@ -36,7 +40,11 @@ public class CoursesController {
     private final UserRepository userRepository;
     private final com.odc.aws_learning.app.repository.CoursesRepository coursesRepository;
     private final S3Service s3Service; // Injected
+    private final UploadFileService uploadFileService;
     private final ObjectMapper objectMapper; // Injected
+    
+    @Value("${file.upload-dir}")
+    private String uploadDir;
 
 
     @PostMapping(value = "/save/{catId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -53,8 +61,26 @@ public class CoursesController {
         CourseCreationRequest request = objectMapper.readValue(coursestring, CourseCreationRequest.class);
 
         if (image != null && !image.isEmpty()) {
-            String imageUrl = s3Service.saveFile(image, "courses");
-            request.setImagePath(imageUrl);
+            try {
+                // Essayer d'abord S3
+                String imageUrl = s3Service.saveFile(image, "courses");
+                if (imageUrl != null && !imageUrl.isEmpty()) {
+                    request.setImagePath(imageUrl);
+                }
+            } catch (RuntimeException e) {
+                // Si S3 échoue (credentials non configurés), utiliser le stockage local comme fallback
+                log.warn("Échec de l'upload S3 pour l'image du cours, utilisation du stockage local comme fallback: {}", e.getMessage());
+                try {
+                    String localFolderPath = uploadDir + "/courses";
+                    String savedFileName = uploadFileService.uploadFile(image, localFolderPath);
+                    String localUrl = "http://localhost:8080/awsodclearning/api/files/courses/" + savedFileName;
+                    log.info("Image du cours sauvegardée localement: {}", localUrl);
+                    request.setImagePath(localUrl);
+                } catch (IOException ioException) {
+                    log.error("Erreur lors de la sauvegarde locale de l'image du cours: {}", ioException.getMessage(), ioException);
+                    // Continuer sans image si les deux méthodes échouent
+                }
+            }
         }
 
         // Si l'utilisateur est ADMIN et qu'un instructorId est fourni dans le payload, l'utiliser
@@ -68,8 +94,16 @@ public class CoursesController {
         }
         request.setCategoryId(catId);
 
-        CourseDto createdCourse = courseService.createCourse(request);
-        return CResponse.success(createdCourse, "Cours enregistré avec succès");
+        try {
+            CourseDto createdCourse = courseService.createCourse(request);
+            return CResponse.success(createdCourse, "Cours enregistré avec succès");
+        } catch (RuntimeException e) {
+            log.error("Erreur lors de la création du cours: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la création du cours: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Erreur inattendue lors de la création du cours: {}", e.getMessage(), e);
+            return CResponse.error("Erreur inattendue lors de la création du cours: " + e.getMessage());
+        }
     }
 
      @GetMapping("/read/{id}")

@@ -1,6 +1,7 @@
 package com.odc.aws_learning.app.controller;
 
 import com.odc.aws_learning.app.service.S3Service;
+import com.odc.aws_learning.app.service.UploadFileService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -13,10 +14,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @CrossOrigin
 @RestController
 @RequestMapping("/api/files")
@@ -29,20 +33,23 @@ public class FileController {
     private final S3Service s3Service;
     private final UploadFileService uploadFileService;
 
-    @GetMapping("/{filename:.+}")
-    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
-        Path file = Paths.get(uploadDir).resolve(filename);
+    @GetMapping("/{folderName}/{filename:.+}")
+    public ResponseEntity<Resource> serveFile(@PathVariable String folderName, @PathVariable String filename) {
+        Path file = Paths.get(uploadDir).resolve(folderName).resolve(filename);
         Resource resource;
         try {
             resource = new UrlResource(file.toUri());
             if (resource.exists() || resource.isReadable()) {
                 return ResponseEntity.ok()
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                        .contentType(MediaType.parseMediaType("application/octet-stream"))
                         .body(resource);
             } else {
-                throw new RuntimeException("Le fichier n'est pas lisible");
+                log.warn("Fichier non trouvé ou non lisible: {}", file);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
         } catch (Exception e) {
+            log.error("Erreur lors de la récupération du fichier: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
@@ -64,24 +71,39 @@ public class FileController {
         }
 
         try {
+            // Essayer d'abord S3
             String url = s3Service.saveFile(file, folderName);
             if (url != null && !url.isEmpty()) {
                 return ResponseEntity.ok(url);
-            } else {
-                return ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Erreur lors de l'upload du fichier vers S3: Le service a retourné null. Vérifiez les logs du serveur et la configuration AWS (credentials, bucket, région).");
             }
         } catch (RuntimeException e) {
-            // Les exceptions sont maintenant propagées depuis S3Service
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de l'upload du fichier vers S3: " + e.getMessage());
+            // Si S3 échoue (credentials non configurés), utiliser le stockage local comme fallback
+            log.warn("Échec de l'upload S3, utilisation du stockage local comme fallback: {}", e.getMessage());
+            try {
+                // Créer le dossier de destination local
+                String localFolderPath = uploadDir + "/" + folderName;
+                String savedFileName = uploadFileService.uploadFile(file, localFolderPath);
+                // Retourner l'URL relative pour servir le fichier via le FileController
+                String localUrl = "/api/files/" + folderName + "/" + savedFileName;
+                log.info("Fichier sauvegardé localement: {}", localUrl);
+                return ResponseEntity.ok("http://localhost:8080/awsodclearning" + localUrl);
+            } catch (IOException ioException) {
+                log.error("Erreur lors de la sauvegarde locale du fichier: {}", ioException.getMessage(), ioException);
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Erreur lors de l'upload du fichier (S3 et stockage local ont échoué): " + ioException.getMessage());
+            }
         } catch (Exception e) {
+            log.error("Erreur inattendue lors de l'upload: {}", e.getMessage(), e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur inattendue lors de l'upload: " + e.getMessage());
         }
+        
+        // Si on arrive ici, S3 a retourné null sans exception
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Erreur lors de l'upload du fichier vers S3: Le service a retourné null.");
     }
 
     @GetMapping("/presigned-url")

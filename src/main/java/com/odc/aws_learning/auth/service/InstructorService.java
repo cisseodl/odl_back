@@ -1,6 +1,7 @@
 package com.odc.aws_learning.auth.service;
 
 import com.odc.aws_learning.auth.base.response.CResponse;
+import com.odc.aws_learning.auth.dao.request.InstructorUpdateRequest;
 import com.odc.aws_learning.auth.dto.InstructorWithUserDto;
 import com.odc.aws_learning.auth.entities.Instructor;
 import com.odc.aws_learning.auth.entities.User;
@@ -86,11 +87,37 @@ public class InstructorService {
     }
 
     @Transactional
-    public CResponse<?> updateInstructor(Long id, String biography, String specialization) {
+    public CResponse<?> updateInstructor(Long id, InstructorUpdateRequest request) {
         return instructorRepository.findById(id)
                 .map(instructor -> {
-                    if (biography != null) instructor.setBiography(biography);
-                    if (specialization != null) instructor.setSpecialization(specialization);
+                    // Mettre à jour les champs spécifiques de l'instructeur
+                    if (request.getBiography() != null) {
+                        instructor.setBiography(request.getBiography());
+                    }
+                    if (request.getSpecialization() != null) {
+                        instructor.setSpecialization(request.getSpecialization());
+                    }
+
+                    // Mettre à jour les champs User si fournis
+                    User user = instructor.getUser();
+                    if (user != null) {
+                        if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+                            user.setFullName(request.getFullName().trim());
+                        }
+                        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+                            user.setEmail(request.getEmail().trim());
+                        }
+                        if (request.getPhone() != null) {
+                            user.setPhone(request.getPhone().trim().isEmpty() ? null : request.getPhone().trim());
+                        }
+                        if (request.getAvatar() != null) {
+                            user.setAvatar(request.getAvatar());
+                        }
+                        if (request.getActivate() != null) {
+                            user.setActivate(request.getActivate());
+                        }
+                        userRepository.save(user);
+                    }
 
                     return CResponse.success(instructorRepository.save(instructor), "Instructeur mis à jour avec succès.");
                 }).orElse(CResponse.error("Instructeur non trouvé avec l'ID: " + id));

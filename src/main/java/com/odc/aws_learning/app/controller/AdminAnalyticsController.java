@@ -3,6 +3,7 @@ package com.odc.aws_learning.app.controller;
 import com.odc.aws_learning.app.service.AdminAnalyticsService;
 import com.odc.aws_learning.app.wrapper.AnalyticsMetricsDTO;
 import com.odc.aws_learning.app.wrapper.DashboardStatsDTO;
+import com.odc.aws_learning.app.wrapper.LearningTimeMetricsDTO;
 import com.odc.aws_learning.app.wrapper.ModerationSummaryData;
 import com.odc.aws_learning.app.wrapper.OverallComparisonStats;
 import com.odc.aws_learning.app.wrapper.UserGrowthDataPoint; // Added
@@ -72,5 +73,11 @@ public class AdminAnalyticsController {
         // On essaie d'abord de trouver un apprenant avec cet ID, sinon on assume que c'est un userId
         LearnerProgressResponseDTO progress = adminAnalyticsService.getLearnerProgress(learnerId);
         return CResponse.success(progress, "Learner progress fetched successfully.");
+    }
+
+    @GetMapping("/learning-time-metrics")
+    public CResponse<LearningTimeMetricsDTO> getLearningTimeMetrics() {
+        LearningTimeMetricsDTO metrics = adminAnalyticsService.getLearningTimeMetrics();
+        return CResponse.success(metrics, "Learning time metrics fetched successfully.");
     }
 }

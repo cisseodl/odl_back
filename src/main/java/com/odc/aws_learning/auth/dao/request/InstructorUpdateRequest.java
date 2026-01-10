@@ -9,8 +9,21 @@ public class InstructorUpdateRequest {
     @Schema(description = "Spécialisation de l'instructeur", example = "AWS, Azure")
     private String specialization;
 
-    // Si on veut mettre à jour les infos de l'utilisateur lié, on peut ajouter un UserUpdateDto ici.
-    // Pour l'instant, on se concentre sur les champs spécifiques de l'instructeur.
+    // Champs User pour permettre la mise à jour des informations utilisateur
+    @Schema(description = "Nom complet de l'utilisateur")
+    private String fullName;
+
+    @Schema(description = "Email de l'utilisateur")
+    private String email;
+
+    @Schema(description = "Téléphone de l'utilisateur")
+    private String phone;
+
+    @Schema(description = "Avatar de l'utilisateur")
+    private String avatar;
+
+    @Schema(description = "Statut d'activation de l'utilisateur")
+    private Boolean activate;
 
     public InstructorUpdateRequest() {
     }
@@ -34,5 +47,45 @@ public class InstructorUpdateRequest {
 
     public void setSpecialization(String specialization) {
         this.specialization = specialization;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public Boolean getActivate() {
+        return activate;
+    }
+
+    public void setActivate(Boolean activate) {
+        this.activate = activate;
     }
 }

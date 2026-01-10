@@ -22,6 +22,7 @@ import com.odc.aws_learning.app.wrapper.AnalyticsMetricsDTO;
 import com.odc.aws_learning.app.wrapper.LearnerProgressResponseDTO;
 import com.odc.aws_learning.app.wrapper.CoursePerformanceDataPoint;
 import com.odc.aws_learning.app.wrapper.DashboardStatsDTO;
+import com.odc.aws_learning.app.wrapper.LearningTimeMetricsDTO;
 import com.odc.aws_learning.app.wrapper.ModerationSummaryData;
 import com.odc.aws_learning.app.wrapper.OverallComparisonStats;
 import com.odc.aws_learning.app.wrapper.UserActivitySummaryDTO;
@@ -507,6 +508,97 @@ public class AdminAnalyticsService {
                 .coursesCompleted(coursesCompleted)
                 .overallProgress(overallProgress)
                 .courses(courseProgressList)
+                .build();
+    }
+
+    /**
+     * Calcule les métriques de temps d'apprentissage :
+     * - Temps moyen par cours
+     * - Sessions actives
+     * - Temps moyen par apprenant
+     */
+    public LearningTimeMetricsDTO getLearningTimeMetrics() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime last24Hours = now.minusHours(24);
+
+        // Sessions actives : utilisateurs avec activité dans les dernières 24h
+        long activeSessions = activityLogRepository.countDistinctUserByCreatedAtAfter(last24Hours);
+
+        // Calculer le temps moyen par cours
+        // Pour chaque cours, on calcule la somme des durées des leçons complétées par tous les apprenants
+        List<Courses> allCourses = coursesRepository.findAll();
+        List<Double> averageTimesPerCourse = new ArrayList<>();
+
+        for (Courses course : allCourses) {
+            // Récupérer tous les UserProgress pour ce cours
+            List<UserProgress> allProgressForCourse = userProgressRepository.findAll().stream()
+                    .filter(up -> up.getLesson() != null 
+                            && up.getLesson().getModule() != null 
+                            && up.getLesson().getModule().getCourse() != null
+                            && up.getLesson().getModule().getCourse().getId().equals(course.getId()))
+                    .collect(Collectors.toList());
+
+            if (!allProgressForCourse.isEmpty()) {
+                // Calculer le temps total passé sur ce cours (somme des durées des leçons complétées)
+                double totalTimeMinutes = allProgressForCourse.stream()
+                        .filter(up -> up.getLesson().getDuration() != null)
+                        .mapToDouble(up -> up.getLesson().getDuration())
+                        .sum();
+
+                // Compter les apprenants distincts qui ont complété au moins une leçon dans ce cours
+                long learnersCount = allProgressForCourse.stream()
+                        .map(up -> up.getUser().getId())
+                        .distinct()
+                        .count();
+
+                if (learnersCount > 0) {
+                    double averageTimeForCourse = totalTimeMinutes / learnersCount;
+                    averageTimesPerCourse.add(averageTimeForCourse);
+                }
+            }
+        }
+
+        // Temps moyen par cours (moyenne de tous les temps moyens par cours)
+        double averageTimePerCourseMinutes = averageTimesPerCourse.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        // Calculer le temps moyen par apprenant
+        // Pour chaque apprenant, on calcule la somme des durées des leçons complétées
+        List<User> allLearners = userRepository.findAll();
+        List<Double> timePerLearner = new ArrayList<>();
+
+        for (User learner : allLearners) {
+            List<UserProgress> learnerProgress = userProgressRepository.findByUserId(learner.getId());
+            double totalTimeMinutes = learnerProgress.stream()
+                    .filter(up -> up.getLesson() != null && up.getLesson().getDuration() != null)
+                    .mapToDouble(up -> up.getLesson().getDuration())
+                    .sum();
+
+            if (totalTimeMinutes > 0) {
+                timePerLearner.add(totalTimeMinutes);
+            }
+        }
+
+        // Temps moyen par apprenant
+        double averageTimePerLearnerMinutes = timePerLearner.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        // Nombre de cours avec activité
+        long coursesWithActivity = (long) averageTimesPerCourse.size();
+
+        // Nombre d'apprenants avec activité
+        long learnersWithActivity = (long) timePerLearner.size();
+
+        return LearningTimeMetricsDTO.builder()
+                .averageTimePerCourseMinutes(averageTimePerCourseMinutes)
+                .activeSessions(activeSessions)
+                .averageTimePerLearnerMinutes(averageTimePerLearnerMinutes)
+                .coursesWithActivity(coursesWithActivity)
+                .learnersWithActivity(learnersWithActivity)
                 .build();
     }
 }
