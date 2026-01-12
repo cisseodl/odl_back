@@ -66,7 +66,9 @@ public class SecurityConfiguration {
             "http://127.0.0.1:*",
             "https://main.d7kfdxiyupcrp.amplifyapp.com",
             "https://*.amplifyapp.com", // Autoriser toutes les applications Amplify
-            "https://*.elasticbeanstalk.com" // Autoriser les environnements Elastic Beanstalk
+            "https://*.elasticbeanstalk.com", // Autoriser les environnements Elastic Beanstalk
+            "https://api.smart-odc.com", // Domaine personnalisé API
+            "https://*.smart-odc.com" // Autoriser tous les sous-domaines smart-odc.com
         ));
         // Méthodes HTTP explicites incluant OPTIONS pour les requêtes preflight
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
