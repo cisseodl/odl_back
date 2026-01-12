@@ -64,7 +64,9 @@ public class SecurityConfiguration {
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:*",
             "http://127.0.0.1:*",
-            "https://main.d7kfdxiyupcrp.amplifyapp.com"
+            "https://main.d7kfdxiyupcrp.amplifyapp.com",
+            "https://*.amplifyapp.com", // Autoriser toutes les applications Amplify
+            "https://*.elasticbeanstalk.com" // Autoriser les environnements Elastic Beanstalk
         ));
         // Méthodes HTTP explicites incluant OPTIONS pour les requêtes preflight
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

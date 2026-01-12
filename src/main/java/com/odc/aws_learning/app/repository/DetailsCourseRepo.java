@@ -56,4 +56,7 @@ public interface DetailsCourseRepo extends JpaRepository<DetailsCourse, Long> {
 
     long countByCourseIdAndCreatedAtBetween(Long courseId, LocalDateTime start, LocalDateTime end);
     long countByCourseIdAndCompletedTrueAndCreatedAtBetween(Long courseId, LocalDateTime start, LocalDateTime end);
+    
+    // Method to count completed enrollments for a specific course
+    long countByCourseIdAndCompleted(Long courseId, boolean completed);
 }

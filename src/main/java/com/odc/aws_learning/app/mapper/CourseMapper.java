@@ -16,7 +16,7 @@ public interface CourseMapper {
     @Mapping(target = "category", source = "categorie.title")
     @Mapping(target = "instructor", ignore = true) // Set by service
     @Mapping(target = "curriculum", source = "modules")
-    @Mapping(target = "duration", source = "modules", qualifiedByName = "calculateCourseDuration")
+    @Mapping(target = "duration", source = "duration", qualifiedByName = "formatDuration")
     @Mapping(target = "imageUrl", source = "imagePath")
     @Mapping(target = "lastUpdated", source = "lastModifiedAt", qualifiedByName = "formatLastUpdated")
     @Mapping(target = "status", source = "status")
@@ -29,6 +29,17 @@ public interface CourseMapper {
 
     List<CourseDto> toDtoList(List<Courses> courses);
 
+    @Named("formatDuration")
+    default String formatDuration(Integer durationInSeconds) {
+        if (durationInSeconds == null || durationInSeconds <= 0) {
+            return "0h 0min";
+        }
+        long minutes = durationInSeconds / 60;
+        long hours = minutes / 60;
+        minutes = minutes % 60;
+        return String.format("%dh %dmin", hours, minutes);
+    }
+    
     @Named("calculateCourseDuration")
     default String calculateCourseDuration(List<Module> modules) {
         if (modules == null || modules.isEmpty()) {

@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -91,31 +92,54 @@ public class CourseService {
             String category, CourseLevel level, String language, Boolean bestseller, CourseStatus status,
             int page, int size, String sortBy, String sortDir) {
         try {
-            Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() :
-                    Sort.by(sortBy).descending();
-            Pageable pageable = PageRequest.of(page, size, sort);
-
-            Page<Courses> coursesPage;
-            // Basic filtering logic, can be expanded for more complex queries
+            // Utiliser les méthodes avec FETCH pour charger les relations nécessaires
+            List<Courses> coursesList;
+            
+            // Basic filtering logic avec jointures FETCH
             if (status != null) {
-                coursesPage = this.coursesRepository.findByStatus(status, pageable);
+                coursesList = this.coursesRepository.findByStatusWithRelations(status);
             } else if (category != null && !category.isEmpty()) {
                 // Find category by title (needs a method in CategorieRepository)
                 Optional<Categorie> cat = this.categorieRepository.findByTitle(category);
                 if (cat.isPresent()) {
-                    coursesPage = this.coursesRepository.findByCategorieId(cat.get().getId(), pageable);
+                    coursesList = this.coursesRepository.findByCategorieIdWithRelations(cat.get().getId());
                 } else {
-                    coursesPage = Page.empty();
+                    coursesList = new ArrayList<>();
                 }
             } else if (level != null) {
-                coursesPage = this.coursesRepository.findByLevel(level, pageable);
+                coursesList = this.coursesRepository.findByLevelWithRelations(level);
             } else if (bestseller != null) {
-                coursesPage = this.coursesRepository.findByBestseller(bestseller, pageable);
+                coursesList = this.coursesRepository.findByBestsellerWithRelations(bestseller);
             } else {
-                coursesPage = this.coursesRepository.findAll(pageable);
+                coursesList = this.coursesRepository.findAllWithRelations();
             }
             
-            return coursesPage.getContent().stream()
+            // Appliquer la pagination manuellement après avoir récupéré les données avec les relations
+            Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() :
+                    Sort.by(sortBy).descending();
+            
+            // Trier la liste
+            List<Courses> sortedList = coursesList.stream()
+                    .sorted((c1, c2) -> {
+                        Comparable val1 = getFieldValue(c1, sortBy);
+                        Comparable val2 = getFieldValue(c2, sortBy);
+                        if (val1 == null && val2 == null) return 0;
+                        if (val1 == null) return 1;
+                        if (val2 == null) return -1;
+                        int comparison = val1.compareTo(val2);
+                        return sortDir.equalsIgnoreCase("ASC") ? comparison : -comparison;
+                    })
+                    .collect(Collectors.toList());
+            
+            // Appliquer la pagination
+            int start = page * size;
+            int end = Math.min(start + size, sortedList.size());
+            List<Courses> paginatedList = start < sortedList.size() ? 
+                    sortedList.subList(start, end) : new ArrayList<>();
+            
+            // Mapper les cours en DTOs
+            // La durée est maintenant calculée à partir du champ duration du cours (en secondes)
+            return paginatedList.stream()
                     .map(course -> {
                         try {
                             CourseDto dto = this.courseMapper.toDto(course);
@@ -144,6 +168,29 @@ public class CourseService {
             System.err.println("Error in getAllCourses: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Erreur lors de la récupération des cours: " + e.getMessage(), e);
+        }
+    }
+    
+    // Helper method pour obtenir la valeur d'un champ pour le tri
+    @SuppressWarnings("rawtypes")
+    private Comparable getFieldValue(Courses course, String fieldName) {
+        try {
+            switch (fieldName.toLowerCase()) {
+                case "id":
+                    return course.getId();
+                case "title":
+                    return course.getTitle() != null ? course.getTitle() : "";
+                case "createdat":
+                case "created_at":
+                    return course.getCreatedAt() != null ? course.getCreatedAt() : null;
+                case "lastmodifiedat":
+                case "last_modified_at":
+                    return course.getLastModifiedAt() != null ? course.getLastModifiedAt() : null;
+                default:
+                    return course.getId();
+            }
+        } catch (Exception e) {
+            return course.getId();
         }
     }
 
@@ -402,11 +449,37 @@ public class CourseService {
                             }
                         }
                     );
+                    // Si le profil instructeur n'existe pas, créer un InstructorDto minimal avec les infos de base
+                    if (dto.getInstructor() == null) {
+                        try {
+                            com.odc.aws_learning.app.dto.InstructorDto minimalInstructor = new com.odc.aws_learning.app.dto.InstructorDto();
+                            minimalInstructor.setId(course.getInstructor().getId());
+                            minimalInstructor.setName(course.getInstructor().getFullName() != null ? 
+                                    course.getInstructor().getFullName() : 
+                                    course.getInstructor().getEmail() != null ? course.getInstructor().getEmail() : 
+                                    "Instructor #" + course.getInstructor().getId());
+                            minimalInstructor.setAvatar(course.getInstructor().getAvatar());
+                            dto.setInstructor(minimalInstructor);
+                        } catch (Exception e) {
+                            System.err.println("Error creating minimal instructor DTO for course " + course.getId() + ": " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
                 } catch (Exception e) {
-                    // Si le profil instructeur n'existe pas, on continue sans erreur
-                    // L'instructeur sera null dans le DTO
-                    System.err.println("Instructor profile not found for user " + course.getInstructor().getId() + ": " + e.getMessage());
-                    e.printStackTrace();
+                    // Si le profil instructeur n'existe pas, créer un InstructorDto minimal
+                    try {
+                        com.odc.aws_learning.app.dto.InstructorDto minimalInstructor = new com.odc.aws_learning.app.dto.InstructorDto();
+                        minimalInstructor.setId(course.getInstructor().getId());
+                        minimalInstructor.setName(course.getInstructor().getFullName() != null ? 
+                                course.getInstructor().getFullName() : 
+                                course.getInstructor().getEmail() != null ? course.getInstructor().getEmail() : 
+                                "Instructor #" + course.getInstructor().getId());
+                        minimalInstructor.setAvatar(course.getInstructor().getAvatar());
+                        dto.setInstructor(minimalInstructor);
+                    } catch (Exception e2) {
+                        System.err.println("Instructor profile not found for user " + course.getInstructor().getId() + ": " + e.getMessage());
+                        e.printStackTrace();
+                    }
                 }
             }
         } catch (Exception e) {

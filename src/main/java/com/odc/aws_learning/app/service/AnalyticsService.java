@@ -4,6 +4,8 @@ import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
+import com.odc.aws_learning.app.repository.DetailsCourseRepo;
+import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.app.entity.Courses;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,8 @@ public class AnalyticsService {
     private final UserRepository userRepository;
     private final CoursesRepository coursesRepository;
     private final UserQuizAttemptRepository userQuizAttemptRepository;
+    private final DetailsCourseRepo detailsCourseRepo;
+    private final ReviewRepository reviewRepository;
     // Potentially inject other repositories like ApprenantRepository, InstructorRepository, AuditLogRepository
 
     /**
@@ -122,15 +126,29 @@ public class AnalyticsService {
      * @return CResponse containing course performance data for the instructor.
      */
     public CResponse<?> getCoursePerformanceForInstructor(Long instructorId) {
-        // Placeholder. Will query courses by instructor and aggregate performance.
-        List<Courses> instructorCourses = coursesRepository.findByInstructor_Id(instructorId); // Using the new method
+        // Query courses by instructor and aggregate real performance data
+        List<Courses> instructorCourses = coursesRepository.findByInstructor_Id(instructorId);
         List<Map<String, Object>> coursePerformance = instructorCourses.stream().map(course -> {
             Map<String, Object> courseStats = new HashMap<>();
             courseStats.put("courseId", course.getId());
             courseStats.put("courseTitle", course.getTitle());
-            courseStats.put("studentsCount", (long) (Math.random() * 50)); // Dummy
-            courseStats.put("completionRate", Math.round(Math.random() * 10000.0) / 100.0); // Dummy %
-            courseStats.put("averageRating", Math.round(Math.random() * 500.0) / 100.0); // Dummy 1-5
+            
+            // Get real students count from DetailsCourse
+            long studentsCount = detailsCourseRepo.countByCourseId(course.getId());
+            courseStats.put("studentsCount", studentsCount);
+            
+            // Calculate completion rate: completed enrollments / total enrollments
+            long totalEnrollments = studentsCount;
+            long completedEnrollments = detailsCourseRepo.countByCourseIdAndCompleted(course.getId(), true);
+            double completionRate = totalEnrollments > 0 
+                ? (completedEnrollments * 100.0 / totalEnrollments) 
+                : 0.0;
+            courseStats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+            
+            // Get average rating from ReviewRepository
+            Double avgRating = reviewRepository.findAverageRatingByCourse(course);
+            courseStats.put("averageRating", avgRating != null ? Math.round(avgRating * 100.0) / 100.0 : 0.0);
+            
             return courseStats;
         }).collect(Collectors.toList());
         return CResponse.success(coursePerformance, "Course performance for instructor retrieved successfully.");
