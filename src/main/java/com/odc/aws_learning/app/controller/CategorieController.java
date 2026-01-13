@@ -21,13 +21,13 @@ public class CategorieController {
     }
 
     @GetMapping("/read")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT','INSTRUCTOR')")
     public CResponse<?> getAllCategories() {
         return categorieService.getAllCategories();
     }
 
     @GetMapping("/read/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT','INSTRUCTOR')")
     public ResponseEntity<Categorie> getCategoryById(@PathVariable Long id) {
         Categorie categorie = categorieService.getCategoryById(id);
         if (categorie != null) {
@@ -38,7 +38,7 @@ public class CategorieController {
     }
 
     @PostMapping(value = "/save", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<Categorie> createCategory(@org.springframework.web.bind.annotation.RequestBody CategorieRequest request) {
         Categorie categorie = new Categorie();
         categorie.setTitle(request.getTitle());
@@ -48,7 +48,7 @@ public class CategorieController {
     }
 
     @PutMapping("/update")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public ResponseEntity<String> updateCategory(@org.springframework.web.bind.annotation.RequestBody CategorieRequest request) {
         try {
             Categorie existingCategorie = categorieService.getCategoryById(request.getId()); // Supposons que CategorieRequest a un getId()
@@ -67,7 +67,7 @@ public class CategorieController {
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public ResponseEntity<String> deleteCategory(@PathVariable Long id) {
         boolean deleted = categorieService.deleteCategorie(id);
         if (deleted) {

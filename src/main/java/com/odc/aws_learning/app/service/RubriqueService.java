@@ -5,6 +5,8 @@ import com.odc.aws_learning.app.repository.RubriqueRepository;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 // import lombok.AllArgsConstructor; // Lombok removed
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,17 +17,23 @@ import java.util.Optional;
 
 @Service
 @Transactional
+@Slf4j
 // @AllArgsConstructor // Lombok removed
 public class RubriqueService {
 
     private final RubriqueRepository rubriqueRepository;
     private final UserRepository userRepository;
     private final S3Service s3Service;
+    private final UploadFileService uploadFileService;
+    
+    @Value("${file.upload-dir}")
+    private String uploadDir;
 
-    public RubriqueService(RubriqueRepository rubriqueRepository, UserRepository userRepository, S3Service s3Service) {
+    public RubriqueService(RubriqueRepository rubriqueRepository, UserRepository userRepository, S3Service s3Service, UploadFileService uploadFileService) {
         this.rubriqueRepository = rubriqueRepository;
         this.userRepository = userRepository;
         this.s3Service = s3Service;
+        this.uploadFileService = uploadFileService;
     }
 
     public List<Rubrique> getAllRubriques() {
@@ -63,12 +71,38 @@ public class RubriqueService {
         existingRubrique.setLienRessources(rubriqueDetails.getLienRessources());
 
         if (imageFile != null && !imageFile.isEmpty()) {
-            // Optional: delete old image from S3 if it exists
+            // Optional: delete old image from S3 if it exists (seulement si c'est une URL S3)
             if (existingRubrique.getImage() != null && !existingRubrique.getImage().isEmpty()) {
-                s3Service.deleteFile(existingRubrique.getImage());
+                try {
+                    // Ne supprimer que si c'est une URL S3 (contient le nom du bucket)
+                    if (existingRubrique.getImage().contains("s3") || existingRubrique.getImage().contains("amazonaws.com")) {
+                        s3Service.deleteFile(existingRubrique.getImage());
+                    }
+                } catch (Exception e) {
+                    log.warn("Erreur lors de la suppression de l'ancienne image: {}", e.getMessage());
+                }
             }
-            String newImageUrl = s3Service.saveFile(imageFile, "rubriques");
-            existingRubrique.setImage(newImageUrl);
+            
+            try {
+                // Essayer d'abord S3
+                String newImageUrl = s3Service.saveFile(imageFile, "rubriques");
+                if (newImageUrl != null && !newImageUrl.isEmpty()) {
+                    existingRubrique.setImage(newImageUrl);
+                }
+            } catch (RuntimeException e) {
+                // Si S3 échoue, utiliser le stockage local comme fallback
+                log.warn("Échec de l'upload S3 pour l'image de la rubrique, utilisation du stockage local comme fallback: {}", e.getMessage());
+                try {
+                    String localFolderPath = uploadDir + "/rubriques";
+                    String savedFileName = uploadFileService.uploadFile(imageFile, localFolderPath);
+                    String localUrl = "http://localhost:8080/awsodclearning/api/files/rubriques/" + savedFileName;
+                    log.info("Image de la rubrique sauvegardée localement: {}", localUrl);
+                    existingRubrique.setImage(localUrl);
+                } catch (IOException ioException) {
+                    log.error("Erreur lors de la sauvegarde locale de l'image de la rubrique: {}", ioException.getMessage(), ioException);
+                    // Continuer sans mettre à jour l'image si les deux méthodes échouent
+                }
+            }
         }
 
         return rubriqueRepository.save(existingRubrique);
