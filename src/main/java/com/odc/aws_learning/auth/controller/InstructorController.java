@@ -31,7 +31,8 @@ public class InstructorController {
             return instructorService.createInstructorForUser(
                 request.getUserId(),
                 request.getBiography(),
-                request.getSpecialization()
+                request.getSpecialization(),
+                request.getPassword() // Passer le mot de passe si fourni
             );
         }
         // Sinon, utiliser l'email fourni ou celui de l'utilisateur connecté

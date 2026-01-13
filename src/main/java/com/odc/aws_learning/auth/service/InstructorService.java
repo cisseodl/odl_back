@@ -1,5 +1,6 @@
 package com.odc.aws_learning.auth.service;
 
+import com.odc.aws_learning.app.service.SendEmailService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.dao.request.InstructorUpdateRequest;
 import com.odc.aws_learning.auth.dto.InstructorWithUserDto;
@@ -9,6 +10,7 @@ import com.odc.aws_learning.auth.repository.InstructorRepository;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 // import org.springframework.security.crypto.password.PasswordEncoder; // Removed
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +50,7 @@ public class InstructorService {
     }
 
     @Transactional
-    public CResponse<?> createInstructorForUser(Long userId, String biography, String specialization) {
+    public CResponse<?> createInstructorForUser(Long userId, String biography, String specialization, String password) {
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isEmpty()) {
             return CResponse.error("Utilisateur non trouvé avec l'ID: " + userId);
@@ -66,6 +68,29 @@ public class InstructorService {
         // Link instructor to user for bidirectional consistency
         user.setInstructor(savedInstructor);
         userRepository.save(user);
+
+        // Envoyer un email au formateur avec le lien et le mot de passe (si fourni)
+        try {
+            String passwordToSend = password != null && !password.trim().isEmpty() 
+                ? password 
+                : "Votre mot de passe a été défini lors de la création de votre compte. Contactez l'administrateur si vous l'avez oublié.";
+            
+            String emailMessage = sendEmailService.mailTemplateInstructorCreated(
+                user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                user.getEmail(),
+                passwordToSend,
+                frontendUrl
+            );
+            sendEmailService.sendEmailWithAttachment(
+                user.getEmail(),
+                emailMessage,
+                "Votre compte formateur a été créé - Orange Digital Learning"
+            );
+        } catch (Exception e) {
+            // Ne pas faire échouer la création si l'email échoue
+            System.err.println("Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         return CResponse.success(savedInstructor, "Instructeur créé avec succès.");
     }

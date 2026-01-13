@@ -64,6 +64,46 @@ public class SendEmailService {
                 "<h2 style=\"color: #2e6c80;\"> <i>NB: Veuillez le modifier après la première connexion</i> </h2>\n" +
                 "</div>";
     }
+
+    public String mailTemplateWelcome(String fullName, String email) {
+        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 20px; text-align: center\">\n" +
+                "  <h1 style=\"color: #5e9ca0;'\">BIENVENUE SUR Orange Digital Learning</h1>\n" +
+                " <img style=\"height: 100px;\" class=\"welcomeImg\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"\">" +
+                "  <div style=\"border-bottom: 1px grey solid\">\n" +
+                "    \n" +
+                "  </div>\n" +
+                "\n" +
+                "<p>Bonjour <strong>" + fullName + "</strong>,</p>\n" +
+                "<p>Nous sommes ravis de vous accueillir sur Orange Digital Learning !</p>\n" +
+                "<p>Votre compte a été créé avec succès avec l'adresse email: <strong>" + email + "</strong></p>\n" +
+                "<p>Vous pouvez maintenant accéder à la plateforme et commencer votre apprentissage.</p>\n" +
+                "<br>" +
+                "<p style=\"color: #2e6c80;\">Bonne continuation dans votre parcours d'apprentissage !</p>\n" +
+                "</div>";
+    }
+
+    public String mailTemplateInstructorCreated(String fullName, String email, String password, String siteUrl) {
+        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 20px; text-align: center\">\n" +
+                "  <h1 style=\"color: #5e9ca0;'\">COMPTE FORMATEUR CRÉÉ - Orange Digital Learning</h1>\n" +
+                " <img style=\"height: 100px;\" class=\"welcomeImg\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"\">" +
+                "  <div style=\"border-bottom: 1px grey solid\">\n" +
+                "    \n" +
+                "  </div>\n" +
+                "\n" +
+                "<p>Bonjour <strong>" + fullName + "</strong>,</p>\n" +
+                "<p>Votre compte formateur a été créé avec succès sur Orange Digital Learning !</p>\n" +
+                "<p><strong>Vos identifiants de connexion:</strong></p>\n" +
+                "<p>Email: <strong>" + email + "</strong></p>\n" +
+                "<p>Mot de passe: <strong>" + password + "</strong></p>\n" +
+                "<br>" +
+                "<p><strong>Lien de connexion:</strong></p>\n" +
+                "<p><a href=\"" + siteUrl + "\" style=\"color: #2e6c80; text-decoration: underline;\">" + siteUrl + "</a></p>\n" +
+                "<br>" +
+                "<p style=\"color: #2e6c80;\"><i>NB: Veuillez modifier votre mot de passe après la première connexion pour des raisons de sécurité.</i></p>\n" +
+                "<br>" +
+                "<p>Bienvenue dans l'équipe des formateurs !</p>\n" +
+                "</div>";
+    }
 }
 
 

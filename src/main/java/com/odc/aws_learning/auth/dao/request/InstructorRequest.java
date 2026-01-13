@@ -15,6 +15,9 @@ public class InstructorRequest {
     @Schema(description = "Email de l'utilisateur à promouvoir (optionnel, utilisé si userId n'est pas fourni)", example = "user@example.com")
     private String userEmail;
 
+    @Schema(description = "Mot de passe de l'utilisateur (optionnel, utilisé uniquement lors de la création d'un formateur par un admin)", example = "password123")
+    private String password;
+
     public InstructorRequest() {
     }
 
@@ -53,5 +56,13 @@ public class InstructorRequest {
 
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }
