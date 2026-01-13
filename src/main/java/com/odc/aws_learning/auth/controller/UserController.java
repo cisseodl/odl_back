@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,6 +34,24 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'INSTRUCTOR', 'APPRENANT')") // Updated roles
     public CResponse<?> getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
+    }
+
+    /**
+     * Blacklister (désactiver) un utilisateur
+     */
+    @PutMapping("/{id}/blacklist")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CResponse<?> blacklistUser(@PathVariable Long id) {
+        return userService.blacklistUser(id);
+    }
+
+    /**
+     * Déblacklister (réactiver) un utilisateur
+     */
+    @PutMapping("/{id}/unblacklist")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CResponse<?> unblacklistUser(@PathVariable Long id) {
+        return userService.unblacklistUser(id);
     }
 
     /**

@@ -5,6 +5,7 @@ import com.odc.aws_learning.app.dto.UserCertificationStats;
 import com.odc.aws_learning.auth.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,4 +21,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     long countByCourseIdIn(List<Long> courseIds); // Added for instructor analytics
 
     long countByUser(User user);
+    
+    @Query("SELECT COUNT(c) FROM Certificate c WHERE c.course.instructor.id = :instructorId")
+    long countByCourse_Instructor_Id(@Param("instructorId") Long instructorId);
 }

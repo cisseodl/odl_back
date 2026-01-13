@@ -217,6 +217,20 @@ public class CoursesController {
     }
 
     /**
+     * Désinscrire un utilisateur d'un cours.
+     * DELETE /courses/unenroll/{courseId}/user/{userId}
+     * Accessible aux admins et instructeurs
+     */
+    @DeleteMapping("/unenroll/{courseId}/user/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public ResponseEntity<CResponse<?>> unenrollUserFromCourse(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        CResponse<?> response = courseService.unenrollUserFromCourse(userId, courseId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Récupère l'utilisateur actuellement authentifié
      */
     private User getCurrentUser() {

@@ -527,4 +527,33 @@ public class CourseService {
             return CResponse.error("Erreur lors de l'inscription: " + e.getMessage());
         }
     }
+
+    /**
+     * Désinscrire un utilisateur d'un cours
+     */
+    @Transactional
+    public CResponse<?> unenrollUserFromCourse(Long userId, Long courseId) {
+        try {
+            // Vérifier que le cours existe
+            Optional<Courses> courseOptional = coursesRepository.findById(courseId);
+            if (courseOptional.isEmpty()) {
+                return CResponse.error("Cours non trouvé avec l'ID: " + courseId);
+            }
+
+            // Vérifier si l'utilisateur est inscrit
+            Optional<com.odc.aws_learning.app.entity.DetailsCourse> enrollmentOptional = detailsCourseRepo
+                    .findByCourseIdAndLearnerId(courseId, userId);
+
+            if (enrollmentOptional.isEmpty()) {
+                return CResponse.error("L'utilisateur n'est pas inscrit à ce cours");
+            }
+
+            // Supprimer l'inscription
+            detailsCourseRepo.delete(enrollmentOptional.get());
+
+            return CResponse.success(null, "Désinscription du cours réussie");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la désinscription: " + e.getMessage());
+        }
+    }
 }

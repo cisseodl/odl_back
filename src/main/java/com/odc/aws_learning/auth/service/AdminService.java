@@ -1,5 +1,6 @@
 package com.odc.aws_learning.auth.service;
 
+import com.odc.aws_learning.app.service.SendEmailService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.dto.AdminWithUserDto;
 import com.odc.aws_learning.auth.entities.Admin;
@@ -7,6 +8,7 @@ import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.AdminRepository;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,10 @@ public class AdminService {
 
     private final AdminRepository adminRepository;
     private final UserRepository userRepository; // To manage User entity
+    private final SendEmailService sendEmailService;
+    
+    @Value("${app.frontend.url:https://pi.smart-odc.com}")
+    private String frontendUrl;
 
     @Transactional
     public CResponse<?> createAdmin(User user) {
@@ -47,6 +53,24 @@ public class AdminService {
         // Link admin to user for bidirectional consistency
         existingUser.setAdmin(savedAdmin);
         userRepository.save(existingUser);
+
+        // Envoyer un email à l'administrateur nouvellement créé
+        try {
+            String emailMessage = sendEmailService.mailTemplateAdminCreated(
+                existingUser.getFullName() != null ? existingUser.getFullName() : existingUser.getEmail(),
+                existingUser.getEmail(),
+                frontendUrl
+            );
+            sendEmailService.sendEmailWithAttachment(
+                existingUser.getEmail(),
+                emailMessage,
+                "Votre compte administrateur a été créé - Orange Digital Learning"
+            );
+        } catch (Exception e) {
+            // Ne pas faire échouer la création si l'email échoue
+            System.err.println("Erreur lors de l'envoi de l'email à l'administrateur: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         // Retourner le DTO avec les données utilisateur
         AdminWithUserDto adminDto = AdminWithUserDto.fromAdmin(savedAdmin);

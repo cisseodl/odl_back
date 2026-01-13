@@ -46,7 +46,8 @@ public class DashboardStatsDTO {
         private long newEnrollmentsLast30Days;
         private long activeLearners;
         private double averageCompletionRate;
-        private double averageQuizScore;
+        private double averageQuizScore; // Gardé pour compatibilité, mais remplacé par totalCertificatesByModule
+        private long totalCertificatesByModule; // Nombre de certifiés par module (total de certificats pour les cours de l'instructeur)
         private long newComments;
         private Double averageRating; // Note moyenne des cours de l'instructeur
         private long totalStudents; // Total des apprenants uniques

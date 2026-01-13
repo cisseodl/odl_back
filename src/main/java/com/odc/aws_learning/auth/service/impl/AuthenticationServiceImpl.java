@@ -96,19 +96,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
            var jwt = jwtService.generateToken(savedUser);
            JwtAuthenticationResponse authenticationResponse = new JwtAuthenticationResponse(jwt, savedUser);
            
-           // Envoyer un email de bienvenue après inscription
-           try {
-               String welcomeMessage = sendEmailService.mailTemplateWelcome(savedUser.getFullName(), savedUser.getEmail());
-               sendEmailService.sendEmailWithAttachment(
-                   savedUser.getEmail(),
-                   welcomeMessage,
-                   "Bienvenue sur Orange Digital Learning"
-               );
-           } catch (Exception e) {
-               // Ne pas faire échouer l'inscription si l'email échoue
-               System.err.println("Erreur lors de l'envoi de l'email de bienvenue: " + e.getMessage());
-               e.printStackTrace();
-           }
+           // Ne pas envoyer d'email lors de la création d'un utilisateur
+           // L'email sera envoyé uniquement lors de la promotion à un rôle (admin, instructeur, apprenant)
            
            return CResponse.success(authenticationResponse, "Création de l'utilisateur réussie");
        } catch (Exception e) {

@@ -29,6 +29,9 @@ public class InstructorService {
     
     @Value("${app.frontend.url:https://pi.smart-odc.com}")
     private String frontendUrl;
+    
+    @Value("${app.dashboard.url:https://pi.smart-odc.com}")
+    private String dashboardUrl;
 
     @Transactional
     public CResponse<?> createInstructorAuthenticated(String userEmail, String biography, String specialization) {
@@ -73,23 +76,22 @@ public class InstructorService {
         user.setInstructor(savedInstructor);
         userRepository.save(user);
 
-        // Envoyer un email au formateur avec le lien et le mot de passe (si fourni)
+        // Envoyer un email au formateur avec le lien Amplify et le mot de passe non crypté (si fourni par l'admin)
         try {
-            String passwordToSend = password != null && !password.trim().isEmpty() 
-                ? password 
-                : "Votre mot de passe a été défini lors de la création de votre compte. Contactez l'administrateur si vous l'avez oublié.";
-            
-            String emailMessage = sendEmailService.mailTemplateInstructorCreated(
-                user.getFullName() != null ? user.getFullName() : user.getEmail(),
-                user.getEmail(),
-                passwordToSend,
-                frontendUrl
-            );
-            sendEmailService.sendEmailWithAttachment(
-                user.getEmail(),
-                emailMessage,
-                "Votre compte formateur a été créé - Orange Digital Learning"
-            );
+            if (password != null && !password.trim().isEmpty()) {
+                // Si un mot de passe est fourni, l'envoyer dans l'email
+                String emailMessage = sendEmailService.mailTemplateInstructorCreated(
+                    user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                    user.getEmail(),
+                    password, // Mot de passe non crypté fourni par l'admin
+                    dashboardUrl // Lien Amplify du dashboard
+                );
+                sendEmailService.sendEmailWithAttachment(
+                    user.getEmail(),
+                    emailMessage,
+                    "Votre compte formateur a été créé - Orange Digital Learning"
+                );
+            }
         } catch (Exception e) {
             // Ne pas faire échouer la création si l'email échoue
             System.err.println("Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());

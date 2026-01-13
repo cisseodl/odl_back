@@ -9,12 +9,14 @@ import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 // import org.springframework.security.crypto.password.PasswordEncoder; // Removed
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.odc.aws_learning.app.service.SendEmailService;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +28,11 @@ public class ApprenantService {
     private final ApprenantRepository apprenantRepository;
     private final CohorteRepository cohorteRepository;
     private final UserRepository userRepository;
+    private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
+    
+    @Value("${app.frontend.url:https://pi.smart-odc.com}")
+    private String frontendUrl;
 
     @Transactional
     public CResponse<?> createApprenantAuthenticated(String emailFromJwt, ApprenantCreateRequest request) {
@@ -73,6 +79,26 @@ public class ApprenantService {
         Apprenant savedApprenant = apprenantRepository.save(apprenant);
         user.setApprenant(savedApprenant);
         userRepository.save(user);
+
+        // Envoyer un email uniquement si l'apprenant est créé par un admin (userId fourni dans la requête)
+        if (request.getUserId() != null) {
+            try {
+                String emailMessage = sendEmailService.mailTemplateApprenantCreated(
+                    user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                    user.getEmail(),
+                    frontendUrl
+                );
+                sendEmailService.sendEmailWithAttachment(
+                    user.getEmail(),
+                    emailMessage,
+                    "Votre compte apprenant a été créé - Orange Digital Learning"
+                );
+            } catch (Exception e) {
+                // Ne pas faire échouer la création si l'email échoue
+                System.err.println("Erreur lors de l'envoi de l'email à l'apprenant: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
 
         return CResponse.success(savedApprenant, "Apprenant créé avec succès.");
     }

@@ -189,6 +189,40 @@ public class UserService implements UserDetailsService {
     }
 
     /**
+     * Blacklister (désactiver) un utilisateur
+     */
+    @Transactional
+    public CResponse<?> blacklistUser(Long id) {
+        Optional<User> userOptional = userRepository.findById(id);
+        if (userOptional.isEmpty()) {
+            return CResponse.error("Utilisateur non trouvé avec l'ID: " + id);
+        }
+        
+        User user = userOptional.get();
+        user.setActivate(false);
+        userRepository.save(user);
+        
+        return CResponse.success(null, "Utilisateur blacklisté (désactivé) avec succès.");
+    }
+
+    /**
+     * Déblacklister (réactiver) un utilisateur
+     */
+    @Transactional
+    public CResponse<?> unblacklistUser(Long id) {
+        Optional<User> userOptional = userRepository.findById(id);
+        if (userOptional.isEmpty()) {
+            return CResponse.error("Utilisateur non trouvé avec l'ID: " + id);
+        }
+        
+        User user = userOptional.get();
+        user.setActivate(true);
+        userRepository.save(user);
+        
+        return CResponse.success(null, "Utilisateur déblacklisté (réactivé) avec succès.");
+    }
+
+    /**
      * Supprime un utilisateur et toutes ses entités liées en cascade (Admin, Instructor, Apprenant, Certificates, etc.)
      * Grâce à CascadeType.ALL et orphanRemoval = true dans les relations @OneToOne et @OneToMany,
      * la suppression de l'utilisateur supprimera automatiquement toutes les entités liées.

@@ -92,6 +92,9 @@ public class DashboardService {
         long completedEnrollments = detailsCourseRepo.countByCourse_Instructor_IdAndCompleted(instructorId, true);
         double averageCompletionRate = (totalEnrollments > 0) ? ((double) completedEnrollments / totalEnrollments) * 100.0 : 0.0;
         Double averageQuizScore = userQuizAttemptRepository.findAverageScoreByInstructorId(instructorId);
+        
+        // Total certificates for instructor's courses (nombre de certifiés par module)
+        long totalCertificatesByModule = certificateRepository.countByCourse_Instructor_Id(instructorId);
 
         // Interaction stats
         long newComments = reviewRepository.countByCourse_Instructor_IdAndCreatedAtAfter(instructorId, now.minusDays(30));
@@ -117,6 +120,7 @@ public class DashboardService {
                 .activeLearners(activeLearners)
                 .averageCompletionRate(averageCompletionRate)
                 .averageQuizScore(averageQuizScore != null ? averageQuizScore : 0.0)
+                .totalCertificatesByModule(totalCertificatesByModule)
                 .newComments(newComments)
                 .averageRating(averageRating != null ? averageRating : 0.0)
                 .totalStudents(totalStudents)
