@@ -24,7 +24,11 @@ public class InstructorService {
 
     private final InstructorRepository instructorRepository;
     private final UserRepository userRepository; // To manage User entity
+    private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
+    
+    @Value("${app.frontend.url:https://pi.smart-odc.com}")
+    private String frontendUrl;
 
     @Transactional
     public CResponse<?> createInstructorAuthenticated(String userEmail, String biography, String specialization) {
