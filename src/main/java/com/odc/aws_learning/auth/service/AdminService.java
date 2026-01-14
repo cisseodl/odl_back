@@ -24,7 +24,7 @@ public class AdminService {
     private final UserRepository userRepository; // To manage User entity
     private final SendEmailService sendEmailService;
     
-    @Value("${app.frontend.url:https://pi.smart-odc.com}")
+    @Value("${app.frontend.url:https://admin.smart-odc.com}")
     private String frontendUrl;
 
     @Transactional

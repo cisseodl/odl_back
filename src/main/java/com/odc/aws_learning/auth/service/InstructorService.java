@@ -27,10 +27,10 @@ public class InstructorService {
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
-    @Value("${app.frontend.url:https://pi.smart-odc.com}")
+    @Value("${app.frontend.url:https://admin.smart-odc.com}")
     private String frontendUrl;
     
-    @Value("${app.dashboard.url:https://pi.smart-odc.com}")
+    @Value("${app.dashboard.url:https://admin.smart-odc.com}")
     private String dashboardUrl;
 
     @Transactional
