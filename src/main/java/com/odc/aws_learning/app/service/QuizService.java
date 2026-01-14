@@ -263,4 +263,107 @@ public class QuizService {
         
         return dto;
     }
+    
+    /**
+     * Met à jour un quiz complet avec ses questions et réponses
+     */
+    @Transactional
+    public CResponse<QuizDTO> updateQuiz(Long quizId, QuizDTO quizDTO) {
+        try {
+            Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+            if (quizOptional.isEmpty()) {
+                return CResponse.error("Quiz non trouvé avec l'ID: " + quizId);
+            }
+            
+            Quiz quiz = quizOptional.get();
+            
+            // Mettre à jour les propriétés du quiz
+            quiz.setTitre(quizDTO.getTitle());
+            quiz.setDescription(quizDTO.getDescription());
+            quiz.setDureeMinutes(quizDTO.getDurationMinutes());
+            quiz.setScoreMinimum(quizDTO.getScoreMinimum() != null ? quizDTO.getScoreMinimum() : 80);
+            
+            // Si le cours change
+            if (quizDTO.getCourseId() != null && !quizDTO.getCourseId().equals(quiz.getCourse().getId())) {
+                Optional<Courses> courseOptional = coursesRepository.findById(quizDTO.getCourseId());
+                if (courseOptional.isPresent()) {
+                    quiz.setCourse(courseOptional.get());
+                }
+            }
+            
+            // Supprimer les anciennes questions et réponses
+            if (quiz.getQuestions() != null) {
+                quiz.getQuestions().forEach(question -> {
+                    if (question.getReponses() != null) {
+                        quizReponseRepository.deleteAll(question.getReponses());
+                    }
+                    quizQuestionRepository.delete(question);
+                });
+                quiz.getQuestions().clear();
+            }
+            
+            // Créer les nouvelles questions et réponses
+            if (quizDTO.getQuestions() != null) {
+                for (QuizDTO.QuestionDTO questionDTO : quizDTO.getQuestions()) {
+                    QuizQuestion question = new QuizQuestion();
+                    question.setContenu(questionDTO.getContent());
+                    question.setType(questionDTO.getType());
+                    question.setPoints(questionDTO.getPoints());
+                    question.setQuiz(quiz);
+                    
+                    QuizQuestion savedQuestion = quizQuestionRepository.save(question);
+                    
+                    // Créer les réponses
+                    if (questionDTO.getReponses() != null) {
+                        for (QuizDTO.ReponseDTO reponseDTO : questionDTO.getReponses()) {
+                            QuizReponse reponse = new QuizReponse();
+                            reponse.setTexte(reponseDTO.getText());
+                            reponse.setEstCorrecte(reponseDTO.getIsCorrect());
+                            reponse.setQuestion(savedQuestion);
+                            quizReponseRepository.save(reponse);
+                        }
+                    }
+                }
+            }
+            
+            Quiz savedQuiz = quizRepository.save(quiz);
+            return CResponse.success(convertToDTO(savedQuiz), "Quiz mis à jour avec succès");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la mise à jour du quiz: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Supprime un quiz et toutes ses questions/réponses associées
+     */
+    @Transactional
+    public CResponse<?> deleteQuiz(Long quizId) {
+        try {
+            Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+            if (quizOptional.isEmpty()) {
+                return CResponse.error("Quiz non trouvé avec l'ID: " + quizId);
+            }
+            
+            Quiz quiz = quizOptional.get();
+            
+            // Supprimer les questions et réponses (cascade devrait le faire automatiquement)
+            if (quiz.getQuestions() != null) {
+                quiz.getQuestions().forEach(question -> {
+                    if (question.getReponses() != null) {
+                        quizReponseRepository.deleteAll(question.getReponses());
+                    }
+                    quizQuestionRepository.delete(question);
+                });
+            }
+            
+            // Supprimer le quiz
+            quizRepository.delete(quiz);
+            
+            return CResponse.success(null, "Quiz supprimé avec succès");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la suppression du quiz: " + e.getMessage());
+        }
+    }
 }

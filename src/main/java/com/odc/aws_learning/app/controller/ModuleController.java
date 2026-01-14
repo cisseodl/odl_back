@@ -20,7 +20,7 @@ public class ModuleController {
         this.moduleService = moduleService;
     }
     @PostMapping("/save")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<?> saveModule(@RequestParam("module") String moduleAndCoursePayloadsString,
                                     @RequestParam(value = "pdfFile", required = false) MultipartFile pdfFile) throws JsonProcessingException {
         System.out.println("=== RECEPTION DU PAYLOAD MODULES ===");
@@ -48,7 +48,7 @@ public class ModuleController {
     }
 
     @GetMapping("/course/{courseId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<?> getModulesByCourse(@PathVariable Long courseId) {
         return moduleService.getModulesByCourse(courseId);
     }

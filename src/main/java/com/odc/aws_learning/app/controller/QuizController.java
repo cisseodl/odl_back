@@ -25,27 +25,45 @@ public class QuizController {
     private final UserRepository userRepository;
     
     /**
-     * Créer un quiz complet avec questions/réponses (ADMIN only)
+     * Créer un quiz complet avec questions/réponses (ADMIN et INSTRUCTOR)
      */
     @PostMapping("/create")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<QuizDTO> createQuiz(@RequestBody QuizDTO quizDTO) {
         return quizService.createQuiz(quizDTO);
     }
     
     /**
-     * Récupérer tous les quiz d'un cours (USER/ADMIN/LEARNER)
+     * Récupérer tous les quiz d'un cours (USER/ADMIN/LEARNER/INSTRUCTOR)
      */
     @GetMapping("/course/{courseId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<List<QuizDTO>> getQuizzesByCourse(@PathVariable Long courseId) {
         return quizService.getQuizzesByCourse(courseId);
     }
 
     @GetMapping("/{quizId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<QuizDTO> getQuizById(@PathVariable Long quizId) {
         return quizService.getQuizById(quizId);
+    }
+    
+    /**
+     * Mettre à jour un quiz complet avec questions/réponses (ADMIN et INSTRUCTOR)
+     */
+    @PutMapping("/update/{quizId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<QuizDTO> updateQuiz(@PathVariable Long quizId, @RequestBody QuizDTO quizDTO) {
+        return quizService.updateQuiz(quizId, quizDTO);
+    }
+    
+    /**
+     * Supprimer un quiz (ADMIN et INSTRUCTOR)
+     */
+    @DeleteMapping("/delete/{quizId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> deleteQuiz(@PathVariable Long quizId) {
+        return quizService.deleteQuiz(quizId);
     }
     
     /**
