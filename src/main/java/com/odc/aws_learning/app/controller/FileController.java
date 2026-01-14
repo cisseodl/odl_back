@@ -36,22 +36,47 @@ public class FileController {
 
     @GetMapping("/{folderName}/{filename:.+}")
     public ResponseEntity<Resource> serveFile(@PathVariable String folderName, @PathVariable String filename) {
-        Path file = Paths.get(uploadDir).resolve(folderName).resolve(filename);
-        Resource resource;
         try {
-            resource = new UrlResource(file.toUri());
-            if (resource.exists() || resource.isReadable()) {
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                        .contentType(MediaType.parseMediaType("application/octet-stream"))
-                        .body(resource);
-            } else {
-                log.warn("Fichier non trouvé ou non lisible: {}", file);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            Path file = Paths.get(uploadDir).resolve(folderName).resolve(filename);
+            log.debug("Tentative de récupération du fichier: {}", file.toAbsolutePath());
+            
+            Resource resource = new UrlResource(file.toUri());
+            
+            if (!resource.exists()) {
+                log.warn("Fichier non trouvé: {} (chemin absolu: {})", file, file.toAbsolutePath());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
+            
+            if (!resource.isReadable()) {
+                log.warn("Fichier non lisible: {} (chemin absolu: {})", file, file.toAbsolutePath());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            
+            // Détecter le type MIME du fichier
+            String contentType = "application/octet-stream";
+            String lowerFilename = filename.toLowerCase();
+            if (lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")) {
+                contentType = "image/jpeg";
+            } else if (lowerFilename.endsWith(".png")) {
+                contentType = "image/png";
+            } else if (lowerFilename.endsWith(".gif")) {
+                contentType = "image/gif";
+            } else if (lowerFilename.endsWith(".webp")) {
+                contentType = "image/webp";
+            } else if (lowerFilename.endsWith(".pdf")) {
+                contentType = "application/pdf";
+            } else if (lowerFilename.endsWith(".mp4")) {
+                contentType = "video/mp4";
+            }
+            
+            log.debug("Fichier trouvé et servi: {} (type: {})", file, contentType);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
         } catch (Exception e) {
-            log.error("Erreur lors de la récupération du fichier: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            log.error("Erreur lors de la récupération du fichier {}/{}: {}", folderName, filename, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 

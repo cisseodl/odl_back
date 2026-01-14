@@ -8,6 +8,7 @@ import com.odc.aws_learning.app.repository.CohorteRepository;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
+import com.odc.aws_learning.app.wrapper.ApprenantWithUserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,7 @@ import com.odc.aws_learning.app.service.SendEmailService;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -103,15 +105,54 @@ public class ApprenantService {
         return CResponse.success(savedApprenant, "Apprenant créé avec succès.");
     }
 
+    @Transactional(readOnly = true)
     public CResponse<?> getAllApprenants() {
-        List<Apprenant> apprenants = apprenantRepository.findAll();
-        return CResponse.success(apprenants, "Liste des apprenants.");
+        try {
+            // Essayer d'abord avec la méthode optimisée
+            List<Apprenant> apprenants;
+            try {
+                apprenants = apprenantRepository.findAllWithUserAndCohorteJoinFetch();
+            } catch (Exception e) {
+                // Si la méthode optimisée échoue, utiliser findAll() standard
+                System.err.println("Erreur avec findAllWithUserAndCohorteJoinFetch, utilisation de findAll(): " + e.getMessage());
+                apprenants = apprenantRepository.findAll();
+            }
+            
+            // Convertir en DTO pour éviter les problèmes de sérialisation JSON
+            List<ApprenantWithUserDto> apprenantDtos = apprenants.stream()
+                    .map(apprenant -> {
+                        try {
+                            return ApprenantWithUserDto.fromApprenant(apprenant);
+                        } catch (Exception e) {
+                            System.err.println("Erreur lors de la conversion d'un apprenant en DTO: " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+            
+            return CResponse.success(apprenantDtos, "Liste des apprenants.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des apprenants: " + e.getMessage());
+        }
     }
 
+    @Transactional(readOnly = true)
     public CResponse<?> getApprenantById(Long id) {
-        Optional<Apprenant> apprenantOptional = apprenantRepository.findById(id);
-        return apprenantOptional.map(apprenant -> CResponse.success(apprenant, "Apprenant trouvé."))
-                .orElse(CResponse.error("Apprenant non trouvé avec l'ID: " + id));
+        try {
+            Optional<Apprenant> apprenantOptional = apprenantRepository.findByIdWithUserAndCohorte(id);
+            if (apprenantOptional.isPresent()) {
+                Apprenant apprenant = apprenantOptional.get();
+                // Convertir en DTO pour éviter les problèmes de sérialisation JSON
+                ApprenantWithUserDto apprenantDto = ApprenantWithUserDto.fromApprenant(apprenant);
+                return CResponse.success(apprenantDto, "Apprenant trouvé.");
+            }
+            return CResponse.error("Apprenant non trouvé avec l'ID: " + id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération de l'apprenant: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -147,18 +188,34 @@ public class ApprenantService {
 
     @Transactional
     public CResponse<?> deleteApprenant(Long id) {
-        Optional<Apprenant> apprenantOptional = apprenantRepository.findById(id);
-        if (apprenantOptional.isPresent()) {
+        try {
+            Optional<Apprenant> apprenantOptional = apprenantRepository.findById(id);
+            if (apprenantOptional.isEmpty()) {
+                return CResponse.error("Apprenant non trouvé avec l'ID: " + id);
+            }
+            
             Apprenant apprenant = apprenantOptional.get();
             User user = apprenant.getUser();
+            
+            if (user == null) {
+                // Si l'apprenant n'a pas d'utilisateur associé, supprimer directement l'apprenant
+                apprenantRepository.delete(apprenant);
+                return CResponse.success(null, "Apprenant supprimé avec succès.");
+            }
             
             // Supprimer l'utilisateur, ce qui supprimera automatiquement l'Apprenant en cascade
             // grâce à CascadeType.ALL et orphanRemoval = true dans la relation User -> Apprenant
             userRepository.delete(user);
             
             return CResponse.success(null, "Apprenant et utilisateur associé supprimés avec succès.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("foreign key constraint")) {
+                return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. Veuillez d'abord supprimer les données associées.");
+            }
+            return CResponse.error("Erreur lors de la suppression de l'apprenant: " + errorMessage);
         }
-        return CResponse.error("Apprenant non trouvé avec l'ID: " + id);
     }
     
     // Original methods to adapt/re-implement as needed
