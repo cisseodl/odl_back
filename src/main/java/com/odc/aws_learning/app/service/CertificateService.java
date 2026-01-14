@@ -8,14 +8,16 @@ import com.odc.aws_learning.app.entity.Quiz;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.app.entity.Certificate;
 import com.odc.aws_learning.app.entity.Courses;
-import com.odc.aws_learning.app.service.S3Service;
+import com.odc.aws_learning.app.service.UploadFileService;
 import com.odc.aws_learning.auth.entities.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import com.odc.aws_learning.app.repository.CertificateRepository;
@@ -29,11 +31,17 @@ import java.util.UUID;
 public class CertificateService {
 
     private final CertificateRepository certificateRepository;
-    private final S3Service s3Service; // Added
+    private final UploadFileService uploadFileService;
 
-    public CertificateService(CertificateRepository certificateRepository, S3Service s3Service) {
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+
+    @Value("${app.server.base-url:https://api.smart-odc.com}")
+    private String serverBaseUrl;
+
+    public CertificateService(CertificateRepository certificateRepository, UploadFileService uploadFileService) {
         this.certificateRepository = certificateRepository;
-        this.s3Service = s3Service;
+        this.uploadFileService = uploadFileService;
     }
     public CResponse<Certificate> generateCertificate(User user, Courses course, Quiz quiz, UserQuizAttempt attempt) {
         try {
@@ -115,27 +123,29 @@ public class CertificateService {
 
             byte[] pdfBytes = out.toByteArray();
 
-            // Générer un nom de fichier unique pour le certificat sur S3
+            // Générer un nom de fichier unique pour le certificat
             String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
 
-            // Uploader le PDF vers S3
-            ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-            String certificateUrl = s3Service.saveFile(bis, pdfBytes.length, "application/pdf", certificateFileName, "certificates");
+            // Uploader le PDF vers le stockage local (Elastic Beanstalk)
+            try {
+                String localFolderPath = uploadDir + "/certificates";
+                ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
+                String savedFileName = uploadFileService.uploadFileFromInputStream(bis, localFolderPath, certificateFileName);
+                String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
+                
+                // Enregistrer l'entité Certificate dans la base de données
+                Certificate certificate = new Certificate();
+                certificate.setUniqueCode(UUID.randomUUID().toString()); // Générer un code unique pour le certificat
+                certificate.setUser(user);
+                certificate.setCourse(course);
+                certificate.setIssuedAt(java.time.Instant.now());
+                certificate.setCertificateUrl(certificateUrl);
+                certificateRepository.save(certificate);
 
-            if (certificateUrl == null) {
-                return CResponse.error("Erreur lors de l'upload du certificat vers S3.");
+                return CResponse.success(certificate, "Certificat généré et enregistré avec succès.");
+            } catch (IOException ioException) {
+                throw new RuntimeException("Erreur lors de l'upload du certificat vers le stockage local: " + ioException.getMessage(), ioException);
             }
-
-            // Enregistrer l'entité Certificate dans la base de données
-            Certificate certificate = new Certificate();
-            certificate.setUniqueCode(UUID.randomUUID().toString()); // Générer un code unique pour le certificat
-            certificate.setUser(user);
-            certificate.setCourse(course);
-            certificate.setIssuedAt(java.time.Instant.now());
-            certificate.setCertificateUrl(certificateUrl);
-            certificateRepository.save(certificate);
-
-            return CResponse.success(certificate, "Certificat généré et enregistré avec succès.");
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la génération du certificat PDF", e);
         }

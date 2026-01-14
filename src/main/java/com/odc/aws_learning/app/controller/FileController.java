@@ -1,6 +1,5 @@
 package com.odc.aws_learning.app.controller;
 
-import com.odc.aws_learning.app.service.S3Service;
 import com.odc.aws_learning.app.service.UploadFileService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +29,9 @@ public class FileController {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    private final S3Service s3Service;
+    @Value("${app.server.base-url:https://api.smart-odc.com}")
+    private String serverBaseUrl;
+
     private final UploadFileService uploadFileService;
 
     @GetMapping("/{folderName}/{filename:.+}")
@@ -55,7 +56,7 @@ public class FileController {
     }
 
     /**
-     * Endpoint de test pour l'upload vers S3.
+     * Endpoint pour l'upload de fichiers vers le stockage local (Elastic Beanstalk).
      * URL: POST /api/files/upload
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -71,39 +72,24 @@ public class FileController {
         }
 
         try {
-            // Essayer d'abord S3
-            String url = s3Service.saveFile(file, folderName);
-            if (url != null && !url.isEmpty()) {
-                return ResponseEntity.ok(url);
-            }
-        } catch (RuntimeException e) {
-            // Si S3 échoue (credentials non configurés), utiliser le stockage local comme fallback
-            log.warn("Échec de l'upload S3, utilisation du stockage local comme fallback: {}", e.getMessage());
-            try {
-                // Créer le dossier de destination local
-                String localFolderPath = uploadDir + "/" + folderName;
-                String savedFileName = uploadFileService.uploadFile(file, localFolderPath);
-                // Retourner l'URL relative pour servir le fichier via le FileController
-                String localUrl = "/api/files/" + folderName + "/" + savedFileName;
-                log.info("Fichier sauvegardé localement: {}", localUrl);
-                return ResponseEntity.ok("http://localhost:8080/awsodclearning" + localUrl);
-            } catch (IOException ioException) {
-                log.error("Erreur lors de la sauvegarde locale du fichier: {}", ioException.getMessage(), ioException);
-                return ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Erreur lors de l'upload du fichier (S3 et stockage local ont échoué): " + ioException.getMessage());
-            }
+            // Utiliser le stockage local (Elastic Beanstalk)
+            String localFolderPath = uploadDir + "/" + folderName;
+            String savedFileName = uploadFileService.uploadFile(file, localFolderPath);
+            // Générer l'URL complète pour servir le fichier via le FileController
+            String fileUrl = serverBaseUrl + "/awsodclearning/api/files/" + folderName + "/" + savedFileName;
+            log.info("Fichier sauvegardé localement: {}", fileUrl);
+            return ResponseEntity.ok(fileUrl);
+        } catch (IOException ioException) {
+            log.error("Erreur lors de la sauvegarde locale du fichier: {}", ioException.getMessage(), ioException);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur lors de l'upload du fichier: " + ioException.getMessage());
         } catch (Exception e) {
             log.error("Erreur inattendue lors de l'upload: {}", e.getMessage(), e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur inattendue lors de l'upload: " + e.getMessage());
         }
-        
-        // Si on arrive ici, S3 a retourné null sans exception
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Erreur lors de l'upload du fichier vers S3: Le service a retourné null.");
     }
 
     @GetMapping("/presigned-url")
@@ -112,12 +98,9 @@ public class FileController {
             @RequestParam String fileName,
             @RequestParam String fileType,
             @RequestParam(value = "folder", defaultValue = "") String folder) {
-        String presignedUrl = s3Service.generatePresignedUrl(fileName, fileType, folder);
-        if (presignedUrl != null) {
-            return ResponseEntity.ok(CResponse.success(presignedUrl, "URL pré-signée générée avec succès"));
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CResponse.error("Erreur lors de la génération de l'URL pré-signée"));
-        }
+        // Pour Elastic Beanstalk, on retourne directement l'URL du fichier après upload
+        // Cette méthode n'est plus utilisée avec S3, mais conservée pour compatibilité
+        String fileUrl = serverBaseUrl + "/awsodclearning/api/files/" + folder + "/" + fileName;
+        return ResponseEntity.ok(CResponse.success(fileUrl, "URL du fichier générée avec succès"));
     }
 }

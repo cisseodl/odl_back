@@ -95,4 +95,43 @@ public class UploadFileService {
         }
         return filename;
     }
+
+    /**
+     * Upload un fichier à partir d'un InputStream vers le stockage local.
+     * @param inputStream Le flux de données du fichier.
+     * @param link Le chemin du dossier de destination.
+     * @param fileName Le nom du fichier à sauvegarder.
+     * @return Le nom du fichier sauvegardé.
+     * @throws IOException En cas d'erreur lors de l'écriture du fichier.
+     */
+    public String uploadFileFromInputStream(InputStream inputStream, String link, String fileName) throws IOException {
+        Path uploadPath = Paths.get(link);
+        
+        if (!Files.exists(uploadPath)) {
+            try {
+                Files.createDirectories(uploadPath);
+            } catch (IOException e) {
+                System.err.println("Error creating upload directories for InputStream: " + uploadPath.toString() + " - " + e.getMessage());
+                throw new IOException("Could not create upload directory for InputStream: " + uploadPath.toString(), e);
+            }
+        }
+
+        Path filePath = uploadPath.resolve(fileName);
+        try {
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("Error saving file from InputStream: " + filePath.toString() + " - " + e.getMessage());
+            throw new IOException("Could not save file from InputStream: " + filePath.toString(), e);
+        } finally {
+            try {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+            } catch (IOException e) {
+                System.err.println("Error closing InputStream: " + e.getMessage());
+            }
+        }
+        
+        return fileName;
+    }
 }

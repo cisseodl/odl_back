@@ -8,7 +8,6 @@ import com.odc.aws_learning.app.dto.CourseDto;
 import com.odc.aws_learning.app.dto.CourseUpdateRequest; // Added
 import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.service.CourseService;
-import com.odc.aws_learning.app.service.S3Service; // Added
 import com.odc.aws_learning.app.service.UploadFileService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -39,12 +38,14 @@ public class CoursesController {
     private final CourseService courseService;
     private final UserRepository userRepository;
     private final com.odc.aws_learning.app.repository.CoursesRepository coursesRepository;
-    private final S3Service s3Service; // Injected
     private final UploadFileService uploadFileService;
     private final ObjectMapper objectMapper; // Injected
     
     @Value("${file.upload-dir}")
     private String uploadDir;
+
+    @Value("${app.server.base-url:https://api.smart-odc.com}")
+    private String serverBaseUrl;
 
 
     @PostMapping(value = "/save/{catId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -62,24 +63,15 @@ public class CoursesController {
 
         if (image != null && !image.isEmpty()) {
             try {
-                // Essayer d'abord S3
-                String imageUrl = s3Service.saveFile(image, "courses");
-                if (imageUrl != null && !imageUrl.isEmpty()) {
-                    request.setImagePath(imageUrl);
-                }
-            } catch (RuntimeException e) {
-                // Si S3 échoue (credentials non configurés), utiliser le stockage local comme fallback
-                log.warn("Échec de l'upload S3 pour l'image du cours, utilisation du stockage local comme fallback: {}", e.getMessage());
-                try {
-                    String localFolderPath = uploadDir + "/courses";
-                    String savedFileName = uploadFileService.uploadFile(image, localFolderPath);
-                    String localUrl = "http://localhost:8080/awsodclearning/api/files/courses/" + savedFileName;
-                    log.info("Image du cours sauvegardée localement: {}", localUrl);
-                    request.setImagePath(localUrl);
-                } catch (IOException ioException) {
-                    log.error("Erreur lors de la sauvegarde locale de l'image du cours: {}", ioException.getMessage(), ioException);
-                    // Continuer sans image si les deux méthodes échouent
-                }
+                // Utiliser le stockage local (Elastic Beanstalk)
+                String localFolderPath = uploadDir + "/courses";
+                String savedFileName = uploadFileService.uploadFile(image, localFolderPath);
+                String imageUrl = serverBaseUrl + "/awsodclearning/api/files/courses/" + savedFileName;
+                log.info("Image du cours sauvegardée localement: {}", imageUrl);
+                request.setImagePath(imageUrl);
+            } catch (IOException ioException) {
+                log.error("Erreur lors de la sauvegarde locale de l'image du cours: {}", ioException.getMessage(), ioException);
+                // Continuer sans image si l'upload échoue
             }
         }
 
@@ -121,8 +113,17 @@ public class CoursesController {
            try {
                CourseUpdateRequest request = objectMapper.readValue(coursestring, CourseUpdateRequest.class);
                if (image != null && !image.isEmpty()) {
-                   String imageUrl = s3Service.saveFile(image, "courses");
-                   request.setImagePath(imageUrl);
+                   try {
+                       // Utiliser le stockage local (Elastic Beanstalk)
+                       String localFolderPath = uploadDir + "/courses";
+                       String savedFileName = uploadFileService.uploadFile(image, localFolderPath);
+                       String imageUrl = serverBaseUrl + "/awsodclearning/api/files/courses/" + savedFileName;
+                       log.info("Image du cours mise à jour localement: {}", imageUrl);
+                       request.setImagePath(imageUrl);
+                   } catch (IOException ioException) {
+                       log.error("Erreur lors de la sauvegarde locale de l'image du cours: {}", ioException.getMessage(), ioException);
+                       // Continuer sans mettre à jour l'image si l'upload échoue
+                   }
                }
                CourseDto updatedCourse = courseService.updateCourse(id, request);
                return CResponse.success(updatedCourse, "Le cours a été mis à jour avec succès.");
