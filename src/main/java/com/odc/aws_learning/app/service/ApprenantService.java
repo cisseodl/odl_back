@@ -5,6 +5,7 @@ import com.odc.aws_learning.app.entity.Apprenant;
 import com.odc.aws_learning.app.entity.Cohorte;
 import com.odc.aws_learning.app.repository.ApprenantRepository;
 import com.odc.aws_learning.app.repository.CohorteRepository;
+import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -30,6 +31,7 @@ public class ApprenantService {
     private final ApprenantRepository apprenantRepository;
     private final CohorteRepository cohorteRepository;
     private final UserRepository userRepository;
+    private final DetailsCourseRepo detailsCourseRepo;
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
@@ -203,18 +205,34 @@ public class ApprenantService {
                 return CResponse.success(null, "Apprenant supprimé avec succès.");
             }
             
+            // Supprimer d'abord les DetailsCourse (inscriptions aux cours) associés à cet utilisateur
+            // car DetailsCourse n'a pas de cascade depuis User
+            try {
+                List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCourses = detailsCourseRepo.findByLearnerId(user.getId());
+                if (!detailsCourses.isEmpty()) {
+                    detailsCourseRepo.deleteAll(detailsCourses);
+                }
+            } catch (Exception e) {
+                // Logger l'erreur mais continuer avec la suppression
+                System.err.println("Erreur lors de la suppression des DetailsCourse pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+            }
+            
             // Supprimer l'utilisateur, ce qui supprimera automatiquement l'Apprenant en cascade
             // grâce à CascadeType.ALL et orphanRemoval = true dans la relation User -> Apprenant
             userRepository.delete(user);
             
             return CResponse.success(null, "Apprenant et utilisateur associé supprimés avec succès.");
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            e.printStackTrace();
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && (errorMessage.contains("foreign key constraint") || errorMessage.contains("constraint"))) {
+                return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. Veuillez d'abord supprimer les données associées.");
+            }
+            return CResponse.error("Erreur de contrainte lors de la suppression de l'apprenant: " + errorMessage);
         } catch (Exception e) {
             e.printStackTrace();
             String errorMessage = e.getMessage();
-            if (errorMessage != null && errorMessage.contains("foreign key constraint")) {
-                return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. Veuillez d'abord supprimer les données associées.");
-            }
-            return CResponse.error("Erreur lors de la suppression de l'apprenant: " + errorMessage);
+            return CResponse.error("Erreur lors de la suppression de l'apprenant: " + (errorMessage != null ? errorMessage : e.getClass().getSimpleName()));
         }
     }
     
