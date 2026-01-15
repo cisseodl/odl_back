@@ -88,9 +88,25 @@ public class FileController {
             }
             
             log.debug("Fichier trouvé et servi: {} (type: {})", file, contentType);
+            
+            // Déterminer Content-Disposition selon le type de fichier
+            String contentDisposition = "inline; filename=\"" + resource.getFilename() + "\"";
+            // Pour les fichiers Word, Excel, PowerPoint, permettre l'ouverture dans le navigateur
+            // mais aussi permettre le téléchargement si nécessaire
+            if (lowerFilename.endsWith(".doc") || lowerFilename.endsWith(".docx") ||
+                lowerFilename.endsWith(".xls") || lowerFilename.endsWith(".xlsx") ||
+                lowerFilename.endsWith(".ppt") || lowerFilename.endsWith(".pptx")) {
+                // Pour les fichiers Office, permettre l'ouverture inline mais aussi le téléchargement
+                contentDisposition = "inline; filename=\"" + resource.getFilename() + "\"";
+            }
+            
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET, OPTIONS")
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "*")
+                    .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
                     .body(resource);
         } catch (Exception e) {
             log.error("Erreur lors de la récupération du fichier {}/{}: {}", folderName, filename, e.getMessage(), e);
