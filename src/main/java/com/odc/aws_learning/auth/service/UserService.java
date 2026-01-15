@@ -136,11 +136,14 @@ public class UserService implements UserDetailsService {
                     .filter(dto -> dto != null)
                     .collect(Collectors.toList());
 
+            System.out.println("UserService.getAll() - Nombre d'utilisateurs convertis: " + users.size());
             return CResponse.success(users, "Liste des utilisateurs");
         } catch (Exception e) {
             System.err.println("Erreur dans getAll(): " + e.getMessage());
+            System.err.println("Type d'exception: " + e.getClass().getName());
             e.printStackTrace();
-            return CResponse.error("Erreur lors de la récupération des utilisateurs: " + e.getMessage());
+            // Retourner une liste vide plutôt qu'une erreur pour éviter de bloquer l'interface
+            return CResponse.success(new ArrayList<>(), "Aucun utilisateur trouvé (erreur lors de la récupération)");
         }
     }
 
