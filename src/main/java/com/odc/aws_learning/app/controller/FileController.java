@@ -65,8 +65,26 @@ public class FileController {
                 contentType = "image/webp";
             } else if (lowerFilename.endsWith(".pdf")) {
                 contentType = "application/pdf";
+            } else if (lowerFilename.endsWith(".doc")) {
+                contentType = "application/msword";
+            } else if (lowerFilename.endsWith(".docx")) {
+                contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            } else if (lowerFilename.endsWith(".xls")) {
+                contentType = "application/vnd.ms-excel";
+            } else if (lowerFilename.endsWith(".xlsx")) {
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            } else if (lowerFilename.endsWith(".ppt")) {
+                contentType = "application/vnd.ms-powerpoint";
+            } else if (lowerFilename.endsWith(".pptx")) {
+                contentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            } else if (lowerFilename.endsWith(".txt")) {
+                contentType = "text/plain";
             } else if (lowerFilename.endsWith(".mp4")) {
                 contentType = "video/mp4";
+            } else if (lowerFilename.endsWith(".webm")) {
+                contentType = "video/webm";
+            } else if (lowerFilename.endsWith(".ogg")) {
+                contentType = "video/ogg";
             }
             
             log.debug("Fichier trouvé et servi: {} (type: {})", file, contentType);
