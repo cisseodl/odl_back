@@ -6,6 +6,8 @@ import com.odc.aws_learning.app.entity.Cohorte;
 import com.odc.aws_learning.app.repository.ApprenantRepository;
 import com.odc.aws_learning.app.repository.CohorteRepository;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
+import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
+import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -32,6 +34,7 @@ public class ApprenantService {
     private final CohorteRepository cohorteRepository;
     private final UserRepository userRepository;
     private final DetailsCourseRepo detailsCourseRepo;
+    private final UserQuizAttemptRepository userQuizAttemptRepository;
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
@@ -214,8 +217,12 @@ public class ApprenantService {
     @Transactional
     public CResponse<?> deleteApprenant(Long id) {
         try {
+            System.out.println("=== SUPPRESSION D'APPRENANT ===");
+            System.out.println("ID Apprenant: " + id);
+            
             Optional<Apprenant> apprenantOptional = apprenantRepository.findById(id);
             if (apprenantOptional.isEmpty()) {
+                System.err.println("Apprenant non trouvé avec l'ID: " + id);
                 return CResponse.error("Apprenant non trouvé avec l'ID: " + id);
             }
             
@@ -223,31 +230,53 @@ public class ApprenantService {
             User user = apprenant.getUser();
             
             if (user == null) {
-                // Si l'apprenant n'a pas d'utilisateur associé, supprimer directement l'apprenant
+                System.out.println("Aucun utilisateur associé, suppression directe de l'apprenant");
                 apprenantRepository.delete(apprenant);
                 return CResponse.success(null, "Apprenant supprimé avec succès.");
             }
             
+            System.out.println("User ID: " + user.getId());
+            
             // Supprimer d'abord les DetailsCourse (inscriptions aux cours) associés à cet utilisateur
             // car DetailsCourse n'a pas de cascade depuis User
             try {
+                System.out.println("Suppression des DetailsCourse...");
                 List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCourses = detailsCourseRepo.findByLearnerId(user.getId());
+                System.out.println("Nombre de DetailsCourse trouvés: " + detailsCourses.size());
                 if (!detailsCourses.isEmpty()) {
                     detailsCourseRepo.deleteAll(detailsCourses);
+                    System.out.println("DetailsCourse supprimés avec succès");
                 }
             } catch (Exception e) {
-                // Logger l'erreur mais continuer avec la suppression
                 System.err.println("Erreur lors de la suppression des DetailsCourse pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
             }
             
+            // Supprimer les UserQuizAttempt car cette relation n'a pas de cascade depuis User
+            try {
+                System.out.println("Suppression des UserQuizAttempt...");
+                List<com.odc.aws_learning.app.entity.UserQuizAttempt> quizAttempts = userQuizAttemptRepository.findByUserId(user.getId());
+                System.out.println("Nombre de UserQuizAttempt trouvés: " + quizAttempts.size());
+                if (!quizAttempts.isEmpty()) {
+                    userQuizAttemptRepository.deleteAll(quizAttempts);
+                    System.out.println("UserQuizAttempt supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des UserQuizAttempt pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            System.out.println("Suppression de l'utilisateur...");
             // Supprimer l'utilisateur, ce qui supprimera automatiquement l'Apprenant en cascade
             // grâce à CascadeType.ALL et orphanRemoval = true dans la relation User -> Apprenant
             userRepository.delete(user);
+            System.out.println("Utilisateur supprimé avec succès");
             
             return CResponse.success(null, "Apprenant et utilisateur associé supprimés avec succès.");
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             e.printStackTrace();
             String errorMessage = e.getMessage();
+            System.err.println("DataIntegrityViolationException: " + errorMessage);
             if (errorMessage != null && (errorMessage.contains("foreign key constraint") || errorMessage.contains("constraint"))) {
                 return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. Veuillez d'abord supprimer les données associées.");
             }
@@ -255,6 +284,8 @@ public class ApprenantService {
         } catch (Exception e) {
             e.printStackTrace();
             String errorMessage = e.getMessage();
+            System.err.println("Exception lors de la suppression: " + errorMessage);
+            System.err.println("Type d'exception: " + e.getClass().getName());
             return CResponse.error("Erreur lors de la suppression de l'apprenant: " + (errorMessage != null ? errorMessage : e.getClass().getSimpleName()));
         }
     }
