@@ -7,6 +7,10 @@ import com.odc.aws_learning.app.repository.ApprenantRepository;
 import com.odc.aws_learning.app.repository.CohorteRepository;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
+import com.odc.aws_learning.app.repository.LearnerModuleRepository;
+import com.odc.aws_learning.app.repository.UserProgressRepository;
+import com.odc.aws_learning.app.repository.ReviewRepository;
+import com.odc.aws_learning.app.repository.LabSessionRepository;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -35,6 +39,10 @@ public class ApprenantService {
     private final UserRepository userRepository;
     private final DetailsCourseRepo detailsCourseRepo;
     private final UserQuizAttemptRepository userQuizAttemptRepository;
+    private final LearnerModuleRepository learnerModuleRepository;
+    private final UserProgressRepository userProgressRepository;
+    private final ReviewRepository reviewRepository;
+    private final LabSessionRepository labSessionRepository;
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
@@ -263,6 +271,64 @@ public class ApprenantService {
                 }
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des UserQuizAttempt pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les LearnerModule car cette relation utilise "learner" au lieu de "user"
+            try {
+                System.out.println("Suppression des LearnerModule...");
+                List<com.odc.aws_learning.app.entity.LearnerModule> learnerModules = learnerModuleRepository.findAll().stream()
+                        .filter(lm -> lm.getLearner() != null && lm.getLearner().getId().equals(user.getId()))
+                        .collect(java.util.stream.Collectors.toList());
+                System.out.println("Nombre de LearnerModule trouvés: " + learnerModules.size());
+                if (!learnerModules.isEmpty()) {
+                    learnerModuleRepository.deleteAll(learnerModules);
+                    System.out.println("LearnerModule supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des LearnerModule pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les UserProgress car cette relation peut avoir des problèmes de cascade
+            try {
+                System.out.println("Suppression des UserProgress...");
+                List<com.odc.aws_learning.app.entity.UserProgress> userProgresses = userProgressRepository.findByUserId(user.getId());
+                System.out.println("Nombre de UserProgress trouvés: " + userProgresses.size());
+                if (!userProgresses.isEmpty()) {
+                    userProgressRepository.deleteAll(userProgresses);
+                    System.out.println("UserProgress supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des UserProgress pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les Review car cette relation peut avoir des problèmes de cascade
+            try {
+                System.out.println("Suppression des Review...");
+                List<com.odc.aws_learning.app.entity.Review> reviews = reviewRepository.findByUserId(user.getId());
+                System.out.println("Nombre de Review trouvés: " + reviews.size());
+                if (!reviews.isEmpty()) {
+                    reviewRepository.deleteAll(reviews);
+                    System.out.println("Review supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des Review pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les LabSession car cette relation peut avoir des problèmes de cascade
+            try {
+                System.out.println("Suppression des LabSession...");
+                List<com.odc.aws_learning.app.entity.LabSession> labSessions = labSessionRepository.findByUserId(user.getId());
+                System.out.println("Nombre de LabSession trouvés: " + labSessions.size());
+                if (!labSessions.isEmpty()) {
+                    labSessionRepository.deleteAll(labSessions);
+                    System.out.println("LabSession supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des LabSession pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
             }
             

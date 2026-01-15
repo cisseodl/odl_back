@@ -15,6 +15,7 @@ import java.util.List;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByCourseId(Long courseId);
     List<Review> findByCourseIdAndActivateIsTrue(Long courseId);
+    List<Review> findByUserId(Long userId);
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.course.instructor.id = :instructorId")
     Double findAverageRatingByInstructorCourses(@Param("instructorId") Long instructorId);
