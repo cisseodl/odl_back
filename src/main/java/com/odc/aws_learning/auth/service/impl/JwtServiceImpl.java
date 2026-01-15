@@ -18,7 +18,7 @@ import java.util.function.Function;
 
 @Service
 public class JwtServiceImpl implements JwtService {
-    @Value("${token.signing.key}")
+    @Value("${token.signing.key:413F4428472B4B62506hdfgamooATK979244226452948404D6351}")
     private String jwtSigningKey;
     @Override
     public String extractUserName(String token) {
