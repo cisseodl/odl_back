@@ -62,9 +62,20 @@ public class ApprenantService {
 
         Apprenant apprenant = new Apprenant();
         apprenant.setActivate(request.getActivate() != null ? request.getActivate() : true);
-        apprenant.setNom(request.getNom());
-        apprenant.setPrenom(request.getPrenom());
-        apprenant.setEmail(request.getEmail() != null ? request.getEmail() : user.getEmail()); // Utiliser l'email du DTO ou celui du User
+        
+        // Parser le username pour extraire nom et prenom
+        if (request.getUsername() != null && !request.getUsername().trim().isEmpty()) {
+            String[] nameParts = request.getUsername().trim().split("\\s+", 2);
+            if (nameParts.length >= 2) {
+                apprenant.setPrenom(nameParts[0]);
+                apprenant.setNom(nameParts[1]);
+            } else {
+                apprenant.setPrenom(nameParts[0]);
+                apprenant.setNom("");
+            }
+        }
+        // L'email vient du User, pas besoin de le stocker dans Apprenant
+        apprenant.setEmail(user.getEmail()); // Utiliser l'email du User
         apprenant.setNumero(request.getNumero()); // Le numéro vient du DTO
         apprenant.setProfession(request.getProfession());
         apprenant.setNiveauEtude(request.getNiveauEtude());
@@ -158,7 +169,7 @@ public class ApprenantService {
     }
 
     @Transactional
-    public CResponse<?> updateApprenant(Long id, User userDetails, String nom, String prenom, String email, String numero, String profession, String niveauEtude, String filiere, Long cohorteId, String attentes, Boolean satisfaction) {
+    public CResponse<?> updateApprenant(Long id, User userDetails, String username, String numero, String profession, String niveauEtude, String filiere, Long cohorteId, String attentes, Boolean satisfaction) {
         return apprenantRepository.findById(id)
                 .map(apprenant -> {
                     // Update user details if necessary (e.g., from a DTO)
@@ -167,10 +178,22 @@ public class ApprenantService {
                     if (userDetails.getEmail() != null) user.setEmail(userDetails.getEmail());
                     // ... update other user fields as needed ...
                     userRepository.save(user); // Save updated user details
+                    
+                    // Mettre à jour l'email de l'apprenant avec celui du User
+                    apprenant.setEmail(user.getEmail());
 
-                    if (nom != null) apprenant.setNom(nom);
-                    if (prenom != null) apprenant.setPrenom(prenom);
-                    if (email != null) apprenant.setEmail(email);
+                    // Parser le username pour extraire nom et prenom
+                    if (username != null && !username.trim().isEmpty()) {
+                        String[] nameParts = username.trim().split("\\s+", 2);
+                        if (nameParts.length >= 2) {
+                            apprenant.setPrenom(nameParts[0]);
+                            apprenant.setNom(nameParts[1]);
+                        } else {
+                            apprenant.setPrenom(nameParts[0]);
+                            apprenant.setNom("");
+                        }
+                    }
+                    
                     if (numero != null) apprenant.setNumero(numero);
                     if (profession != null) apprenant.setProfession(profession);
                     if (niveauEtude != null) apprenant.setNiveauEtude(niveauEtude);

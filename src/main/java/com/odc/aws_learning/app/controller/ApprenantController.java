@@ -89,9 +89,7 @@ public class ApprenantController {
     public CResponse<?> updateApprenant(
             @PathVariable Long id,
             @RequestBody User userDetails,
-            @RequestParam(required = false) String nom,
-            @RequestParam(required = false) String prenom,
-            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String username,
             @RequestParam(required = false) String numero,
             @RequestParam(required = false) String profession,
             @RequestParam(required = false) String niveauEtude,
@@ -103,9 +101,7 @@ public class ApprenantController {
         return apprenantService.updateApprenant(
                 id,
                 userDetails,
-                nom,
-                prenom,
-                email,
+                username,
                 numero,
                 profession,
                 niveauEtude,

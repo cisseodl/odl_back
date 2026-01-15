@@ -20,9 +20,7 @@ public class ApprenantWithUserDto {
     private Boolean activate;
     
     // Apprenant specific fields
-    private String nom;
-    private String prenom;
-    private String email;
+    private String username; // Combine nom et prenom
     private String numero;
     private String profession;
     private String niveauEtude;
@@ -46,14 +44,24 @@ public class ApprenantWithUserDto {
         }
         
         User user = apprenant.getUser();
+        
+        // Construire le username à partir de nom et prenom
+        String username = null;
+        if (apprenant.getNom() != null || apprenant.getPrenom() != null) {
+            String nom = apprenant.getNom() != null ? apprenant.getNom() : "";
+            String prenom = apprenant.getPrenom() != null ? apprenant.getPrenom() : "";
+            username = (prenom + " " + nom).trim();
+            if (username.isEmpty()) {
+                username = nom.isEmpty() ? prenom : nom;
+            }
+        }
+        
         ApprenantWithUserDto.ApprenantWithUserDtoBuilder builder = ApprenantWithUserDto.builder()
                 .id(apprenant.getId())
                 .createdAt(apprenant.getCreatedAt())
                 .lastModifiedAt(apprenant.getLastModifiedAt())
                 .activate(apprenant.isActivate())
-                .nom(apprenant.getNom())
-                .prenom(apprenant.getPrenom())
-                .email(apprenant.getEmail())
+                .username(username)
                 .numero(apprenant.getNumero())
                 .profession(apprenant.getProfession())
                 .niveauEtude(apprenant.getNiveauEtude())

@@ -7,9 +7,7 @@ public class ApprenantCreateRequest {
 
     private Boolean activate;
 
-    private String nom;
-    private String prenom;
-    private String email;
+    private String username; // Remplace nom et prenom
     private String numero;
     private String profession;
     private String niveauEtude;
