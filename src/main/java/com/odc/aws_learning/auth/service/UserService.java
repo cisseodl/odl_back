@@ -41,34 +41,107 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
+    @Transactional(readOnly = true)
     public CResponse<?> getAll(int page, int size) {
-        Pageable paging = PageRequest.of(page, size);
-        Page<User> pageUsers = userRepository.findAll(paging);
-        List<UserDto> users = pageUsers.getContent().stream()
-                .map(user -> {
-                    List<String> roles = new ArrayList<>();
-                    if (user.getAdmin() != null) roles.add("ADMIN");
-                    if (user.getInstructor() != null) roles.add("INSTRUCTOR");
-                    if (user.getApprenant() != null) roles.add("APPRENANT");
-                    if (roles.isEmpty()) roles.add("USER"); // Default role
+        try {
+            Pageable paging = PageRequest.of(page, size);
+            
+            // Utiliser findAll standard avec pagination, puis charger les relations si nécessaire
+            Page<User> pageUsers = userRepository.findAll(paging);
+            List<User> usersList = pageUsers.getContent();
+            
+            List<UserDto> users = usersList.stream()
+                    .map(user -> {
+                        try {
+                            List<String> roles = new ArrayList<>();
+                            
+                            // Vérifier les relations de manière sécurisée
+                            // Ces relations sont chargées en lazy, donc on doit les accéder dans la transaction
+                            try {
+                                if (user.getAdmin() != null) {
+                                    roles.add("ADMIN");
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Erreur lors de l'accès à getAdmin() pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                            }
+                            
+                            try {
+                                if (user.getInstructor() != null) {
+                                    roles.add("INSTRUCTOR");
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Erreur lors de l'accès à getInstructor() pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                            }
+                            
+                            try {
+                                if (user.getApprenant() != null) {
+                                    roles.add("APPRENANT");
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Erreur lors de l'accès à getApprenant() pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                            }
+                            
+                            if (roles.isEmpty()) {
+                                roles.add("USER"); // Default role
+                            }
 
-                    return UserDto.builder()
-                            .id(user.getId())
-                            .fullName(user.getFullName())
-                            .email(user.getEmail())
-                            .phone(user.getPhone())
-                            .admin(user.getAdmin() != null) // Check if Admin entity is linked
-                            .activate(user.getActivate())
-                            .avatar(user.getAvatar())
-                            .roles(roles)
-                            .certificates(user.getCertificates().stream()
-                                    .map(certificate -> certificate.getCertificateUrl() + ", Code:" + certificate.getUniqueCode())
-                                    .collect(Collectors.toList()))
-                            .build();
-                })
-                .collect(Collectors.toList());
+                            // Gérer les certificats de manière sécurisée
+                            // Les certificats sont chargés en lazy, donc on doit les accéder dans la transaction
+                            List<String> certificateList = new ArrayList<>();
+                            try {
+                                if (user.getCertificates() != null && !user.getCertificates().isEmpty()) {
+                                    certificateList = user.getCertificates().stream()
+                                            .filter(cert -> cert != null && cert.getCertificateUrl() != null)
+                                            .map(certificate -> {
+                                                String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
+                                                String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
+                                                return url + ", Code:" + code;
+                                            })
+                                            .collect(Collectors.toList());
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Erreur lors de l'accès aux certificats pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                                e.printStackTrace();
+                                // Continuer avec une liste vide de certificats
+                            }
 
-        return CResponse.success(users, "Liste des utilisateurs");
+                            return UserDto.builder()
+                                    .id(user.getId())
+                                    .fullName(user.getFullName() != null ? user.getFullName() : "")
+                                    .email(user.getEmail() != null ? user.getEmail() : "")
+                                    .phone(user.getPhone())
+                                    .admin(user.getAdmin() != null) // Check if Admin entity is linked
+                                    .activate(user.getActivate() != null ? user.getActivate() : false)
+                                    .avatar(user.getAvatar())
+                                    .roles(roles)
+                                    .certificates(certificateList)
+                                    .build();
+                        } catch (Exception e) {
+                            System.err.println("Erreur lors de la conversion de l'utilisateur " + user.getId() + " en DTO: " + e.getMessage());
+                            e.printStackTrace();
+                            // Retourner un DTO minimal en cas d'erreur
+                            return UserDto.builder()
+                                    .id(user.getId())
+                                    .fullName(user.getFullName() != null ? user.getFullName() : "")
+                                    .email(user.getEmail() != null ? user.getEmail() : "")
+                                    .phone(user.getPhone())
+                                    .admin(false)
+                                    .activate(user.getActivate() != null ? user.getActivate() : false)
+                                    .avatar(user.getAvatar())
+                                    .roles(new ArrayList<>())
+                                    .certificates(new ArrayList<>())
+                                    .build();
+                        }
+                    })
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+
+            return CResponse.success(users, "Liste des utilisateurs");
+        } catch (Exception e) {
+            System.err.println("Erreur dans getAll(): " + e.getMessage());
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des utilisateurs: " + e.getMessage());
+        }
     }
 
     public CResponse<?> checkUserByPhone(String phone) {
