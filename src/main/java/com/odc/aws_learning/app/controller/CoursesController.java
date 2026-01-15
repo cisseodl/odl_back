@@ -158,13 +158,15 @@ public class CoursesController {
             Courses course = courseOptional.get();
             
             // Si l'utilisateur est un instructeur (pas admin), vérifier qu'il est propriétaire du cours
-            if (currentUser.getAdmin() == null 
-                && course.getInstructor() != null 
-                && !course.getInstructor().getId().equals(currentUser.getId())) {
+            boolean isInstructor = currentUser.getAdmin() == null && currentUser.getInstructor() != null;
+            boolean isOwner = course.getInstructor() != null && course.getInstructor().getId().equals(currentUser.getId());
+            
+            if (isInstructor && !isOwner) {
                 return CResponse.error("Vous n'êtes pas autorisé à modifier ce cours.");
             }
             
-            CourseDto updatedCourse = courseService.validateCourse(id, request);
+            // Passer l'information si c'est un instructeur propriétaire pour permettre la validation directe
+            CourseDto updatedCourse = courseService.validateCourse(id, request, isInstructor && isOwner);
             return CResponse.success(updatedCourse, "Le statut du cours a été mis à jour.");
         } catch (IllegalArgumentException e) {
             return CResponse.error(e.getMessage());

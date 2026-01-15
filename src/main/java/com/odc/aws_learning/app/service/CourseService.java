@@ -369,17 +369,28 @@ public class CourseService {
     }
 
     public CourseDto validateCourse(Long courseId, com.odc.aws_learning.app.dto.CourseValidationRequest request) {
+        return validateCourse(courseId, request, false);
+    }
+
+    public CourseDto validateCourse(Long courseId, com.odc.aws_learning.app.dto.CourseValidationRequest request, boolean isInstructorOwner) {
         Courses course = coursesRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found with id: " + courseId));
 
         switch (request.getAction()) {
             case APPROVE:
-                // Si le cours est en BROUILLON, l'instructeur le soumet pour validation (IN_REVIEW)
-                // Si le cours est en IN_REVIEW, l'admin l'approuve (PUBLIE)
+                // Si l'instructeur est propriétaire, il peut valider directement (BROUILLON -> PUBLIE)
+                // Sinon, le flux normal : BROUILLON -> IN_REVIEW -> PUBLIE
                 if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.BROUILLON) {
-                    course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW);
+                    if (isInstructorOwner) {
+                        // L'instructeur propriétaire peut publier directement son cours
+                        course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.PUBLIE);
+                    } else {
+                        // Sinon, passer en révision (pour validation par admin)
+                        course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW);
+                    }
                     course.setRejectionReason(null);
                 } else if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW) {
+                    // Seul l'admin peut approuver un cours en révision
                     course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.PUBLIE);
                     course.setRejectionReason(null);
                 } else {
