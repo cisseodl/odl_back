@@ -30,7 +30,41 @@ public class QuizController {
     @PostMapping("/create")
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<QuizDTO> createQuiz(@RequestBody QuizDTO quizDTO) {
-        return quizService.createQuiz(quizDTO);
+        try {
+            System.out.println("=== RECEPTION DU PAYLOAD QUIZ ===");
+            System.out.println("Title: " + quizDTO.getTitle());
+            System.out.println("Description: " + quizDTO.getDescription());
+            System.out.println("CourseId: " + quizDTO.getCourseId());
+            System.out.println("DurationMinutes: " + quizDTO.getDurationMinutes());
+            System.out.println("ScoreMinimum: " + quizDTO.getScoreMinimum());
+            System.out.println("Nombre de questions: " + (quizDTO.getQuestions() != null ? quizDTO.getQuestions().size() : 0));
+            
+            if (quizDTO.getQuestions() != null) {
+                for (int i = 0; i < quizDTO.getQuestions().size(); i++) {
+                    QuizDTO.QuestionDTO q = quizDTO.getQuestions().get(i);
+                    System.out.println("Question " + i + ":");
+                    System.out.println("  Content: " + q.getContent());
+                    System.out.println("  Type: " + q.getType());
+                    System.out.println("  Points: " + q.getPoints());
+                    System.out.println("  Nombre de réponses: " + (q.getReponses() != null ? q.getReponses().size() : 0));
+                    
+                    if (q.getReponses() != null) {
+                        for (int j = 0; j < q.getReponses().size(); j++) {
+                            QuizDTO.ReponseDTO r = q.getReponses().get(j);
+                            System.out.println("    Réponse " + j + ": " + r.getText() + " (Correct: " + r.getIsCorrect() + ")");
+                        }
+                    }
+                }
+            }
+            
+            CResponse<QuizDTO> response = quizService.createQuiz(quizDTO);
+            System.out.println("Réponse du service: " + (response != null ? response.getMessage() : "NULL"));
+            return response;
+        } catch (Exception e) {
+            System.err.println("ERREUR dans createQuiz: " + e.getMessage());
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la création du quiz: " + e.getMessage());
+        }
     }
     
     /**
