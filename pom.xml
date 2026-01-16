@@ -120,13 +120,12 @@
 			<version>5.5.13.3</version>
 		</dependency>
 
-		<!-- AWS S3 SDK (v1.x) -->
+		<!-- AWS SDK for Java v1 for S3 -->
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-s3</artifactId>
-			<version>1.12.793</version>
+			<version>1.12.720</version>
 		</dependency>
-
 
 
 	</dependencies>

@@ -130,7 +130,7 @@ public class CertificateService {
             try {
                 String localFolderPath = uploadDir + "/certificates";
                 ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-                String savedFileName = uploadFileService.uploadFileFromInputStream(bis, localFolderPath, certificateFileName);
+                String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
                 String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
                 
                 // Enregistrer l'entité Certificate dans la base de données
