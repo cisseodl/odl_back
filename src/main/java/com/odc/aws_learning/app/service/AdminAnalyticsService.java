@@ -404,6 +404,7 @@ public class AdminAnalyticsService {
         // Utilisateurs actifs (ayant une activité dans les 30 derniers jours)
         long activeUsers = activityLogRepository.countDistinctUserByCreatedAtAfter(last30Days);
         long totalUsers = userRepository.count();
+        long inactiveUsers = Math.max(0, totalUsers - activeUsers);
         double engagementRate = totalUsers > 0 ? ((double) activeUsers / totalUsers) * 100.0 : 0.0;
 
         // Sessions actives (utilisateurs avec activité dans les 7 derniers jours)
