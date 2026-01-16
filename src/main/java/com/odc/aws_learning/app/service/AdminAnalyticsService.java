@@ -38,6 +38,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.criteria.Predicate;
 import java.math.BigInteger;
@@ -216,11 +217,13 @@ public class AdminAnalyticsService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<UserGrowthDataPoint> getUserGrowthData(String timeframe) {
-        LocalDateTime now = LocalDateTime.now();
-        List<UserGrowthDataPoint> dataPoints = new ArrayList<>();
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            List<UserGrowthDataPoint> dataPoints = new ArrayList<>();
 
-        switch (timeframe) {
+            switch (timeframe) {
             case "7-days":
                 for (int i = 6; i >= 0; i--) {
                     LocalDateTime startOfDay = now.minusDays(i).truncatedTo(ChronoUnit.DAYS);
@@ -312,9 +315,14 @@ public class AdminAnalyticsService {
                             .build());
                 break;
             default:
-                throw new IllegalArgumentException("Invalid timeframe: " + timeframe);
+                throw new IllegalArgumentException("Invalid timeframe: " + timeframe + ". Valid values: 7-days, 3-months, 6-months, 1-year, all");
+            }
+            return dataPoints;
+        } catch (Exception e) {
+            System.err.println("Error in getUserGrowthData with timeframe '" + timeframe + "': " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error fetching user growth data: " + e.getMessage(), e);
         }
-        return dataPoints;
     }
 
     public List<CoursePerformanceDataPoint> getCoursePerformanceData(String timeFilter, String startDateStr, String endDateStr) {

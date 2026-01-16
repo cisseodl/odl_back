@@ -48,8 +48,16 @@ public class AdminAnalyticsController {
 
     @GetMapping("/user-growth")
     public CResponse<List<UserGrowthDataPoint>> getUserGrowthData(@RequestParam String timeframe) {
-        List<UserGrowthDataPoint> data = adminAnalyticsService.getUserGrowthData(timeframe);
-        return CResponse.success(data, "User growth data fetched successfully.");
+        try {
+            List<UserGrowthDataPoint> data = adminAnalyticsService.getUserGrowthData(timeframe);
+            return CResponse.success(data, "User growth data fetched successfully.");
+        } catch (IllegalArgumentException e) {
+            return CResponse.error("Invalid timeframe: " + timeframe + ". Valid values: 7-days, 3-months, 6-months, 1-year, all");
+        } catch (Exception e) {
+            System.err.println("Error fetching user growth data: " + e.getMessage());
+            e.printStackTrace();
+            return CResponse.error("Error fetching user growth data: " + e.getMessage());
+        }
     }
 
     @GetMapping("/course-performance")
