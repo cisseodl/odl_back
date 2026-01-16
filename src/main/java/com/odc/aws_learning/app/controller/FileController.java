@@ -25,16 +25,17 @@ public class FileController {
 
     /**
      * POST /api/files/upload
-     * Retourne directement l'URL S3. Plus besoin de serveFile !
+     * Retourne l'URL S3 encapsulée dans un objet CResponse (JSON)
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> uploadFile(
+    public ResponseEntity<CResponse<String>> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "folderName", required = false, defaultValue = "documents") String folderName) {
 
         if (file == null || file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Fichier vide");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CResponse.error("Le fichier est vide"));
         }
 
         try {
@@ -44,27 +45,30 @@ public class FileController {
             String fileUrl = String.format("https://%s.s3.%s.amazonaws.com/%s/%s",
                     BUCKET_NAME, REGION, folderName, savedFileName);
 
-            log.info("Fichier disponible sur S3 : {}", fileUrl);
-            return ResponseEntity.ok(fileUrl);
+            log.info("Fichier uploadé avec succès sur S3 : {}", fileUrl);
+
+            // IMPORTANT : On retourne l'objet CResponse pour que le Frontend reçoive du JSON
+            return ResponseEntity.ok(CResponse.success(fileUrl, "Upload réussi"));
 
         } catch (Exception e) {
             log.error("Erreur S3 : {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur d'upload : " + e.getMessage());
+                    .body(CResponse.error("Erreur d'upload : " + e.getMessage()));
         }
     }
 
     /**
-     * Pour récupérer l'URL d'un fichier dont on connaît déjà le nom en base de données.
+     * GET /api/files/url
+     * Retourne l'URL d'un fichier existant au format JSON
      */
     @GetMapping("/url")
-    public ResponseEntity<String> getFileUrl(
+    public ResponseEntity<CResponse<String>> getFileUrl(
             @RequestParam String fileName,
             @RequestParam(value = "folder", defaultValue = "documents") String folder) {
 
         String fileUrl = String.format("https://%s.s3.%s.amazonaws.com/%s/%s",
                 BUCKET_NAME, REGION, folder, fileName);
 
-        return ResponseEntity.ok(fileUrl);
+        return ResponseEntity.ok(CResponse.success(fileUrl, "URL récupérée avec succès"));
     }
 }
