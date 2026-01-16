@@ -192,7 +192,15 @@ public class AdminAnalyticsService {
         // Active Users (simplified: users with any activity log entry in the period)
         long activeUsersCurrentPeriod = activityLogRepository.countDistinctUserByCreatedAtAfter(currentPeriodStart);
         long activeUsersPreviousPeriod = activityLogRepository.countDistinctUserByCreatedAtBetween(previousPeriodStart, currentPeriodStart);
-
+        
+        // Total users (tous les utilisateurs existants)
+        long totalUsers = userRepository.count();
+        
+        // Inactive Users = Total Users - Active Users
+        // Pour la période actuelle : utilisateurs sans activité dans la période actuelle
+        long inactiveUsersCurrentPeriod = Math.max(0, totalUsers - activeUsersCurrentPeriod);
+        // Pour la période précédente : utilisateurs sans activité dans la période précédente
+        long inactiveUsersPreviousPeriod = Math.max(0, totalUsers - activeUsersPreviousPeriod);
 
         return OverallComparisonStats.builder()
                 .registrationsCurrentPeriod(registrationsCurrentPeriod)
@@ -203,6 +211,8 @@ public class AdminAnalyticsService {
                 .completionRatePreviousPeriod(completionRatePreviousPeriod)
                 .activeUsersCurrentPeriod(activeUsersCurrentPeriod)
                 .activeUsersPreviousPeriod(activeUsersPreviousPeriod)
+                .inactiveUsersCurrentPeriod(inactiveUsersCurrentPeriod)
+                .inactiveUsersPreviousPeriod(inactiveUsersPreviousPeriod)
                 .build();
     }
 
@@ -415,6 +425,7 @@ public class AdminAnalyticsService {
                 .totalReviews(totalReviews)
                 .engagementRate(engagementRate)
                 .activeUsers(activeUsers)
+                .inactiveUsers(inactiveUsers)
                 .totalUsers(totalUsers)
                 .averageSessionTimeMinutes(averageSessionTimeMinutes)
                 .activeSessions(activeSessions)

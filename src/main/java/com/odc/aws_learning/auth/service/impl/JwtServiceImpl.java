@@ -20,6 +20,9 @@ import java.util.function.Function;
 public class JwtServiceImpl implements JwtService {
     @Value("${token.signing.key:413F4428472B4B62506hdfgamooATK979244226452948404D6351}")
     private String jwtSigningKey;
+    
+    @Value("${jwt.expiration:3600000}") // 1 heure par défaut (en millisecondes)
+    private Long jwtExpiration;
     @Override
     public String extractUserName(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -54,7 +57,7 @@ public class JwtServiceImpl implements JwtService {
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder().setClaims(extraClaims).setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + (864000000L * 3) * 12 * 100))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256).compact();
     }
 

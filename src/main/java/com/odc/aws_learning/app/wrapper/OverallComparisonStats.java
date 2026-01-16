@@ -14,4 +14,6 @@ public class OverallComparisonStats {
     private long coursesCreatedPreviousPeriod;
     private long activeUsersCurrentPeriod;
     private long activeUsersPreviousPeriod;
+    private long inactiveUsersCurrentPeriod;
+    private long inactiveUsersPreviousPeriod;
 }

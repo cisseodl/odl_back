@@ -13,6 +13,7 @@ public class AnalyticsMetricsDTO {
     // Taux d'engagement (pourcentage d'utilisateurs actifs)
     private Double engagementRate;
     private Long activeUsers;
+    private Long inactiveUsers;
     private Long totalUsers;
     
     // Temps d'apprentissage (approximatif basé sur UserProgress)
