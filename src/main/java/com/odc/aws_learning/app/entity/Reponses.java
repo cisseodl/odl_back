@@ -27,6 +27,8 @@ public class Reponses extends BaseEntity {
     private String description;
     private String status;
     private String imagePath;
+    @Column(nullable = true)
+    private Boolean isCorrect; // Indique si cette réponse est correcte (pour les QUIZ)
     @ManyToOne
     @JsonBackReference // Added (corresponds to Questions.reponses @JsonManagedReference)
     private Questions questions;
@@ -79,6 +81,14 @@ public class Reponses extends BaseEntity {
 
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+    
+    public Boolean getIsCorrect() {
+        return isCorrect;
+    }
+    
+    public void setIsCorrect(Boolean isCorrect) {
+        this.isCorrect = isCorrect;
     }
 
     public Questions getQuestions() {

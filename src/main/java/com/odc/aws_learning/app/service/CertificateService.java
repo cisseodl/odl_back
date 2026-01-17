@@ -160,4 +160,117 @@ public class CertificateService {
         // Retourner les informations du certificat (user, course, issuedAt, certificateUrl)
         return CResponse.success(certificateOptional.get(), "Certificat récupéré avec succès");
     }
+    
+    /**
+     * Génère un certificat pour une évaluation réussie (score >= 70%)
+     * @param user L'apprenant
+     * @param course Le cours
+     * @param evaluationScore Le score obtenu (0-100)
+     * @return Le certificat généré
+     */
+    public CResponse<Certificate> generateCertificateForEvaluation(User user, Courses course, Double evaluationScore) {
+        try {
+            Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            // Polices
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
+            Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.DARK_GRAY);
+
+            // Titre centré
+            Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(30f);
+            document.add(title);
+
+            // Ligne de séparation
+            PdfPTable separatorTable = new PdfPTable(1);
+            separatorTable.setWidthPercentage(100);
+            PdfPCell separatorCell = new PdfPCell();
+            separatorCell.setBorderWidthBottom(2f);
+            separatorCell.setBorder(Rectangle.BOTTOM);
+            separatorCell.setFixedHeight(10f);
+            separatorCell.setBorderColor(BaseColor.LIGHT_GRAY);
+            separatorCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            separatorCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            separatorCell.setPhrase(new Phrase(""));
+            separatorTable.addCell(separatorCell);
+            separatorTable.setSpacingAfter(30f);
+            document.add(separatorTable);
+
+            // Contenu principal
+            String fullName = user.getFullName() != null ? user.getFullName() : user.getEmail();
+            Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
+            awardedTo.setAlignment(Element.ALIGN_CENTER);
+            document.add(awardedTo);
+
+            Paragraph name = new Paragraph(fullName, subtitleFont);
+            name.setAlignment(Element.ALIGN_CENTER);
+            name.setSpacingAfter(20f);
+            document.add(name);
+
+            String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation";
+            Paragraph forCourse = new Paragraph(
+                    "Pour avoir réussi le cours : " + courseTitle,
+                    textFont
+            );
+            forCourse.setAlignment(Element.ALIGN_CENTER);
+            forCourse.setSpacingAfter(15f);
+            document.add(forCourse);
+
+            Paragraph score = new Paragraph(
+                    "Score à l'évaluation : " + String.format("%.1f", evaluationScore) + " / 100",
+                    textFont
+            );
+            score.setAlignment(Element.ALIGN_CENTER);
+            score.setSpacingAfter(20f);
+            document.add(score);
+
+            LocalDate today = LocalDate.now();
+            String dateStr = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Paragraph date = new Paragraph("Date : " + dateStr, textFont);
+            date.setAlignment(Element.ALIGN_CENTER);
+            date.setSpacingAfter(40f);
+            document.add(date);
+
+            // Zone de signature
+            Paragraph signature = new Paragraph("Signature de l'administration", textFont);
+            signature.setAlignment(Element.ALIGN_RIGHT);
+            document.add(signature);
+
+            document.close();
+
+            byte[] pdfBytes = out.toByteArray();
+
+            // Générer un nom de fichier unique pour le certificat
+            String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
+
+            // Uploader le PDF vers le stockage local (Elastic Beanstalk)
+            try {
+                String localFolderPath = uploadDir + "/certificates";
+                ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
+                String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
+                String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
+                
+                // Enregistrer l'entité Certificate dans la base de données
+                Certificate certificate = new Certificate();
+                certificate.setUniqueCode(UUID.randomUUID().toString());
+                certificate.setUser(user);
+                certificate.setCourse(course);
+                certificate.setIssuedAt(java.time.Instant.now());
+                certificate.setCertificateUrl(certificateUrl);
+                certificateRepository.save(certificate);
+
+                return CResponse.success(certificate, "Certificat généré et enregistré avec succès.");
+            } catch (IOException ioException) {
+                throw new RuntimeException("Erreur lors de l'upload du certificat vers le stockage local: " + ioException.getMessage(), ioException);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la génération du certificat PDF", e);
+        }
+    }
 }

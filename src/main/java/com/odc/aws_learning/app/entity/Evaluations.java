@@ -22,11 +22,34 @@ import java.util.ArrayList; // Added for default list initialization
 // @Data // Removed
 
 public class Evaluations extends BaseEntity {
+    public enum EvaluationType {
+        QUIZ,  // Évaluation avec questions/réponses automatiques
+        TP     // Travaux pratiques corrigés par l'instructeur
+    }
+    
     private String title;
     @Lob
     private String description;
     private String status;
     private String imagePath;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EvaluationType type = EvaluationType.QUIZ; // Par défaut QUIZ
+    
+    @ManyToOne
+    @JoinColumn(name = "course_id", nullable = false)
+    private Courses course;
+    
+    @ManyToOne
+    @JoinColumn(name = "instructor_id", nullable = false)
+    private User instructor; // Instructeur qui crée l'évaluation
+    
+    @Column(nullable = true, length = 5000)
+    private String tpInstructions; // Instructions pour les TPs (optionnel)
+    
+    @Column(nullable = true, length = 1000)
+    private String tpFileUrl; // Fichier TP à télécharger (optionnel)
 
     @OneToMany(mappedBy = "evaluations")
     // @JsonIgnoreProperties(value = {"evaluations"}, allowSetters = true) // Replaced by @JsonManagedReference
@@ -36,6 +59,10 @@ public class Evaluations extends BaseEntity {
     @OneToMany(mappedBy = "evaluations", cascade = CascadeType.ALL, orphanRemoval = true) // Added for InfoTest
     @JsonManagedReference // Added for InfoTest
     private List<InfoTest> infoTests = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "evaluation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<com.odc.aws_learning.app.entity.EvaluationAttempt> attempts = new ArrayList<>();
 
     public Evaluations() {
         super();
@@ -48,6 +75,46 @@ public class Evaluations extends BaseEntity {
         this.imagePath = imagePath;
         this.questions = questions;
         this.infoTests = infoTests;
+    }
+    
+    public EvaluationType getType() {
+        return type;
+    }
+    
+    public void setType(EvaluationType type) {
+        this.type = type;
+    }
+    
+    public Courses getCourse() {
+        return course;
+    }
+    
+    public void setCourse(Courses course) {
+        this.course = course;
+    }
+    
+    public User getInstructor() {
+        return instructor;
+    }
+    
+    public void setInstructor(User instructor) {
+        this.instructor = instructor;
+    }
+    
+    public String getTpInstructions() {
+        return tpInstructions;
+    }
+    
+    public void setTpInstructions(String tpInstructions) {
+        this.tpInstructions = tpInstructions;
+    }
+    
+    public String getTpFileUrl() {
+        return tpFileUrl;
+    }
+    
+    public void setTpFileUrl(String tpFileUrl) {
+        this.tpFileUrl = tpFileUrl;
     }
 
     public String getTitle() {
@@ -97,6 +164,14 @@ public class Evaluations extends BaseEntity {
     public void setInfoTests(List<InfoTest> infoTests) {
         this.infoTests = infoTests;
     }
+    
+    public List<com.odc.aws_learning.app.entity.EvaluationAttempt> getAttempts() {
+        return attempts;
+    }
+    
+    public void setAttempts(List<com.odc.aws_learning.app.entity.EvaluationAttempt> attempts) {
+        this.attempts = attempts;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -109,7 +184,10 @@ public class Evaluations extends BaseEntity {
                Objects.equals(status, that.status) &&
                Objects.equals(imagePath, that.imagePath) &&
                Objects.equals(questions, that.questions) &&
-               Objects.equals(infoTests, that.infoTests); // Added
+               Objects.equals(infoTests, that.infoTests) &&
+               type == that.type &&
+               Objects.equals(course, that.course) &&
+               Objects.equals(instructor, that.instructor);
     }
 
     @Override
@@ -126,6 +204,9 @@ public class Evaluations extends BaseEntity {
                ", imagePath='" + imagePath + '\'' +
                ", questions=" + (questions != null ? questions.size() : "null") + // Avoid recursion
                ", infoTests=" + (infoTests != null ? infoTests.size() : "null") + // Added
+               ", type=" + type +
+               ", course=" + (course != null ? course.getId() : "null") +
+               ", instructor=" + (instructor != null ? instructor.getId() : "null") +
                ", id=" + id +
                '}';
     }

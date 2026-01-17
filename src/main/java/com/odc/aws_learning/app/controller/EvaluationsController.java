@@ -2,22 +2,31 @@ package com.odc.aws_learning.app.controller;
 
 
 import com.odc.aws_learning.app.service.EvaluationsService;
+import com.odc.aws_learning.app.dto.EvaluationRequest;
+import com.odc.aws_learning.app.dto.EvaluationSubmissionRequest;
+import com.odc.aws_learning.app.dto.EvaluationCorrectionRequest;
 import com.odc.aws_learning.app.wrapper.Quiz_Answer;
 import com.odc.aws_learning.auth.base.response.CResponse;
+import com.odc.aws_learning.auth.entities.User;
+import com.odc.aws_learning.auth.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.media.Content; // Added
 import io.swagger.v3.oas.annotations.media.ExampleObject; // Added
 import io.swagger.v3.oas.annotations.parameters.RequestBody; // Added
 
-@RequestMapping("/evaluations")
-@RestController
+import java.util.Optional;
 
+@RequestMapping("/api/evaluations")
+@RestController
+@RequiredArgsConstructor
 public class EvaluationsController {
     private final EvaluationsService evaluationsService;
-    public EvaluationsController(EvaluationsService evaluationsService) {
-        this.evaluationsService = evaluationsService;
-    }
+    private final UserRepository userRepository;
     @PostMapping("/save")
     @PreAuthorize("isAuthenticated()") // Added for security
     @RequestBody(
@@ -57,8 +66,75 @@ public class EvaluationsController {
     }
 
     @GetMapping("/get-all")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<?> getAll() {
         return evaluationsService.getAll();
+    }
+    
+    /**
+     * Créer une nouvelle évaluation (instructeur)
+     */
+    @PostMapping("/create")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> createEvaluation(@org.springframework.web.bind.annotation.RequestBody EvaluationRequest request) {
+        User instructor = getCurrentUser();
+        if (instructor == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.createEvaluation(request, instructor);
+    }
+    
+    /**
+     * Soumettre une évaluation (apprenant)
+     */
+    @PostMapping("/submit")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
+    public CResponse<?> submitEvaluation(@org.springframework.web.bind.annotation.RequestBody EvaluationSubmissionRequest request) {
+        User learner = getCurrentUser();
+        if (learner == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.submitEvaluation(request, learner);
+    }
+    
+    /**
+     * Corriger une évaluation TP (instructeur)
+     */
+    @PostMapping("/correct")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> correctEvaluation(@org.springframework.web.bind.annotation.RequestBody EvaluationCorrectionRequest request) {
+        User instructor = getCurrentUser();
+        if (instructor == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.correctEvaluation(request, instructor);
+    }
+    
+    /**
+     * Récupérer les tentatives d'un apprenant pour une évaluation
+     */
+    @GetMapping("/{evaluationId}/attempts/{userId}")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> getAttempts(@PathVariable Long evaluationId, @PathVariable Long userId) {
+        return evaluationsService.getAttemptsByEvaluationAndUser(evaluationId, userId);
+    }
+    
+    /**
+     * Récupérer les évaluations en attente de correction pour un instructeur
+     */
+    @GetMapping("/instructor/{instructorId}/pending")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> getPendingEvaluations(@PathVariable Long instructorId) {
+        return evaluationsService.getPendingEvaluationsForInstructor(instructorId);
+    }
+    
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
+            return userOptional.orElse(null);
+        }
+        return null;
     }
 }
