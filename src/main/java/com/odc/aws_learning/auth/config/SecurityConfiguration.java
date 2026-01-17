@@ -43,6 +43,9 @@ public class SecurityConfiguration {
                                 SecurityConstants.CONTACT_URL,
                                 SecurityConstants.CHECK_USER_URL,
                                 SecurityConstants.CONFIG_URL,
+                                "/auth/signup", // Autoriser l'inscription sans authentification
+                                "/auth/signin", // Autoriser la connexion sans authentification
+                                "/auth/check-availability", // Autoriser la vérification de disponibilité
                                 "/api/files/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

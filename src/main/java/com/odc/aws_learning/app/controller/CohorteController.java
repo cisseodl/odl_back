@@ -21,7 +21,7 @@ public class CohorteController {
     }
 
     @GetMapping("/read")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    // Permettre l'accès sans authentification pour permettre le chargement des cohortes lors de l'inscription
     public CResponse<?> getAllCohortes() {
         return cohorteService.getAllCohortes();
     }
