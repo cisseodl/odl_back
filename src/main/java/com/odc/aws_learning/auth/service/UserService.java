@@ -22,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Added
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -137,13 +139,28 @@ public class UserService implements UserDetailsService {
                     .collect(Collectors.toList());
 
             System.out.println("UserService.getAll() - Nombre d'utilisateurs convertis: " + users.size());
-            return CResponse.success(users, "Liste des utilisateurs");
+            
+            // Retourner une structure paginée pour correspondre à ce que le frontend attend
+            Map<String, Object> paginatedResponse = new HashMap<>();
+            paginatedResponse.put("content", users);
+            paginatedResponse.put("totalElements", pageUsers.getTotalElements());
+            paginatedResponse.put("totalPages", pageUsers.getTotalPages());
+            paginatedResponse.put("currentPage", page);
+            paginatedResponse.put("size", size);
+            
+            return CResponse.success(paginatedResponse, "Liste des utilisateurs");
         } catch (Exception e) {
             System.err.println("Erreur dans getAll(): " + e.getMessage());
             System.err.println("Type d'exception: " + e.getClass().getName());
             e.printStackTrace();
-            // Retourner une liste vide plutôt qu'une erreur pour éviter de bloquer l'interface
-            return CResponse.success(new ArrayList<>(), "Aucun utilisateur trouvé (erreur lors de la récupération)");
+            // Retourner une structure paginée vide plutôt qu'une erreur pour éviter de bloquer l'interface
+            Map<String, Object> emptyResponse = new HashMap<>();
+            emptyResponse.put("content", new ArrayList<>());
+            emptyResponse.put("totalElements", 0L);
+            emptyResponse.put("totalPages", 0);
+            emptyResponse.put("currentPage", page);
+            emptyResponse.put("size", size);
+            return CResponse.success(emptyResponse, "Aucun utilisateur trouvé (erreur lors de la récupération)");
         }
     }
 
