@@ -12,6 +12,12 @@ import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.CascadeType; // Added
+import javax.persistence.Enumerated;
+import javax.persistence.EnumType;
+import javax.persistence.Column;
+import javax.persistence.ManyToOne;
+import javax.persistence.JoinColumn;
+import com.odc.aws_learning.auth.entities.User;
 import java.util.List;
 import java.util.Objects; // Added for equals/hashCode
 import java.util.ArrayList; // Added for default list initialization
