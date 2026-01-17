@@ -73,6 +73,7 @@ public class SecurityConfiguration {
             "https://api.smart-odc.com", // Domaine personnalisé API
             "https://pi.smart-odc.com", // Domaine frontend
             "https://admin.smart-odc.com", // Domaine admin explicitement
+            "https://smart-odc.com", // Domaine racine smart-odc.com
             "https://*.smart-odc.com" // Autoriser tous les sous-domaines smart-odc.com
         ));
         // Méthodes HTTP explicites incluant OPTIONS pour les requêtes preflight
