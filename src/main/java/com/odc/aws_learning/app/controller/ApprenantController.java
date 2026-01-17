@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag; // Ajout de l'import Tag
 import java.security.Principal; // Added for Principal
 
 @Tag(name = "Apprenant Management", description = "Endpoints for creating and managing apprenants") // Ajout de l'annotation Swagger Tag
-@RequestMapping("/apprenants")
+@RequestMapping("/api/apprenants")
 @RestController
 @RequiredArgsConstructor
 public class ApprenantController {
