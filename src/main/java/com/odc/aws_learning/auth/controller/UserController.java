@@ -3,6 +3,7 @@ package com.odc.aws_learning.auth.controller;
 import com.odc.aws_learning.auth.service.UserService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,8 +22,22 @@ public class UserController {
 
     @GetMapping("/get-all/{page}/{size}")
     @PreAuthorize("hasRole('ADMIN')")
-    public CResponse<?> getAll(@PathVariable int page, @PathVariable int size) {
-        return userService.getAll(page, size);
+    public ResponseEntity<CResponse<?>> getAll(@PathVariable int page, @PathVariable int size) {
+        try {
+            CResponse<?> response = userService.getAll(page, size);
+            // Retourner toujours un ResponseEntity avec le code HTTP approprié
+            if (response.isSuccess()) {
+                return ResponseEntity.ok(response);
+            } else {
+                // Même en cas d'erreur, retourner 200 avec ok=false pour que le frontend puisse gérer
+                return ResponseEntity.ok(response);
+            }
+        } catch (Exception e) {
+            // En cas d'exception non gérée, retourner une erreur structurée
+            System.err.println("Erreur dans UserController.getAll(): " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok(CResponse.error("Erreur lors de la récupération des utilisateurs: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/check/{phone}")

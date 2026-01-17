@@ -48,121 +48,132 @@ public class UserService implements UserDetailsService {
         try {
             Pageable paging = PageRequest.of(page, size);
             
-            // Utiliser findAll standard, puis charger les relations manuellement avec Hibernate.initialize()
-            // Cela évite les problèmes avec JOIN FETCH et pagination
+            // Utiliser findAll standard
             Page<User> pageUsers = userRepository.findAll(paging);
             List<User> usersList = pageUsers.getContent();
             
-            // Initialiser les relations lazy pour chaque utilisateur dans la transaction
-            for (User user : usersList) {
-                try {
-                    org.hibernate.Hibernate.initialize(user.getAdmin());
-                    org.hibernate.Hibernate.initialize(user.getInstructor());
-                    org.hibernate.Hibernate.initialize(user.getApprenant());
-                } catch (Exception e) {
-                    System.err.println("Erreur lors de l'initialisation des relations pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                }
+            if (usersList == null || usersList.isEmpty()) {
+                Map<String, Object> emptyResponse = new HashMap<>();
+                emptyResponse.put("content", new ArrayList<>());
+                emptyResponse.put("totalElements", 0L);
+                emptyResponse.put("totalPages", 0);
+                emptyResponse.put("currentPage", page);
+                emptyResponse.put("size", size);
+                return CResponse.success(emptyResponse, "Aucun utilisateur trouvé");
             }
             
-            List<UserDto> users = usersList.stream()
-                    .map(user -> {
-                        try {
-                            List<String> roles = new ArrayList<>();
-                            
-                            // Vérifier les relations de manière sécurisée
-                            // Ces relations sont chargées en lazy, donc on doit les accéder dans la transaction
-                            try {
-                                if (user.getAdmin() != null) {
-                                    roles.add("ADMIN");
-                                }
-                            } catch (Exception e) {
-                                System.err.println("Erreur lors de l'accès à getAdmin() pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                            }
-                            
-                            try {
-                                if (user.getInstructor() != null) {
-                                    roles.add("INSTRUCTOR");
-                                }
-                            } catch (Exception e) {
-                                System.err.println("Erreur lors de l'accès à getInstructor() pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                            }
-                            
-                            try {
-                                if (user.getApprenant() != null) {
-                                    roles.add("APPRENANT");
-                                }
-                            } catch (Exception e) {
-                                System.err.println("Erreur lors de l'accès à getApprenant() pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                            }
-                            
-                            if (roles.isEmpty()) {
-                                roles.add("USER"); // Default role
-                            }
-
-                            // Gérer les certificats de manière sécurisée
-                            // Les certificats sont chargés en lazy, donc on doit les accéder dans la transaction
-                            // On utilise Hibernate.initialize() pour forcer le chargement si nécessaire
-                            List<String> certificateList = new ArrayList<>();
-                            try {
-                                // Initialiser la collection si elle n'est pas déjà chargée
-                                org.hibernate.Hibernate.initialize(user.getCertificates());
-                                if (user.getCertificates() != null && !user.getCertificates().isEmpty()) {
-                                    certificateList = user.getCertificates().stream()
-                                            .filter(cert -> cert != null)
-                                            .map(certificate -> {
-                                                try {
-                                                    String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
-                                                    String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
-                                                    return url + ", Code:" + code;
-                                                } catch (Exception certEx) {
-                                                    System.err.println("Erreur lors du traitement d'un certificat pour l'utilisateur " + user.getId() + ": " + certEx.getMessage());
-                                                    return null;
-                                                }
-                                            })
-                                            .filter(certStr -> certStr != null && !certStr.isEmpty())
-                                            .collect(Collectors.toList());
-                                }
-                            } catch (org.hibernate.LazyInitializationException lie) {
-                                System.err.println("LazyInitializationException pour les certificats de l'utilisateur " + user.getId() + ": " + lie.getMessage());
-                                // Continuer avec une liste vide de certificats
-                            } catch (Exception e) {
-                                System.err.println("Erreur lors de l'accès aux certificats pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                                e.printStackTrace();
-                                // Continuer avec une liste vide de certificats
-                            }
-
-                            return UserDto.builder()
-                                    .id(user.getId())
-                                    .fullName(user.getFullName() != null ? user.getFullName() : "")
-                                    .email(user.getEmail() != null ? user.getEmail() : "")
-                                    .phone(user.getPhone())
-                                    .admin(user.getAdmin() != null) // Check if Admin entity is linked
-                                    .activate(user.getActivate() != null ? user.getActivate() : false)
-                                    .avatar(user.getAvatar())
-                                    .roles(roles)
-                                    .certificates(certificateList)
-                                    .build();
-                        } catch (Exception e) {
-                            System.err.println("Erreur lors de la conversion de l'utilisateur " + user.getId() + " en DTO: " + e.getMessage());
-                            e.printStackTrace();
-                            // Retourner un DTO minimal en cas d'erreur
-                            return UserDto.builder()
-                                    .id(user.getId())
-                                    .fullName(user.getFullName() != null ? user.getFullName() : "")
-                                    .email(user.getEmail() != null ? user.getEmail() : "")
-                                    .phone(user.getPhone())
-                                    .admin(false)
-                                    .activate(user.getActivate() != null ? user.getActivate() : false)
-                                    .avatar(user.getAvatar())
-                                    .roles(new ArrayList<>())
-                                    .certificates(new ArrayList<>())
-                                    .build();
+            // Convertir chaque utilisateur en DTO de manière sécurisée
+            List<UserDto> users = new ArrayList<>();
+            for (User user : usersList) {
+                try {
+                    List<String> roles = new ArrayList<>();
+                    boolean hasAdmin = false;
+                    
+                    // Vérifier les relations de manière sécurisée
+                    try {
+                        // Utiliser Hibernate.initialize() pour forcer le chargement dans la transaction
+                        org.hibernate.Hibernate.initialize(user.getAdmin());
+                        if (user.getAdmin() != null) {
+                            roles.add("ADMIN");
+                            hasAdmin = true;
                         }
-                    })
-                    .filter(dto -> dto != null)
-                    .collect(Collectors.toList());
+                    } catch (org.hibernate.LazyInitializationException lie) {
+                        // Ignorer et continuer - on ne peut pas charger la relation
+                    } catch (Exception e) {
+                        // Ignorer et continuer
+                    }
+                    
+                    try {
+                        org.hibernate.Hibernate.initialize(user.getInstructor());
+                        if (user.getInstructor() != null) {
+                            roles.add("INSTRUCTOR");
+                        }
+                    } catch (org.hibernate.LazyInitializationException lie) {
+                        // Ignorer et continuer
+                    } catch (Exception e) {
+                        // Ignorer et continuer
+                    }
+                    
+                    try {
+                        org.hibernate.Hibernate.initialize(user.getApprenant());
+                        if (user.getApprenant() != null) {
+                            roles.add("APPRENANT");
+                        }
+                    } catch (org.hibernate.LazyInitializationException lie) {
+                        // Ignorer et continuer
+                    } catch (Exception e) {
+                        // Ignorer et continuer
+                    }
+                    
+                    if (roles.isEmpty()) {
+                        roles.add("USER"); // Default role
+                    }
 
-            System.out.println("UserService.getAll() - Nombre d'utilisateurs convertis: " + users.size());
+                    // Gérer les certificats de manière sécurisée
+                    List<String> certificateList = new ArrayList<>();
+                    try {
+                        org.hibernate.Hibernate.initialize(user.getCertificates());
+                        if (user.getCertificates() != null && !user.getCertificates().isEmpty()) {
+                            certificateList = user.getCertificates().stream()
+                                    .filter(cert -> cert != null)
+                                    .map(certificate -> {
+                                        try {
+                                            String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
+                                            String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
+                                            return (url.isEmpty() ? "" : url) + (code.isEmpty() ? "" : ", Code:" + code);
+                                        } catch (Exception certEx) {
+                                            return null;
+                                        }
+                                    })
+                                    .filter(certStr -> certStr != null && !certStr.isEmpty())
+                                    .collect(Collectors.toList());
+                        }
+                    } catch (org.hibernate.LazyInitializationException lie) {
+                        // Continuer avec une liste vide de certificats
+                        certificateList = new ArrayList<>();
+                    } catch (Exception e) {
+                        // Continuer avec une liste vide de certificats
+                        certificateList = new ArrayList<>();
+                    }
+
+                    UserDto userDto = UserDto.builder()
+                            .id(user.getId())
+                            .fullName(user.getFullName() != null ? user.getFullName() : "")
+                            .email(user.getEmail() != null ? user.getEmail() : "")
+                            .phone(user.getPhone())
+                            .admin(hasAdmin)
+                            .activate(user.getActivate() != null ? user.getActivate() : false)
+                            .avatar(user.getAvatar())
+                            .roles(roles)
+                            .certificates(certificateList)
+                            .build();
+                    
+                    users.add(userDto);
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de la conversion de l'utilisateur " + (user != null ? user.getId() : "null") + " en DTO: " + e.getMessage());
+                    e.printStackTrace();
+                    // Créer un DTO minimal pour cet utilisateur
+                    try {
+                        UserDto minimalDto = UserDto.builder()
+                                .id(user.getId())
+                                .fullName(user.getFullName() != null ? user.getFullName() : "")
+                                .email(user.getEmail() != null ? user.getEmail() : "")
+                                .phone(user.getPhone())
+                                .admin(false)
+                                .activate(user.getActivate() != null ? user.getActivate() : false)
+                                .avatar(user.getAvatar())
+                                .roles(new ArrayList<>())
+                                .certificates(new ArrayList<>())
+                                .build();
+                        users.add(minimalDto);
+                    } catch (Exception ex) {
+                        // Ignorer cet utilisateur s'il y a une erreur critique
+                        System.err.println("Impossible de créer un DTO minimal pour l'utilisateur: " + ex.getMessage());
+                    }
+                }
+            }
+
+            System.out.println("UserService.getAll() - Nombre d'utilisateurs convertis: " + users.size() + " sur " + usersList.size());
             
             // Retourner une structure paginée pour correspondre à ce que le frontend attend
             Map<String, Object> paginatedResponse = new HashMap<>();
@@ -172,32 +183,14 @@ public class UserService implements UserDetailsService {
             paginatedResponse.put("currentPage", page);
             paginatedResponse.put("size", size);
             
-            return CResponse.success(paginatedResponse, "Liste des utilisateurs");
-        } catch (org.hibernate.LazyInitializationException lie) {
-            System.err.println("LazyInitializationException dans getAll(): " + lie.getMessage());
-            System.err.println("Stack trace: ");
-            lie.printStackTrace();
-            // Retourner une structure paginée vide plutôt qu'une erreur pour éviter de bloquer l'interface
-            Map<String, Object> emptyResponse = new HashMap<>();
-            emptyResponse.put("content", new ArrayList<>());
-            emptyResponse.put("totalElements", 0L);
-            emptyResponse.put("totalPages", 0);
-            emptyResponse.put("currentPage", page);
-            emptyResponse.put("size", size);
-            return CResponse.success(emptyResponse, "Erreur de chargement des relations (LazyInitializationException)");
+            return CResponse.success(paginatedResponse, "Liste des utilisateurs récupérée avec succès");
         } catch (Exception e) {
-            System.err.println("Erreur dans getAll(): " + e.getMessage());
+            System.err.println("Erreur critique dans getAll(): " + e.getMessage());
             System.err.println("Type d'exception: " + e.getClass().getName());
-            System.err.println("Stack trace: ");
             e.printStackTrace();
-            // Retourner une structure paginée vide plutôt qu'une erreur pour éviter de bloquer l'interface
-            Map<String, Object> emptyResponse = new HashMap<>();
-            emptyResponse.put("content", new ArrayList<>());
-            emptyResponse.put("totalElements", 0L);
-            emptyResponse.put("totalPages", 0);
-            emptyResponse.put("currentPage", page);
-            emptyResponse.put("size", size);
-            return CResponse.success(emptyResponse, "Aucun utilisateur trouvé (erreur lors de la récupération: " + e.getClass().getSimpleName() + ")");
+            
+            // Retourner une erreur structurée plutôt qu'une exception non gérée
+            return CResponse.error("Erreur lors de la récupération des utilisateurs: " + e.getMessage());
         }
     }
 
