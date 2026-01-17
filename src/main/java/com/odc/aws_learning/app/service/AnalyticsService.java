@@ -32,7 +32,8 @@ public class AnalyticsService {
     private final DetailsCourseRepo detailsCourseRepo;
     private final ReviewRepository reviewRepository;
     private final ActivityLogRepository activityLogRepository;
-    // Potentially inject other repositories like ApprenantRepository, InstructorRepository
+    private final com.odc.aws_learning.app.repository.ApprenantRepository apprenantRepository;
+    // Potentially inject other repositories like InstructorRepository
 
     /**
      * Retrieves user growth data over a specified time period.
@@ -42,14 +43,112 @@ public class AnalyticsService {
      * @return CResponse containing user growth data.
      */
     public CResponse<?> getUserGrowthData(String timeFilter, Instant startDate, Instant endDate) {
-        // This is a placeholder. Real implementation would query user creation dates
-        // and aggregate based on timeFilter.
-        // For simplicity, let's return some dummy data.
-        Map<String, Object> data = new HashMap<>();
-        data.put("date", List.of("2023-01-01", "2023-01-02", "2023-01-03"));
-        data.put("newUsers", List.of(10, 15, 20));
-        data.put("totalUsers", List.of(100, 115, 135));
-        return CResponse.success(data, "User growth data retrieved successfully.");
+        try {
+            // Déterminer la période de temps
+            Instant start = startDate;
+            Instant end = endDate;
+            
+            if (start == null || end == null) {
+                // Si pas de dates spécifiées, utiliser timeFilter ou période par défaut
+                Instant now = Instant.now();
+                if (timeFilter != null) {
+                    switch (timeFilter.toLowerCase()) {
+                        case "7-days":
+                        case "7d":
+                            start = now.minus(7, ChronoUnit.DAYS);
+                            end = now;
+                            break;
+                        case "3-months":
+                        case "90d":
+                            start = now.minus(90, ChronoUnit.DAYS);
+                            end = now;
+                            break;
+                        case "6-months":
+                        case "180d":
+                            start = now.minus(180, ChronoUnit.DAYS);
+                            end = now;
+                            break;
+                        case "1-year":
+                        case "365d":
+                            start = now.minus(365, ChronoUnit.DAYS);
+                            end = now;
+                            break;
+                        default:
+                            start = now.minus(30, ChronoUnit.DAYS);
+                            end = now;
+                    }
+                } else {
+                    start = now.minus(30, ChronoUnit.DAYS);
+                    end = now;
+                }
+            }
+            
+            // Convertir Instant en LocalDateTime pour la requête
+            java.time.LocalDateTime startLocal = java.time.LocalDateTime.ofInstant(start, java.time.ZoneId.systemDefault());
+            java.time.LocalDateTime endLocal = java.time.LocalDateTime.ofInstant(end, java.time.ZoneId.systemDefault());
+            
+            // Récupérer les apprenants créés dans la période
+            List<com.odc.aws_learning.app.entity.Apprenant> apprenants = apprenantRepository.findAll()
+                .stream()
+                .filter(a -> {
+                    if (a.getCreatedAt() == null) return false;
+                    java.time.LocalDateTime createdAt = a.getCreatedAt();
+                    return !createdAt.isBefore(startLocal) && !createdAt.isAfter(endLocal);
+                })
+                .collect(Collectors.toList());
+            
+            // Grouper par jour ou mois selon la période
+            long daysDiff = java.time.temporal.ChronoUnit.DAYS.between(startLocal, endLocal);
+            boolean groupByDay = daysDiff <= 90; // Grouper par jour si <= 90 jours, sinon par mois
+            
+            Map<String, Long> groupedData = new HashMap<>();
+            for (com.odc.aws_learning.app.entity.Apprenant apprenant : apprenants) {
+                if (apprenant.getCreatedAt() == null) continue;
+                java.time.LocalDateTime createdAt = apprenant.getCreatedAt();
+                String key;
+                if (groupByDay) {
+                    key = createdAt.toLocalDate().toString(); // Format: YYYY-MM-DD
+                } else {
+                    // Format: YYYY-MM (sans le jour)
+                    java.time.LocalDate firstDayOfMonth = createdAt.toLocalDate().withDayOfMonth(1);
+                    key = firstDayOfMonth.getYear() + "-" + 
+                          String.format("%02d", firstDayOfMonth.getMonthValue());
+                }
+                groupedData.put(key, groupedData.getOrDefault(key, 0L) + 1);
+            }
+            
+            // Convertir en liste de points de données
+            List<Map<String, Object>> dataPoints = groupedData.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> {
+                    Map<String, Object> point = new HashMap<>();
+                    point.put("date", entry.getKey());
+                    point.put("newUsers", entry.getValue());
+                    // Calculer le total cumulé jusqu'à cette date
+                    try {
+                        java.time.LocalDateTime dateToCheck;
+                        if (groupByDay) {
+                            dateToCheck = java.time.LocalDate.parse(entry.getKey()).atTime(23, 59, 59);
+                        } else {
+                            // Pour les mois, utiliser le dernier jour du mois
+                            java.time.LocalDate firstDay = java.time.LocalDate.parse(entry.getKey() + "-01");
+                            java.time.LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
+                            dateToCheck = lastDay.atTime(23, 59, 59);
+                        }
+                        long totalUpToDate = apprenantRepository.countByCreatedAtBefore(dateToCheck);
+                        point.put("totalUsers", totalUpToDate);
+                    } catch (Exception e) {
+                        // En cas d'erreur, utiliser le nombre total d'apprenants
+                        point.put("totalUsers", apprenantRepository.count());
+                    }
+                    return point;
+                })
+                .collect(Collectors.toList());
+            
+            return CResponse.success(dataPoints, "User growth data retrieved successfully.");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération des données de croissance: " + e.getMessage());
+        }
     }
 
     /**
