@@ -99,6 +99,7 @@ public class CoursesController {
     }
 
      @GetMapping("/read/{id}")
+    // Endpoint public pour permettre aux apprenants de consulter les cours sans authentification
     public CResponse<CourseDto> getCourseById(@PathVariable Long id) {
         CourseDto courseDto = courseService.getCourseById(id);
         return CResponse.success(courseDto);
@@ -177,7 +178,7 @@ public class CoursesController {
 
     // Récupérer tous les cours
     @GetMapping("/read")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    // Endpoint public pour permettre aux apprenants de consulter les cours sans authentification
     public CResponse<List<CourseDto>> getAllCourses(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) CourseLevel level,

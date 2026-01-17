@@ -50,6 +50,11 @@ public class SecurityConfiguration {
                                 "/auth/signup", // Autoriser l'inscription sans authentification
                                 "/auth/signin", // Autoriser la connexion sans authentification
                                 "/auth/check-availability", // Autoriser la vérification de disponibilité
+                                "/courses/read", // Endpoint public pour lire les cours
+                                "/courses/read/**", // Endpoint public pour lire un cours par ID
+                                "/api/categories/read", // Endpoint public pour lire les catégories
+                                "/api/categories/read/**", // Endpoint public pour lire une catégorie par ID
+                                "/cohorte/read", // Endpoint public pour lire les cohortes
                                 "/api/files/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

@@ -21,13 +21,13 @@ public class CategorieController {
     }
 
     @GetMapping("/read")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT','INSTRUCTOR')")
+    // Endpoint public pour permettre aux apprenants de consulter les catégories sans authentification
     public CResponse<?> getAllCategories() {
         return categorieService.getAllCategories();
     }
 
     @GetMapping("/read/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT','INSTRUCTOR')")
+    // Endpoint public pour permettre aux apprenants de consulter les catégories sans authentification
     public ResponseEntity<Categorie> getCategoryById(@PathVariable Long id) {
         Categorie categorie = categorieService.getCategoryById(id);
         if (categorie != null) {
