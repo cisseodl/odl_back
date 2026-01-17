@@ -15,6 +15,8 @@ import com.odc.aws_learning.app.repository.CertificateRepository;
 import com.odc.aws_learning.app.dto.EvaluationRequest;
 import com.odc.aws_learning.app.dto.EvaluationSubmissionRequest;
 import com.odc.aws_learning.app.dto.EvaluationCorrectionRequest;
+import com.odc.aws_learning.app.dto.QuestionRequest;
+import com.odc.aws_learning.app.dto.ResponseRequest;
 import com.odc.aws_learning.app.wrapper.Quiz_Answer;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -106,6 +108,34 @@ public class EvaluationsService {
             }
             
             Evaluations saved = evaluationsRepository.save(evaluation);
+            
+            // Si c'est un QUIZ et qu'il y a des questions, les créer
+            if (request.getType() == Evaluations.EvaluationType.QUIZ && request.getQuestions() != null && !request.getQuestions().isEmpty()) {
+                for (com.odc.aws_learning.app.dto.QuestionRequest questionReq : request.getQuestions()) {
+                    Questions question = new Questions();
+                    question.setTitle(questionReq.getTitle());
+                    question.setDescription(questionReq.getDescription());
+                    question.setType(questionReq.getType() != null ? questionReq.getType() : "SINGLE_CHOICE");
+                    question.setStatus("ACTIVE");
+                    question.setEvaluations(saved);
+                    
+                    Questions savedQuestion = questionsRepository.save(question);
+                    
+                    // Créer les réponses pour cette question
+                    if (questionReq.getReponses() != null && !questionReq.getReponses().isEmpty()) {
+                        for (com.odc.aws_learning.app.dto.ResponseRequest responseReq : questionReq.getReponses()) {
+                            Reponses response = new Reponses();
+                            response.setTitle(responseReq.getTitle());
+                            response.setDescription(responseReq.getDescription());
+                            response.setStatus("ACTIVE");
+                            response.setIsCorrect(responseReq.getIsCorrect() != null ? responseReq.getIsCorrect() : false);
+                            response.setQuestions(savedQuestion);
+                            reponsesRepository.save(response);
+                        }
+                    }
+                }
+            }
+            
             return CResponse.success(saved, "Évaluation créée avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la création de l'évaluation: " + e.getMessage());

@@ -2,6 +2,7 @@ package com.odc.aws_learning.app.dto;
 
 import com.odc.aws_learning.app.entity.Evaluations.EvaluationType;
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class EvaluationRequest {
@@ -11,4 +12,5 @@ public class EvaluationRequest {
     private EvaluationType type; // QUIZ ou TP
     private String tpInstructions; // Pour les TPs
     private String tpFileUrl; // Pour les TPs
+    private List<QuestionRequest> questions; // Questions pour les QUIZ (avec réponses et points)
 }
