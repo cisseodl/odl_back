@@ -55,6 +55,8 @@ public class SecurityConfiguration {
                                 "/api/categories/read", // Endpoint public pour lire les catégories
                                 "/api/categories/read/**", // Endpoint public pour lire une catégorie par ID
                                 "/cohorte/read", // Endpoint public pour lire les cohortes
+                                "/api/v1/rubriques/read", // Endpoint public pour lire les rubriques (piliers)
+                                "/api/v1/rubriques/read/**", // Endpoint public pour lire une rubrique par ID
                                 "/api/files/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

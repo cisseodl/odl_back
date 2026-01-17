@@ -37,6 +37,9 @@ public class Rubrique extends BaseEntity { // Extends BaseEntity
     @Column(name = "lien_ressources")
     private String lienRessources;
 
+    @Column(name = "formations_proposees", columnDefinition = "TEXT")
+    private String formationsProposees;
+
     // createdBy is now inherited as String from BaseEntity, no longer a ManyToOne User
     // @ManyToOne
     // @JoinColumn(name = "user_id", nullable = false)
@@ -110,5 +113,13 @@ public class Rubrique extends BaseEntity { // Extends BaseEntity
 
     public void setLienRessources(String lienRessources) {
         this.lienRessources = lienRessources;
+    }
+
+    public String getFormationsProposees() {
+        return formationsProposees;
+    }
+
+    public void setFormationsProposees(String formationsProposees) {
+        this.formationsProposees = formationsProposees;
     }
 }
