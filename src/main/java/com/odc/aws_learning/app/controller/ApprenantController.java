@@ -36,7 +36,7 @@ public class ApprenantController {
             examples = {
                 @ExampleObject(
                     name = "Create Apprenant Example (Authenticated User)",
-                    value = "{\"activate\": true, \"nom\": \"Dupont\", \"prenom\": \"Jean\", \"email\": \"jean.dupont@example.com\", \"numero\": \"0123456789\", \"profession\": \"Etudiant\", \"niveauEtude\": \"Master\", \"filiere\": \"Informatique\", \"attentes\": \"Apprendre le développement backend avec Spring Boot\", \"satisfaction\": true, \"cohorteId\": 1}"
+                    value = "{\"activate\": true, \"username\": \"Jean Dupont\", \"numero\": \"0123456789\", \"profession\": \"Etudiant\", \"niveauEtude\": \"Master\", \"filiere\": \"Informatique\", \"attentes\": \"Apprendre le développement backend avec Spring Boot\", \"satisfaction\": true, \"cohorteId\": 1}"
                 )
             }
         )

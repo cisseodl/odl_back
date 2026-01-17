@@ -23,6 +23,8 @@ public class AdminService {
     private final AdminRepository adminRepository;
     private final UserRepository userRepository; // To manage User entity
     private final SendEmailService sendEmailService;
+    private final com.odc.aws_learning.app.service.AuditService auditService;
+    private final com.odc.aws_learning.app.service.NotificationService notificationService;
     
     @Value("${app.frontend.url:https://admin.smart-odc.com}")
     private String frontendUrl;
@@ -53,6 +55,33 @@ public class AdminService {
         // Link admin to user for bidirectional consistency
         existingUser.setAdmin(savedAdmin);
         userRepository.save(existingUser);
+
+        // Créer un log d'activité
+        try {
+            auditService.logActivity(existingUser.getId(), "create", "admin", 
+                "{\"adminId\":" + savedAdmin.getId() + ",\"userName\":\"" + 
+                (existingUser.getFullName() != null ? existingUser.getFullName() : existingUser.getEmail()) + "\"}");
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
+        }
+
+        // Créer une notification pour les autres admins
+        try {
+            List<Admin> allAdmins = adminRepository.findAll();
+            for (Admin otherAdmin : allAdmins) {
+                User adminUser = otherAdmin.getUser();
+                if (adminUser != null && !adminUser.getId().equals(existingUser.getId())) {
+                    notificationService.createNotification(
+                        adminUser.getId(),
+                        "Nouvel administrateur créé: " + (existingUser.getFullName() != null ? existingUser.getFullName() : existingUser.getEmail()),
+                        "registration",
+                        "/admin/users/administrateurs"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
+        }
 
         // Envoyer un email à l'administrateur nouvellement créé
         try {

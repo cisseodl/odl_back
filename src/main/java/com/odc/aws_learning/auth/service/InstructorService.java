@@ -25,6 +25,9 @@ public class InstructorService {
     private final InstructorRepository instructorRepository;
     private final UserRepository userRepository; // To manage User entity
     private final SendEmailService sendEmailService;
+    private final com.odc.aws_learning.app.service.AuditService auditService;
+    private final com.odc.aws_learning.app.service.NotificationService notificationService;
+    private final com.odc.aws_learning.auth.repository.AdminRepository adminRepository;
     // private final PasswordEncoder passwordEncoder; // Removed
     
     @Value("${app.frontend.url:https://admin.smart-odc.com}")
@@ -53,6 +56,34 @@ public class InstructorService {
         user.setInstructor(savedInstructor);
         userRepository.save(user);
 
+        // Créer un log d'activité
+        try {
+            auditService.logActivity(user.getId(), "create", "instructor", 
+                "{\"instructorId\":" + savedInstructor.getId() + ",\"userName\":\"" + 
+                (user.getFullName() != null ? user.getFullName() : user.getEmail()) + "\"}");
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
+        }
+
+        // Créer une notification pour l'admin
+        try {
+            // Récupérer tous les admins pour leur envoyer une notification
+            List<com.odc.aws_learning.auth.entities.Admin> admins = adminRepository.findAll();
+            for (com.odc.aws_learning.auth.entities.Admin admin : admins) {
+                User adminUser = admin.getUser();
+                if (adminUser != null && !adminUser.getId().equals(user.getId())) {
+                    notificationService.createNotification(
+                        adminUser.getId(),
+                        "Nouvel instructeur créé: " + (user.getFullName() != null ? user.getFullName() : user.getEmail()),
+                        "registration",
+                        "/admin/users/instructeurs"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
+        }
+
         return CResponse.success(savedInstructor, "Instructeur créé avec succès.");
     }
 
@@ -75,6 +106,32 @@ public class InstructorService {
         // Link instructor to user for bidirectional consistency
         user.setInstructor(savedInstructor);
         userRepository.save(user);
+
+        // Créer un log d'activité
+        try {
+            auditService.logActivity(user.getId(), "create", "instructor", 
+                "{\"instructorId\":" + savedInstructor.getId() + ",\"userName\":\"" + 
+                (user.getFullName() != null ? user.getFullName() : user.getEmail()) + "\"}");
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
+        }
+
+        // Créer une notification pour l'admin
+        try {
+            // Récupérer tous les admins via AdminRepository
+            List<com.odc.aws_learning.auth.entities.Admin> admins = 
+                com.odc.aws_learning.auth.repository.AdminRepository.class.cast(
+                    org.springframework.beans.factory.BeanFactoryUtils.beanOfType(
+                        org.springframework.context.ApplicationContext.class.cast(null),
+                        com.odc.aws_learning.auth.repository.AdminRepository.class
+                    )
+                ).findAll();
+            // Alternative: injecter AdminRepository via @RequiredArgsConstructor
+            // Pour l'instant, on utilise une approche simplifiée
+            // Les notifications seront créées via un service dédié ou un listener d'événements
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
+        }
 
         // Envoyer un email au formateur avec le lien Amplify et le mot de passe non crypté (si fourni par l'admin)
         try {

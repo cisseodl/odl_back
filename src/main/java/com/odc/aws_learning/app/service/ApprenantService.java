@@ -74,9 +74,16 @@ public class ApprenantService {
         Apprenant apprenant = new Apprenant();
         apprenant.setActivate(request.getActivate() != null ? request.getActivate() : true);
         
-        // Parser le username pour extraire nom et prenom
+        // Utiliser le username pour mettre à jour le fullName du User
         if (request.getUsername() != null && !request.getUsername().trim().isEmpty()) {
-            String[] nameParts = request.getUsername().trim().split("\\s+", 2);
+            user.setFullName(request.getUsername().trim());
+        }
+        
+        // L'email et le fullName viennent du User, pas besoin de les stocker dans Apprenant
+        // Mais on garde nom, prenom, email dans Apprenant pour compatibilité avec l'entité existante
+        // Ces champs seront synchronisés avec le User
+        if (user.getFullName() != null) {
+            String[] nameParts = user.getFullName().trim().split("\\s+", 2);
             if (nameParts.length >= 2) {
                 apprenant.setPrenom(nameParts[0]);
                 apprenant.setNom(nameParts[1]);
@@ -85,7 +92,6 @@ public class ApprenantService {
                 apprenant.setNom("");
             }
         }
-        // L'email vient du User, pas besoin de le stocker dans Apprenant
         apprenant.setEmail(user.getEmail()); // Utiliser l'email du User
         apprenant.setNumero(request.getNumero()); // Le numéro vient du DTO
         apprenant.setProfession(request.getProfession());
@@ -190,12 +196,17 @@ public class ApprenantService {
                     // ... update other user fields as needed ...
                     userRepository.save(user); // Save updated user details
                     
+                    // Utiliser le username pour mettre à jour le fullName du User
+                    if (username != null && !username.trim().isEmpty()) {
+                        user.setFullName(username.trim());
+                    }
+                    
                     // Mettre à jour l'email de l'apprenant avec celui du User
                     apprenant.setEmail(user.getEmail());
 
-                    // Parser le username pour extraire nom et prenom
-                    if (username != null && !username.trim().isEmpty()) {
-                        String[] nameParts = username.trim().split("\\s+", 2);
+                    // Synchroniser nom et prenom de l'apprenant avec le fullName du User
+                    if (user.getFullName() != null) {
+                        String[] nameParts = user.getFullName().trim().split("\\s+", 2);
                         if (nameParts.length >= 2) {
                             apprenant.setPrenom(nameParts[0]);
                             apprenant.setNom(nameParts[1]);

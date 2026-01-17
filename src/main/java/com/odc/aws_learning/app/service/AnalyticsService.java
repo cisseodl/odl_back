@@ -6,9 +6,13 @@ import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.repository.ReviewRepository;
+import com.odc.aws_learning.app.repository.ActivityLogRepository;
+import com.odc.aws_learning.app.entity.ActivityLog;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.app.entity.Courses;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -27,7 +31,8 @@ public class AnalyticsService {
     private final UserQuizAttemptRepository userQuizAttemptRepository;
     private final DetailsCourseRepo detailsCourseRepo;
     private final ReviewRepository reviewRepository;
-    // Potentially inject other repositories like ApprenantRepository, InstructorRepository, AuditLogRepository
+    private final ActivityLogRepository activityLogRepository;
+    // Potentially inject other repositories like ApprenantRepository, InstructorRepository
 
     /**
      * Retrieves user growth data over a specified time period.
@@ -98,12 +103,102 @@ public class AnalyticsService {
      * @return CResponse containing recent activity.
      */
     public CResponse<?> getInstructorRecentActivity(Long instructorId, int limit) {
-        // Placeholder. Will integrate with AuditLog later.
-        List<Map<String, Object>> activity = List.of(
-                Map.of("studentName", "Student A", "action", "Completed Quiz", "courseTitle", "AWS Basics", "timestamp", Instant.now().minus(1, ChronoUnit.HOURS)),
-                Map.of("studentName", "Student B", "action", "Enrolled in Course", "courseTitle", "Advanced S3", "timestamp", Instant.now().minus(2, ChronoUnit.HOURS))
-        );
-        return CResponse.success(activity, "Instructor recent activity retrieved successfully.");
+        try {
+            // Récupérer les vraies activités de l'instructeur depuis ActivityLog
+            Pageable pageable = PageRequest.of(0, limit);
+            List<ActivityLog> activityLogs = activityLogRepository.findByUserIdOrderByCreatedAtDesc(instructorId, pageable);
+            
+            // Mapper les ActivityLog vers le format attendu par le frontend
+            List<Map<String, Object>> activity = activityLogs.stream().map(log -> {
+                Map<String, Object> activityMap = new HashMap<>();
+                
+                // Déterminer le type d'activité basé sur l'action
+                String activityType = "UNKNOWN";
+                if (log.getAction() != null) {
+                    String action = log.getAction().toUpperCase();
+                    if (action.contains("CREATE") || action.contains("CREATED")) {
+                        if (log.getResource() != null && log.getResource().toLowerCase().contains("course")) {
+                            activityType = "COURSE_CREATED";
+                        } else {
+                            activityType = "CREATED";
+                        }
+                    } else if (action.contains("UPDATE") || action.contains("UPDATED")) {
+                        if (log.getResource() != null && log.getResource().toLowerCase().contains("course")) {
+                            activityType = "COURSE_UPDATED";
+                        } else {
+                            activityType = "UPDATED";
+                        }
+                    } else if (action.contains("DELETE") || action.contains("DELETED")) {
+                        activityType = "DELETED";
+                    } else if (action.contains("APPROVE") || action.contains("APPROVED")) {
+                        activityType = "APPROVED";
+                    } else if (action.contains("REJECT") || action.contains("REJECTED")) {
+                        activityType = "REJECTED";
+                    }
+                }
+                
+                activityMap.put("activityType", activityType);
+                activityMap.put("timestamp", log.getCreatedAt() != null ? log.getCreatedAt().toString() : Instant.now().toString());
+                
+                // Extraire le titre du cours depuis resource ou details
+                String courseTitle = null;
+                if (log.getResource() != null) {
+                    // Format possible: "Course: Titre" ou "course:123"
+                    if (log.getResource().contains(":")) {
+                        String[] parts = log.getResource().split(":", 2);
+                        if (parts.length > 1) {
+                            courseTitle = parts[1].trim();
+                        }
+                    } else {
+                        courseTitle = log.getResource();
+                    }
+                }
+                
+                // Essayer d'extraire depuis details si JSON
+                if (log.getDetails() != null && log.getDetails().contains("courseTitle")) {
+                    try {
+                        if (log.getDetails().startsWith("{")) {
+                            int titleIndex = log.getDetails().indexOf("\"courseTitle\"");
+                            if (titleIndex > 0) {
+                                int start = log.getDetails().indexOf("\"", titleIndex + 13) + 1;
+                                int end = log.getDetails().indexOf("\"", start);
+                                if (start > 0 && end > start) {
+                                    courseTitle = log.getDetails().substring(start, end);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Ignorer les erreurs de parsing
+                    }
+                }
+                
+                activityMap.put("courseTitle", courseTitle != null ? courseTitle : "N/A");
+                activityMap.put("courseId", extractIdFromResource(log.getResource()));
+                return activityMap;
+            }).collect(Collectors.toList());
+            
+            return CResponse.success(activity, "Instructor recent activity retrieved successfully.");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération des activités: " + e.getMessage());
+        }
+    }
+    
+    private Long extractIdFromResource(String resource) {
+        if (resource == null) return null;
+        try {
+            // Essayer d'extraire un ID depuis le resource (format: "Course: Title" ou "course:123")
+            String[] parts = resource.split(":");
+            if (parts.length > 1) {
+                String lastPart = parts[parts.length - 1].trim();
+                // Si c'est un nombre, le retourner
+                if (lastPart.matches("\\d+")) {
+                    return Long.parseLong(lastPart);
+                }
+            }
+        } catch (Exception e) {
+            // Ignorer les erreurs de parsing
+        }
+        return null;
     }
 
     /**
