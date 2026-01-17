@@ -24,4 +24,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "LEFT JOIN FETCH u.instructor " +
            "LEFT JOIN FETCH u.apprenant")
     List<User> findAllWithRelations();
+    
+    // Méthode avec JOIN FETCH pour charger les relations avec pagination
+    // On charge admin, instructor, apprenant (OneToOne) mais pas les collections pour éviter MultipleBagFetchException
+    @Query(value = "SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.admin " +
+           "LEFT JOIN FETCH u.instructor " +
+           "LEFT JOIN FETCH u.apprenant",
+           countQuery = "SELECT COUNT(DISTINCT u) FROM User u")
+    org.springframework.data.domain.Page<User> findAllWithRelations(Pageable pageable);
 }

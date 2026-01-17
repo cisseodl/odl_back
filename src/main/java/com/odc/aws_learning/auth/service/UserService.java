@@ -48,9 +48,21 @@ public class UserService implements UserDetailsService {
         try {
             Pageable paging = PageRequest.of(page, size);
             
-            // Utiliser findAll standard avec pagination, puis charger les relations si nécessaire
+            // Utiliser findAll standard, puis charger les relations manuellement avec Hibernate.initialize()
+            // Cela évite les problèmes avec JOIN FETCH et pagination
             Page<User> pageUsers = userRepository.findAll(paging);
             List<User> usersList = pageUsers.getContent();
+            
+            // Initialiser les relations lazy pour chaque utilisateur dans la transaction
+            for (User user : usersList) {
+                try {
+                    org.hibernate.Hibernate.initialize(user.getAdmin());
+                    org.hibernate.Hibernate.initialize(user.getInstructor());
+                    org.hibernate.Hibernate.initialize(user.getApprenant());
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de l'initialisation des relations pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                }
+            }
             
             List<UserDto> users = usersList.stream()
                     .map(user -> {
@@ -89,18 +101,30 @@ public class UserService implements UserDetailsService {
 
                             // Gérer les certificats de manière sécurisée
                             // Les certificats sont chargés en lazy, donc on doit les accéder dans la transaction
+                            // On utilise Hibernate.initialize() pour forcer le chargement si nécessaire
                             List<String> certificateList = new ArrayList<>();
                             try {
+                                // Initialiser la collection si elle n'est pas déjà chargée
+                                org.hibernate.Hibernate.initialize(user.getCertificates());
                                 if (user.getCertificates() != null && !user.getCertificates().isEmpty()) {
                                     certificateList = user.getCertificates().stream()
-                                            .filter(cert -> cert != null && cert.getCertificateUrl() != null)
+                                            .filter(cert -> cert != null)
                                             .map(certificate -> {
-                                                String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
-                                                String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
-                                                return url + ", Code:" + code;
+                                                try {
+                                                    String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
+                                                    String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
+                                                    return url + ", Code:" + code;
+                                                } catch (Exception certEx) {
+                                                    System.err.println("Erreur lors du traitement d'un certificat pour l'utilisateur " + user.getId() + ": " + certEx.getMessage());
+                                                    return null;
+                                                }
                                             })
+                                            .filter(certStr -> certStr != null && !certStr.isEmpty())
                                             .collect(Collectors.toList());
                                 }
+                            } catch (org.hibernate.LazyInitializationException lie) {
+                                System.err.println("LazyInitializationException pour les certificats de l'utilisateur " + user.getId() + ": " + lie.getMessage());
+                                // Continuer avec une liste vide de certificats
                             } catch (Exception e) {
                                 System.err.println("Erreur lors de l'accès aux certificats pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                                 e.printStackTrace();
@@ -149,9 +173,22 @@ public class UserService implements UserDetailsService {
             paginatedResponse.put("size", size);
             
             return CResponse.success(paginatedResponse, "Liste des utilisateurs");
+        } catch (org.hibernate.LazyInitializationException lie) {
+            System.err.println("LazyInitializationException dans getAll(): " + lie.getMessage());
+            System.err.println("Stack trace: ");
+            lie.printStackTrace();
+            // Retourner une structure paginée vide plutôt qu'une erreur pour éviter de bloquer l'interface
+            Map<String, Object> emptyResponse = new HashMap<>();
+            emptyResponse.put("content", new ArrayList<>());
+            emptyResponse.put("totalElements", 0L);
+            emptyResponse.put("totalPages", 0);
+            emptyResponse.put("currentPage", page);
+            emptyResponse.put("size", size);
+            return CResponse.success(emptyResponse, "Erreur de chargement des relations (LazyInitializationException)");
         } catch (Exception e) {
             System.err.println("Erreur dans getAll(): " + e.getMessage());
             System.err.println("Type d'exception: " + e.getClass().getName());
+            System.err.println("Stack trace: ");
             e.printStackTrace();
             // Retourner une structure paginée vide plutôt qu'une erreur pour éviter de bloquer l'interface
             Map<String, Object> emptyResponse = new HashMap<>();
@@ -160,7 +197,7 @@ public class UserService implements UserDetailsService {
             emptyResponse.put("totalPages", 0);
             emptyResponse.put("currentPage", page);
             emptyResponse.put("size", size);
-            return CResponse.success(emptyResponse, "Aucun utilisateur trouvé (erreur lors de la récupération)");
+            return CResponse.success(emptyResponse, "Aucun utilisateur trouvé (erreur lors de la récupération: " + e.getClass().getSimpleName() + ")");
         }
     }
 
