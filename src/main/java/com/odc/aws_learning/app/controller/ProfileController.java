@@ -12,6 +12,7 @@ import java.security.Principal;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -21,7 +22,11 @@ public class ProfileController {
     private final UserService userService;
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProfileDto> getMyProfile(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         // principal.getName() will give the username (email in our case)
         CResponse<ProfileDto> response = (CResponse<ProfileDto>) userService.getProfileForUser(principal.getName());
         if (response.isSuccess() && response.getData() != null) {
@@ -32,6 +37,7 @@ public class ProfileController {
     }
 
     @PutMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CResponse<?>> updateMyProfile(Principal principal, @RequestBody ProfileDto updatedProfileDto) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CResponse.error("Utilisateur non authentifié"));
@@ -44,6 +50,7 @@ public class ProfileController {
     }
 
     @GetMapping("/me/certificates")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CResponse<?>> getMyCertificates(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CResponse.error("Utilisateur non authentifié"));
