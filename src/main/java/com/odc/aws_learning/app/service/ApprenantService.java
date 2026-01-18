@@ -106,24 +106,22 @@ public class ApprenantService {
         user.setApprenant(savedApprenant);
         userRepository.save(user);
 
-        // Envoyer un email uniquement si l'apprenant est créé par un admin (userId fourni dans la requête)
-        if (request.getUserId() != null) {
-            try {
-                String emailMessage = sendEmailService.mailTemplateApprenantCreated(
-                    user.getFullName() != null ? user.getFullName() : user.getEmail(),
-                    user.getEmail(),
-                    frontendUrl
-                );
-                sendEmailService.sendEmailWithAttachment(
-                    user.getEmail(),
-                    emailMessage,
-                    "Votre compte apprenant a été créé - Orange Digital Learning"
-                );
-            } catch (Exception e) {
-                // Ne pas faire échouer la création si l'email échoue
-                System.err.println("Erreur lors de l'envoi de l'email à l'apprenant: " + e.getMessage());
-                e.printStackTrace();
-            }
+        // Envoyer un email à l'apprenant après création de compte (auto-inscription ou création par admin)
+        try {
+            String emailMessage = sendEmailService.mailTemplateApprenantCreated(
+                user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                user.getEmail(),
+                frontendUrl
+            );
+            sendEmailService.sendEmailWithAttachment(
+                user.getEmail(),
+                emailMessage,
+                "Votre compte apprenant a été créé - Orange Digital Learning"
+            );
+        } catch (Exception e) {
+            // Ne pas faire échouer la création si l'email échoue
+            System.err.println("Erreur lors de l'envoi de l'email à l'apprenant: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return CResponse.success(savedApprenant, "Apprenant créé avec succès.");

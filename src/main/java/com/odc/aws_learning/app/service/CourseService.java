@@ -26,6 +26,8 @@ import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.app.repository.CertificateRepository; // Added
+import com.odc.aws_learning.app.service.NotificationService;
+import com.odc.aws_learning.app.service.SendEmailService;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -57,8 +59,10 @@ public class CourseService {
     private final ModuleRepository moduleRepository;
     private final LessonRepository lessonRepository;
     private final CertificateRepository certificateRepository; // Injected
+    private final NotificationService notificationService;
+    private final SendEmailService sendEmailService;
 
-    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository) {
+    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, NotificationService notificationService, SendEmailService sendEmailService) {
         this.coursesRepository = coursesRepository;
         this.courseMapper = courseMapper;
         this.instructorMapper = instructorMapper;
@@ -71,6 +75,8 @@ public class CourseService {
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
         this.certificateRepository = certificateRepository;
+        this.notificationService = notificationService;
+        this.sendEmailService = sendEmailService;
     }
 
     public CourseDto getCourseById(Long id) {
@@ -532,6 +538,27 @@ public class CourseService {
             detailsCourse.setLearner(user);
             detailsCourse.setActivate(true);
             detailsCourseRepo.save(detailsCourse);
+
+            // Envoyer une notification au formateur du cours
+            if (course.getInstructor() != null) {
+                try {
+                    String learnerName = user.getFullName() != null ? user.getFullName() : user.getEmail();
+                    String courseTitle = course.getTitle() != null ? course.getTitle() : "le cours";
+                    String notificationMessage = learnerName + " s'est inscrit à votre cours: " + courseTitle;
+                    String notificationLink = "/instructor/courses/" + course.getId();
+                    
+                    notificationService.createNotification(
+                        course.getInstructor().getId(),
+                        notificationMessage,
+                        "enrollment",
+                        notificationLink
+                    );
+                } catch (Exception e) {
+                    // Ne pas faire échouer l'inscription si la notification échoue
+                    System.err.println("Erreur lors de la création de la notification pour le formateur: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
 
             return CResponse.success(detailsCourse, "Inscription au cours réussie");
         } catch (Exception e) {

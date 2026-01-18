@@ -69,40 +69,41 @@ public class UserService implements UserDetailsService {
                     List<String> roles = new ArrayList<>();
                     boolean hasAdmin = false;
                     
-                    // Vérifier les relations de manière sécurisée
-                    try {
-                        // Utiliser Hibernate.initialize() pour forcer le chargement dans la transaction
-                        org.hibernate.Hibernate.initialize(user.getAdmin());
-                        if (user.getAdmin() != null) {
+                    // Vérifier les relations de manière sécurisée sans forcer le chargement
+                    // Utiliser des vérifications null simples au lieu de Hibernate.initialize()
+                    if (user.getAdmin() != null) {
+                        try {
+                            // Vérifier si l'objet est initialisé en accédant à une propriété simple
+                            user.getAdmin().getId(); // Tenter d'accéder à une propriété
                             roles.add("ADMIN");
                             hasAdmin = true;
+                        } catch (org.hibernate.LazyInitializationException e) {
+                            // Si c'est une LazyInitializationException, ignorer et continuer
+                        } catch (Exception e) {
+                            // Ignorer les autres exceptions
                         }
-                    } catch (org.hibernate.LazyInitializationException lie) {
-                        // Ignorer et continuer - on ne peut pas charger la relation
-                    } catch (Exception e) {
-                        // Ignorer et continuer
                     }
                     
-                    try {
-                        org.hibernate.Hibernate.initialize(user.getInstructor());
-                        if (user.getInstructor() != null) {
+                    if (user.getInstructor() != null) {
+                        try {
+                            user.getInstructor().getId();
                             roles.add("INSTRUCTOR");
+                        } catch (org.hibernate.LazyInitializationException e) {
+                            // Ignorer et continuer
+                        } catch (Exception e) {
+                            // Ignorer les autres exceptions
                         }
-                    } catch (org.hibernate.LazyInitializationException lie) {
-                        // Ignorer et continuer
-                    } catch (Exception e) {
-                        // Ignorer et continuer
                     }
                     
-                    try {
-                        org.hibernate.Hibernate.initialize(user.getApprenant());
-                        if (user.getApprenant() != null) {
+                    if (user.getApprenant() != null) {
+                        try {
+                            user.getApprenant().getId();
                             roles.add("APPRENANT");
+                        } catch (org.hibernate.LazyInitializationException e) {
+                            // Ignorer et continuer
+                        } catch (Exception e) {
+                            // Ignorer les autres exceptions
                         }
-                    } catch (org.hibernate.LazyInitializationException lie) {
-                        // Ignorer et continuer
-                    } catch (Exception e) {
-                        // Ignorer et continuer
                     }
                     
                     if (roles.isEmpty()) {
@@ -111,29 +112,32 @@ public class UserService implements UserDetailsService {
 
                     // Gérer les certificats de manière sécurisée
                     List<String> certificateList = new ArrayList<>();
-                    try {
-                        org.hibernate.Hibernate.initialize(user.getCertificates());
-                        if (user.getCertificates() != null && !user.getCertificates().isEmpty()) {
-                            certificateList = user.getCertificates().stream()
-                                    .filter(cert -> cert != null)
-                                    .map(certificate -> {
-                                        try {
-                                            String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
-                                            String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
-                                            return (url.isEmpty() ? "" : url) + (code.isEmpty() ? "" : ", Code:" + code);
-                                        } catch (Exception certEx) {
-                                            return null;
-                                        }
-                                    })
-                                    .filter(certStr -> certStr != null && !certStr.isEmpty())
-                                    .collect(Collectors.toList());
+                    if (user.getCertificates() != null) {
+                        try {
+                            // Tenter d'accéder à la collection
+                            int certSize = user.getCertificates().size();
+                            if (certSize > 0) {
+                                certificateList = user.getCertificates().stream()
+                                        .filter(cert -> cert != null)
+                                        .map(certificate -> {
+                                            try {
+                                                String url = certificate.getCertificateUrl() != null ? certificate.getCertificateUrl() : "";
+                                                String code = certificate.getUniqueCode() != null ? certificate.getUniqueCode() : "";
+                                                return (url.isEmpty() ? "" : url) + (code.isEmpty() ? "" : ", Code:" + code);
+                                            } catch (Exception certEx) {
+                                                return null;
+                                            }
+                                        })
+                                        .filter(certStr -> certStr != null && !certStr.isEmpty())
+                                        .collect(Collectors.toList());
+                            }
+                        } catch (org.hibernate.LazyInitializationException lie) {
+                            // Continuer avec une liste vide de certificats
+                            certificateList = new ArrayList<>();
+                        } catch (Exception e) {
+                            // Continuer avec une liste vide de certificats
+                            certificateList = new ArrayList<>();
                         }
-                    } catch (org.hibernate.LazyInitializationException lie) {
-                        // Continuer avec une liste vide de certificats
-                        certificateList = new ArrayList<>();
-                    } catch (Exception e) {
-                        // Continuer avec une liste vide de certificats
-                        certificateList = new ArrayList<>();
                     }
 
                     UserDto userDto = UserDto.builder()
