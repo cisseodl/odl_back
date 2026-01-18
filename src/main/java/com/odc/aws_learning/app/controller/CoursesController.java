@@ -33,6 +33,7 @@ import org.springframework.http.MediaType;
 @Slf4j
 @RequestMapping("/courses")
 @RestController
+@CrossOrigin(origins = {"https://smart-odc.com", "https://*.smart-odc.com", "https://api.smart-odc.com"}, maxAge = 3600)
 @RequiredArgsConstructor
 public class CoursesController {
     private final CourseService courseService;

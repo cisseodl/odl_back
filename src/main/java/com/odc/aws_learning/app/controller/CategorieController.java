@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 
 @RequestMapping("/api/categories")
 @RestController
+@CrossOrigin(origins = {"https://smart-odc.com", "https://*.smart-odc.com", "https://api.smart-odc.com"}, maxAge = 3600)
 public class CategorieController {
 
     private final CategorieService categorieService;
