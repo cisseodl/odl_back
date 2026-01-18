@@ -81,8 +81,31 @@ public class CourseService {
 
     public CourseDto getCourseById(Long id) {
         try {
+            // Charger le cours avec ses relations de base (instructor, categorie)
             Courses course = coursesRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Course not found with id: " + id)); // Custom exception needed
+                    .orElseThrow(() -> new RuntimeException("Course not found with id: " + id));
+
+            // Charger explicitement les modules avec leurs leçons
+            List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(id);
+            if (modules != null && !modules.isEmpty()) {
+                // Trier les modules par moduleOrder
+                modules.sort((m1, m2) -> {
+                    Integer order1 = m1.getModuleOrder() != null ? m1.getModuleOrder() : Integer.MAX_VALUE;
+                    Integer order2 = m2.getModuleOrder() != null ? m2.getModuleOrder() : Integer.MAX_VALUE;
+                    return order1.compareTo(order2);
+                });
+                // Trier les leçons de chaque module par lessonOrder
+                modules.forEach(module -> {
+                    if (module.getLessons() != null && !module.getLessons().isEmpty()) {
+                        module.getLessons().sort((l1, l2) -> {
+                            Integer order1 = l1.getLessonOrder() != null ? l1.getLessonOrder() : Integer.MAX_VALUE;
+                            Integer order2 = l2.getLessonOrder() != null ? l2.getLessonOrder() : Integer.MAX_VALUE;
+                            return order1.compareTo(order2);
+                        });
+                    }
+                });
+                course.setModules(modules);
+            }
 
             CourseDto courseDto = courseMapper.toDto(course);
             populateCalculatedFields(courseDto, course);

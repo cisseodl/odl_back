@@ -67,4 +67,13 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.bestseller = :bestseller")
     List<Courses> findByBestsellerWithRelations(@Param("bestseller") Boolean bestseller);
+
+    // Méthode pour charger un cours avec ses modules et leçons
+    @Query("SELECT DISTINCT c FROM Courses c " +
+           "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.categorie " +
+           "LEFT JOIN FETCH c.modules m " +
+           "LEFT JOIN FETCH m.lessons l " +
+           "WHERE c.id = :courseId")
+    Optional<Courses> findByIdWithModulesAndLessons(@Param("courseId") Long courseId);
 }
