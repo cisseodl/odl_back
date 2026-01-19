@@ -31,4 +31,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.course.id = :courseId AND r.createdAt BETWEEN :start AND :end")
     Double findAverageRatingByCourseIdAndCreatedAtBetween(@Param("courseId") Long courseId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    
+    // Find overall average rating across all courses
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.activate = true")
+    Double findOverallAverageRating();
 }

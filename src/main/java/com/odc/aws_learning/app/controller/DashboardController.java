@@ -51,6 +51,16 @@ public class DashboardController {
         return CResponse.success(stats, "Statistiques du tableau de bord instructeur");
     }
 
+    /**
+     * Récupère les statistiques publiques pour la page d'accueil
+     * GET /api/dashboard/public-stats
+     * Endpoint public (pas d'authentification requise)
+     */
+    @GetMapping("/public-stats")
+    public CResponse<?> getPublicStats() {
+        return dashboardService.getPublicStats();
+    }
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {

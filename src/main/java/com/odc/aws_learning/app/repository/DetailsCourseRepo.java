@@ -59,4 +59,12 @@ public interface DetailsCourseRepo extends JpaRepository<DetailsCourse, Long> {
     
     // Method to count completed enrollments for a specific course
     long countByCourseIdAndCompleted(Long courseId, boolean completed);
+    
+    // Count distinct learners (students) across all courses
+    @Query("SELECT COUNT(DISTINCT dc.learner.id) FROM DetailsCourse dc WHERE dc.activate = true")
+    long countDistinctLearners();
+    
+    // Find maximum enrollments for a single course
+    @Query("SELECT MAX((SELECT COUNT(dc2.id) FROM DetailsCourse dc2 WHERE dc2.course.id = dc.course.id)) FROM DetailsCourse dc")
+    Long findMaxEnrollmentsByCourse();
 }

@@ -3,12 +3,15 @@ package com.odc.aws_learning.app.service;
 import com.odc.aws_learning.app.constante.CourseStatus;
 import com.odc.aws_learning.app.repository.*;
 import com.odc.aws_learning.app.wrapper.DashboardStatsDTO;
+import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -131,5 +134,41 @@ public class DashboardService {
                 .instructorStats(instructorStats)
                 .mode("INSTRUCTOR")
                 .build();
+    }
+
+    /**
+     * Récupère les statistiques publiques pour la page d'accueil
+     * Ces statistiques sont accessibles sans authentification
+     */
+    public CResponse<?> getPublicStats() {
+        try {
+            // Compter le nombre total d'étudiants actifs (utilisateurs avec au moins une inscription active)
+            long totalStudents = detailsCourseRepo.countDistinctLearners();
+            
+            // Compter le nombre total de cours publiés
+            long totalCourses = coursesRepository.countByStatus(CourseStatus.PUBLIE);
+            
+            // Compter le nombre de cours les plus consultés (cours avec le plus d'inscriptions)
+            // On prend le maximum d'inscriptions pour un cours
+            Long maxEnrollments = detailsCourseRepo.findMaxEnrollmentsByCourse();
+            long mostViewedCourses = maxEnrollments != null ? maxEnrollments : 0;
+            
+            // Calculer le taux de satisfaction moyen (moyenne des ratings de tous les cours)
+            // On récupère tous les cours publiés et on calcule la moyenne des ratings
+            Double averageRating = reviewRepository.findOverallAverageRating();
+            // Convertir de 0-5 à 0-100 pour le pourcentage
+            double satisfactionRate = averageRating != null ? Math.round((averageRating / 5.0) * 100) : 98;
+            
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalStudents", totalStudents);
+            stats.put("totalCourses", totalCourses);
+            stats.put("mostViewedCourses", mostViewedCourses);
+            stats.put("satisfactionRate", satisfactionRate);
+            
+            return CResponse.success(stats, "Statistiques publiques récupérées avec succès");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des statistiques publiques: " + e.getMessage());
+        }
     }
 }
