@@ -100,7 +100,8 @@ public class CoursesController {
     }
 
      @GetMapping("/read/{id}")
-    // Endpoint public pour permettre aux apprenants de consulter les cours sans authentification
+    // Endpoint authentifié : seuls les utilisateurs authentifiés peuvent voir les modules et leçons
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<CourseDto> getCourseById(@PathVariable Long id) {
         CourseDto courseDto = courseService.getCourseById(id);
         return CResponse.success(courseDto);
