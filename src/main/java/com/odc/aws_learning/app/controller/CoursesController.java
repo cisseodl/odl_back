@@ -15,7 +15,6 @@ import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -105,19 +104,35 @@ public class CoursesController {
     public CResponse<CourseDto> getCourseById(@PathVariable Long id) {
         try {
             User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                log.warn("getCurrentUser() returned null for authenticated endpoint /courses/read/{}", id);
+                // Même si l'utilisateur est null, on peut quand même essayer de récupérer le cours
+                // mais sans les modules (car l'utilisateur n'est pas authentifié)
+            }
+            
+            log.debug("Fetching course {} for user {}", id, currentUser != null ? currentUser.getId() : "null");
             CourseDto courseDto = courseService.getCourseById(id, currentUser);
+            
+            if (courseDto == null) {
+                log.warn("CourseDto is null for course id {}", id);
+                return CResponse.error("Cours non trouvé avec l'ID: " + id);
+            }
+            
             return CResponse.success(courseDto);
         } catch (RuntimeException e) {
-            log.error("Error getting course by id {}: {}", id, e.getMessage(), e);
+            log.error("RuntimeException getting course by id {}: {}", id, e.getMessage(), e);
             // Si c'est "Course not found", retourner une erreur appropriée
             if (e.getMessage() != null && e.getMessage().contains("not found")) {
                 return CResponse.error("Cours non trouvé avec l'ID: " + id);
             }
-            // Sinon, retourner une erreur générique
-            return CResponse.error("Erreur lors de la récupération du cours: " + e.getMessage());
+            // Sinon, retourner une erreur générique avec plus de détails en mode debug
+            String errorMessage = "Erreur lors de la récupération du cours: " + e.getMessage();
+            log.error("Full exception stack trace:", e);
+            return CResponse.error(errorMessage);
         } catch (Exception e) {
             log.error("Unexpected error getting course by id {}: {}", id, e.getMessage(), e);
-            return CResponse.error("Erreur inattendue lors de la récupération du cours");
+            log.error("Full exception stack trace:", e);
+            return CResponse.error("Erreur inattendue lors de la récupération du cours: " + e.getMessage());
         }
     }
 

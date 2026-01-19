@@ -3,13 +3,21 @@ package com.odc.aws_learning.app.controller;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.app.entity.DetailsCourse;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
+import com.odc.aws_learning.app.repository.CoursesRepository;
+import com.odc.aws_learning.app.constante.Enumeration;
+import com.odc.aws_learning.auth.entities.User;
+import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -18,6 +26,8 @@ import java.util.stream.Collectors;
 public class DetailsCourseController {
 
     private final DetailsCourseRepo detailsCourseRepo;
+    private final CoursesRepository coursesRepository;
+    private final UserRepository userRepository;
 
     /**
      * Récupère tous les détails d'inscription pour un cours spécifique
@@ -81,5 +91,64 @@ public class DetailsCourseController {
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération des cours de l'utilisateur: " + e.getMessage());
         }
+    }
+
+    /**
+     * Récupère les cours complétés de l'utilisateur authentifié avec leurs détails
+     * GET /details-course/my-completed-courses
+     */
+    @GetMapping("/my-completed-courses")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
+    public CResponse<?> getMyCompletedCourses() {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                return CResponse.error("Utilisateur non authentifié");
+            }
+
+            List<DetailsCourse> completedCourses = detailsCourseRepo.findByLearnerIdAndCourseStatut(
+                currentUser.getId(), 
+                Enumeration.COURSE_STATUT.Valide
+            );
+
+            List<Map<String, Object>> coursesList = completedCourses.stream()
+                .filter(DetailsCourse::isCompleted)
+                .map(dc -> {
+                    Map<String, Object> courseMap = new HashMap<>();
+                    if (dc.getCourse() != null) {
+                        courseMap.put("id", dc.getCourse().getId());
+                        courseMap.put("title", dc.getCourse().getTitle());
+                        courseMap.put("description", dc.getCourse().getDescription());
+                        courseMap.put("imageUrl", dc.getCourse().getImagePath());
+                        courseMap.put("duration", dc.getCourse().getDuration());
+                        courseMap.put("level", dc.getCourse().getLevel() != null ? dc.getCourse().getLevel().name() : null);
+                        courseMap.put("category", dc.getCourse().getCategorie() != null ? dc.getCourse().getCategorie().getTitle() : null);
+                        courseMap.put("completedAt", dc.getLastModifiedAt());
+                        courseMap.put("instructor", dc.getCourse().getInstructor() != null ? 
+                            (dc.getCourse().getInstructor().getFullName() != null ? 
+                                dc.getCourse().getInstructor().getFullName() : 
+                                dc.getCourse().getInstructor().getEmail()) : null);
+                    }
+                    return courseMap;
+                })
+                .collect(Collectors.toList());
+
+            return CResponse.success(coursesList, "Cours complétés récupérés avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération des cours complétés: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère l'utilisateur actuellement authentifié
+     */
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
+            return userOptional.orElse(null);
+        }
+        return null;
     }
 }

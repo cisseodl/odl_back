@@ -114,22 +114,35 @@ public class CourseService {
                 try {
                     List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(id);
                     if (modules != null && !modules.isEmpty()) {
-                        // Trier les modules par moduleOrder
-                        modules.sort((m1, m2) -> {
-                            Integer order1 = m1.getModuleOrder() != null ? m1.getModuleOrder() : Integer.MAX_VALUE;
-                            Integer order2 = m2.getModuleOrder() != null ? m2.getModuleOrder() : Integer.MAX_VALUE;
-                            return order1.compareTo(order2);
-                        });
-                        // Trier les leçons de chaque module par lessonOrder
-                        modules.forEach(module -> {
-                            if (module.getLessons() != null && !module.getLessons().isEmpty()) {
-                                module.getLessons().sort((l1, l2) -> {
-                                    Integer order1 = l1.getLessonOrder() != null ? l1.getLessonOrder() : Integer.MAX_VALUE;
-                                    Integer order2 = l2.getLessonOrder() != null ? l2.getLessonOrder() : Integer.MAX_VALUE;
-                                    return order1.compareTo(order2);
-                                });
-                            }
-                        });
+                        try {
+                            // Trier les modules par moduleOrder
+                            modules.sort((m1, m2) -> {
+                                if (m1 == null || m2 == null) return 0;
+                                Integer order1 = m1.getModuleOrder() != null ? m1.getModuleOrder() : Integer.MAX_VALUE;
+                                Integer order2 = m2.getModuleOrder() != null ? m2.getModuleOrder() : Integer.MAX_VALUE;
+                                return order1.compareTo(order2);
+                            });
+                            // Trier les leçons de chaque module par lessonOrder
+                            modules.forEach(module -> {
+                                if (module != null && module.getLessons() != null && !module.getLessons().isEmpty()) {
+                                    try {
+                                        module.getLessons().sort((l1, l2) -> {
+                                            if (l1 == null || l2 == null) return 0;
+                                            Integer order1 = l1.getLessonOrder() != null ? l1.getLessonOrder() : Integer.MAX_VALUE;
+                                            Integer order2 = l2.getLessonOrder() != null ? l2.getLessonOrder() : Integer.MAX_VALUE;
+                                            return order1.compareTo(order2);
+                                        });
+                                    } catch (Exception e) {
+                                        System.err.println("Error sorting lessons for module " + (module != null ? module.getId() : "null") + ": " + e.getMessage());
+                                        // On continue même si le tri échoue
+                                    }
+                                }
+                            });
+                        } catch (Exception e) {
+                            System.err.println("Error sorting modules for course " + id + ": " + e.getMessage());
+                            e.printStackTrace();
+                            // On continue même si le tri échoue
+                        }
                         course.setModules(modules);
                     } else {
                         course.setModules(new ArrayList<>());
@@ -145,8 +158,23 @@ public class CourseService {
                 course.setModules(new ArrayList<>());
             }
 
-            CourseDto courseDto = courseMapper.toDto(course);
-            populateCalculatedFields(courseDto, course);
+            CourseDto courseDto = null;
+            try {
+                courseDto = courseMapper.toDto(course);
+            } catch (Exception e) {
+                System.err.println("Error mapping course to DTO for id " + id + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors du mapping du cours: " + e.getMessage(), e);
+            }
+            
+            try {
+                populateCalculatedFields(courseDto, course);
+            } catch (Exception e) {
+                System.err.println("Error populating calculated fields for course " + id + ": " + e.getMessage());
+                e.printStackTrace();
+                // On continue même si populateCalculatedFields échoue, le cours sera retourné avec des valeurs par défaut
+            }
+            
             return courseDto;
         } catch (RuntimeException e) {
             // Re-lancer les RuntimeException (comme Course not found)
@@ -159,12 +187,25 @@ public class CourseService {
                 Courses course = coursesRepository.findById(id).orElse(null);
                 if (course != null) {
                     course.setModules(new ArrayList<>());
-                    CourseDto courseDto = courseMapper.toDto(course);
-                    populateCalculatedFields(courseDto, course);
-                    return courseDto;
+                    CourseDto courseDto = null;
+                    try {
+                        courseDto = courseMapper.toDto(course);
+                        // Essayer de populer les champs calculés, mais ne pas échouer si ça ne marche pas
+                        try {
+                            populateCalculatedFields(courseDto, course);
+                        } catch (Exception e3) {
+                            System.err.println("Error populating calculated fields in fallback: " + e3.getMessage());
+                            // On continue avec les valeurs par défaut
+                        }
+                        return courseDto;
+                    } catch (Exception e2) {
+                        System.err.println("Error creating minimal course DTO: " + e2.getMessage());
+                        e2.printStackTrace();
+                    }
                 }
             } catch (Exception e2) {
-                System.err.println("Error creating minimal course DTO: " + e2.getMessage());
+                System.err.println("Error in fallback course retrieval: " + e2.getMessage());
+                e2.printStackTrace();
             }
             throw new RuntimeException("Erreur lors de la récupération du cours: " + e.getMessage(), e);
         }
