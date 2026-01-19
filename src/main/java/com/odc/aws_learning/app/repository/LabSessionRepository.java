@@ -56,4 +56,11 @@ public interface LabSessionRepository extends JpaRepository<LabSession, Long> {
      * @return Liste des sessions
      */
     List<LabSession> findByLabDefinitionIdAndStatusIn(Long labDefinitionId, List<LabSessionStatus> statuses);
+    
+    /**
+     * Trouve toutes les sessions avec des statuts spécifiques.
+     * @param statuses Liste des statuts à rechercher
+     * @return Liste des sessions avec ces statuts
+     */
+    List<LabSession> findByStatusIn(List<LabSessionStatus> statuses);
 }
