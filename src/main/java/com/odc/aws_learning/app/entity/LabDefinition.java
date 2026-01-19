@@ -33,11 +33,20 @@ public class LabDefinition extends BaseEntity {
     private String description;
     
     /**
-     * Nom de l'image Docker à utiliser pour ce lab
-     * (ex: "odl/aws-nodejs-lab:latest")
+     * Fichiers uploadés pour ce lab (JSON array de chemins/URLs)
+     * Format: ["/path/to/file1.pdf", "/path/to/file2.zip", ...]
      */
-    @Column(name = "docker_image_name")
-    private String dockerImageName;
+    @Lob
+    @Column(name = "uploaded_files")
+    private String uploadedFiles;
+    
+    /**
+     * Liens ressources externes pour ce lab (JSON array d'URLs)
+     * Format: ["https://example.com/resource1", "https://example.com/resource2", ...]
+     */
+    @Lob
+    @Column(name = "resource_links")
+    private String resourceLinks;
     
     /**
      * Instructions détaillées pour l'étudiant (format Markdown ou HTML)
@@ -62,10 +71,11 @@ public class LabDefinition extends BaseEntity {
         super();
     }
 
-    public LabDefinition(String title, String description, String dockerImageName, String instructions, Integer estimatedDurationMinutes, List<LabSession> sessions) {
+    public LabDefinition(String title, String description, String uploadedFiles, String resourceLinks, String instructions, Integer estimatedDurationMinutes, List<LabSession> sessions) {
         this.title = title;
         this.description = description;
-        this.dockerImageName = dockerImageName;
+        this.uploadedFiles = uploadedFiles;
+        this.resourceLinks = resourceLinks;
         this.instructions = instructions;
         this.estimatedDurationMinutes = estimatedDurationMinutes;
         this.sessions = sessions;
@@ -87,12 +97,20 @@ public class LabDefinition extends BaseEntity {
         this.description = description;
     }
 
-    public String getDockerImageName() {
-        return dockerImageName;
+    public String getUploadedFiles() {
+        return uploadedFiles;
     }
 
-    public void setDockerImageName(String dockerImageName) {
-        this.dockerImageName = dockerImageName;
+    public void setUploadedFiles(String uploadedFiles) {
+        this.uploadedFiles = uploadedFiles;
+    }
+
+    public String getResourceLinks() {
+        return resourceLinks;
+    }
+
+    public void setResourceLinks(String resourceLinks) {
+        this.resourceLinks = resourceLinks;
     }
 
     public String getInstructions() {
@@ -127,7 +145,8 @@ public class LabDefinition extends BaseEntity {
         LabDefinition that = (LabDefinition) o;
         return Objects.equals(title, that.title) &&
                Objects.equals(description, that.description) &&
-               Objects.equals(dockerImageName, that.dockerImageName) &&
+               Objects.equals(uploadedFiles, that.uploadedFiles) &&
+               Objects.equals(resourceLinks, that.resourceLinks) &&
                Objects.equals(instructions, that.instructions) &&
                Objects.equals(estimatedDurationMinutes, that.estimatedDurationMinutes) &&
                Objects.equals(sessions, that.sessions);
@@ -135,7 +154,7 @@ public class LabDefinition extends BaseEntity {
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), title, description, dockerImageName, instructions, estimatedDurationMinutes, sessions);
+        return Objects.hash(super.hashCode(), title, description, uploadedFiles, resourceLinks, instructions, estimatedDurationMinutes, sessions);
     }
 
     @Override
@@ -143,7 +162,8 @@ public class LabDefinition extends BaseEntity {
         return "LabDefinition{" +
                "title='" + title + '\'' +
                ", description='" + description + '\'' +
-               ", dockerImageName='" + dockerImageName + '\'' +
+               ", uploadedFiles='" + uploadedFiles + '\'' +
+               ", resourceLinks='" + resourceLinks + '\'' +
                ", instructions='" + instructions + '\'' +
                ", estimatedDurationMinutes=" + estimatedDurationMinutes +
                ", sessions=" + (sessions != null ? sessions.size() : "null") +

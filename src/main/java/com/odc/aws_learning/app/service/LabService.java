@@ -1,5 +1,6 @@
 package com.odc.aws_learning.app.service;
 
+import com.odc.aws_learning.app.dto.LabDefinitionRequest;
 import com.odc.aws_learning.app.entity.LabDefinition;
 import com.odc.aws_learning.app.entity.LabSession;
 import com.odc.aws_learning.app.entity.LabSessionStatus;
@@ -49,11 +50,121 @@ public class LabService {
      */
     public CResponse<List<LabDefinition>> getAllLabs() {
         try {
-            List<LabDefinition> labs = labDefinitionRepository.findByActivateTrue();
+            List<LabDefinition> labs = labDefinitionRepository.findAll();
             return CResponse.success(labs, "Liste des labs récupérée avec succès");
         } catch (Exception e) {
             log.error("Erreur lors de la récupération des labs: {}", e.getMessage(), e);
             return CResponse.error("Erreur lors de la récupération des labs: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Récupère un lab par son ID.
+     * @param id ID du lab
+     * @return Lab trouvé
+     */
+    public CResponse<LabDefinition> getLabById(Long id) {
+        try {
+            Optional<LabDefinition> labOptional = labDefinitionRepository.findById(id);
+            if (labOptional.isEmpty()) {
+                return CResponse.error("Lab non trouvé avec l'ID: " + id);
+            }
+            return CResponse.success(labOptional.get(), "Lab récupéré avec succès");
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération du lab: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la récupération du lab: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Crée un nouveau lab.
+     * @param request Données du lab à créer
+     * @return Lab créé
+     */
+    @Transactional
+    public CResponse<LabDefinition> createLab(LabDefinitionRequest request) {
+        try {
+            LabDefinition lab = new LabDefinition();
+            lab.setTitle(request.getTitle());
+            lab.setDescription(request.getDescription());
+            lab.setUploadedFiles(request.getUploadedFiles());
+            lab.setResourceLinks(request.getResourceLinks());
+            lab.setInstructions(request.getInstructions());
+            lab.setEstimatedDurationMinutes(request.getEstimatedDurationMinutes());
+            lab.setActivate(request.getActivate() != null ? request.getActivate() : true);
+            
+            LabDefinition savedLab = labDefinitionRepository.save(lab);
+            log.info("Lab créé avec succès - ID: {}, Titre: {}", savedLab.getId(), savedLab.getTitle());
+            return CResponse.success(savedLab, "Lab créé avec succès");
+        } catch (Exception e) {
+            log.error("Erreur lors de la création du lab: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la création du lab: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Met à jour un lab existant.
+     * @param id ID du lab à mettre à jour
+     * @param request Données du lab à mettre à jour
+     * @return Lab mis à jour
+     */
+    @Transactional
+    public CResponse<LabDefinition> updateLab(Long id, LabDefinitionRequest request) {
+        try {
+            Optional<LabDefinition> labOptional = labDefinitionRepository.findById(id);
+            if (labOptional.isEmpty()) {
+                return CResponse.error("Lab non trouvé avec l'ID: " + id);
+            }
+            
+            LabDefinition lab = labOptional.get();
+            lab.setTitle(request.getTitle());
+            lab.setDescription(request.getDescription());
+            lab.setUploadedFiles(request.getUploadedFiles());
+            lab.setResourceLinks(request.getResourceLinks());
+            lab.setInstructions(request.getInstructions());
+            lab.setEstimatedDurationMinutes(request.getEstimatedDurationMinutes());
+            if (request.getActivate() != null) {
+                lab.setActivate(request.getActivate());
+            }
+            
+            LabDefinition updatedLab = labDefinitionRepository.save(lab);
+            log.info("Lab mis à jour avec succès - ID: {}, Titre: {}", updatedLab.getId(), updatedLab.getTitle());
+            return CResponse.success(updatedLab, "Lab mis à jour avec succès");
+        } catch (Exception e) {
+            log.error("Erreur lors de la mise à jour du lab: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la mise à jour du lab: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Supprime un lab.
+     * @param id ID du lab à supprimer
+     * @return Réponse de succès
+     */
+    @Transactional
+    public CResponse<Void> deleteLab(Long id) {
+        try {
+            Optional<LabDefinition> labOptional = labDefinitionRepository.findById(id);
+            if (labOptional.isEmpty()) {
+                return CResponse.error("Lab non trouvé avec l'ID: " + id);
+            }
+            
+            // Vérifier s'il y a des sessions actives
+            List<LabSession> activeSessions = labSessionRepository.findByLabDefinitionIdAndStatusIn(
+                id,
+                Arrays.asList(LabSessionStatus.STARTING, LabSessionStatus.RUNNING)
+            );
+            
+            if (!activeSessions.isEmpty()) {
+                return CResponse.error("Impossible de supprimer ce lab car il y a des sessions actives");
+            }
+            
+            labDefinitionRepository.deleteById(id);
+            log.info("Lab supprimé avec succès - ID: {}", id);
+            return CResponse.success(null, "Lab supprimé avec succès");
+        } catch (Exception e) {
+            log.error("Erreur lors de la suppression du lab: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la suppression du lab: " + e.getMessage());
         }
     }
     
