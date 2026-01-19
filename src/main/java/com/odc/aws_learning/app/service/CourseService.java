@@ -36,6 +36,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -79,6 +80,7 @@ public class CourseService {
         this.sendEmailService = sendEmailService;
     }
 
+    @Transactional(readOnly = true)
     public CourseDto getCourseById(Long id, User user) {
         try {
             // Charger le cours avec ses relations de base (instructor, categorie)
@@ -177,7 +179,27 @@ public class CourseService {
             
             return courseDto;
         } catch (RuntimeException e) {
-            // Re-lancer les RuntimeException (comme Course not found)
+            // Si c'est "Course not found", re-lancer l'exception
+            if (e.getMessage() != null && e.getMessage().contains("not found")) {
+                throw e;
+            }
+            // Pour les autres RuntimeException, essayer de récupérer un cours minimal
+            System.err.println("RuntimeException in getCourseById for id " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            // Essayer de récupérer un cours minimal
+            try {
+                Courses course = coursesRepository.findById(id).orElse(null);
+                if (course != null) {
+                    course.setModules(new ArrayList<>());
+                    CourseDto courseDto = courseMapper.toDto(course);
+                    // Ne pas appeler populateCalculatedFields pour éviter d'autres exceptions
+                    return courseDto;
+                }
+            } catch (Exception e2) {
+                System.err.println("Error in fallback course retrieval: " + e2.getMessage());
+                e2.printStackTrace();
+            }
+            // Si on ne peut pas récupérer le cours, re-lancer l'exception originale
             throw e;
         } catch (Exception e) {
             System.err.println("Error in getCourseById for id " + id + ": " + e.getMessage());
@@ -187,26 +209,15 @@ public class CourseService {
                 Courses course = coursesRepository.findById(id).orElse(null);
                 if (course != null) {
                     course.setModules(new ArrayList<>());
-                    CourseDto courseDto = null;
-                    try {
-                        courseDto = courseMapper.toDto(course);
-                        // Essayer de populer les champs calculés, mais ne pas échouer si ça ne marche pas
-                        try {
-                            populateCalculatedFields(courseDto, course);
-                        } catch (Exception e3) {
-                            System.err.println("Error populating calculated fields in fallback: " + e3.getMessage());
-                            // On continue avec les valeurs par défaut
-                        }
-                        return courseDto;
-                    } catch (Exception e2) {
-                        System.err.println("Error creating minimal course DTO: " + e2.getMessage());
-                        e2.printStackTrace();
-                    }
+                    CourseDto courseDto = courseMapper.toDto(course);
+                    // Ne pas appeler populateCalculatedFields pour éviter d'autres exceptions
+                    return courseDto;
                 }
             } catch (Exception e2) {
                 System.err.println("Error in fallback course retrieval: " + e2.getMessage());
                 e2.printStackTrace();
             }
+            // Si on ne peut pas récupérer le cours, lancer une exception
             throw new RuntimeException("Erreur lors de la récupération du cours: " + e.getMessage(), e);
         }
     }
