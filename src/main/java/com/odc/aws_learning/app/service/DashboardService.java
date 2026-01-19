@@ -144,26 +144,31 @@ public class DashboardService {
         try {
             // Compter le nombre total d'étudiants actifs (utilisateurs avec au moins une inscription active)
             long totalStudents = detailsCourseRepo.countDistinctLearners();
+            System.out.println("Total étudiants actifs: " + totalStudents);
             
             // Compter le nombre total de cours publiés
             long totalCourses = coursesRepository.countByStatus(CourseStatus.PUBLIE);
+            System.out.println("Total cours publiés: " + totalCourses);
             
-            // Compter le nombre de cours les plus consultés (cours avec le plus d'inscriptions)
-            // On prend le maximum d'inscriptions pour un cours
+            // Trouver le cours avec le maximum d'inscriptions (cours le plus consulté)
             Long maxEnrollments = detailsCourseRepo.findMaxEnrollmentsByCourse();
             long mostViewedCourses = maxEnrollments != null ? maxEnrollments : 0;
+            System.out.println("Cours le plus consulté (max inscriptions): " + mostViewedCourses);
             
             // Calculer le taux de satisfaction moyen (moyenne des ratings de tous les cours)
             // On récupère tous les cours publiés et on calcule la moyenne des ratings
             Double averageRating = reviewRepository.findOverallAverageRating();
             // Convertir de 0-5 à 0-100 pour le pourcentage
             double satisfactionRate = averageRating != null ? Math.round((averageRating / 5.0) * 100) : 98;
+            System.out.println("Taux de satisfaction: " + satisfactionRate + "% (rating moyen: " + averageRating + ")");
             
             Map<String, Object> stats = new HashMap<>();
             stats.put("totalStudents", totalStudents);
             stats.put("totalCourses", totalCourses);
             stats.put("mostViewedCourses", mostViewedCourses);
             stats.put("satisfactionRate", satisfactionRate);
+            
+            System.out.println("Statistiques publiques: " + stats);
             
             return CResponse.success(stats, "Statistiques publiques récupérées avec succès");
         } catch (Exception e) {

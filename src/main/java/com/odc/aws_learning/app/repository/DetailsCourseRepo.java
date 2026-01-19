@@ -64,7 +64,7 @@ public interface DetailsCourseRepo extends JpaRepository<DetailsCourse, Long> {
     @Query("SELECT COUNT(DISTINCT dc.learner.id) FROM DetailsCourse dc WHERE dc.activate = true")
     long countDistinctLearners();
     
-    // Find maximum enrollments for a single course
-    @Query("SELECT MAX((SELECT COUNT(dc2.id) FROM DetailsCourse dc2 WHERE dc2.course.id = dc.course.id)) FROM DetailsCourse dc")
+    // Find maximum enrollments for a single course (cours le plus consulté)
+    @Query(value = "SELECT MAX(enrollment_count) FROM (SELECT COUNT(dc.id) as enrollment_count FROM details_course dc WHERE dc.activate = true GROUP BY dc.course_id) as course_enrollments", nativeQuery = true)
     Long findMaxEnrollmentsByCourse();
 }
