@@ -101,7 +101,7 @@ public class LabAutoStopService {
                         // Arrêter la session en utilisant le service existant
                         var result = labService.stopLab(session.getId());
                         
-                        if (result.isOk()) {
+                        if (result.isSuccess()) {
                             stoppedCount++;
                             log.info("Session {} arrêtée automatiquement avec succès.", session.getId());
                         } else {
