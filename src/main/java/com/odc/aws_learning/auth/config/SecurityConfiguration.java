@@ -74,7 +74,10 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Autoriser tous les ports locaux pour le développement (localhost:3000, localhost:3001, etc.)
+        
+        // IMPORTANT: Utiliser setAllowedOriginPatterns au lieu de setAllowedOrigins
+        // car setAllowedOrigins ne fonctionne pas avec allowCredentials(true)
+        // et setAllowedOriginPatterns permet d'utiliser des patterns avec wildcards
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:*",
             "http://127.0.0.1:*",
@@ -83,14 +86,22 @@ public class SecurityConfiguration {
             "https://*.elasticbeanstalk.com", // Autoriser les environnements Elastic Beanstalk
             "https://api.smart-odc.com", // Domaine personnalisé API
             "https://pi.smart-odc.com", // Domaine frontend
-            "https://admin.smart-odc.com", // Domaine admin explicitement
+            "https://admin.smart-odc.com", // Domaine admin explicitement (IMPORTANT pour résoudre l'erreur CORS)
             "https://smart-odc.com", // Domaine racine smart-odc.com
             "https://*.smart-odc.com" // Autoriser tous les sous-domaines smart-odc.com
         ));
+        
         // Méthodes HTTP explicites incluant OPTIONS pour les requêtes preflight
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization", 
+            "Content-Type", 
+            "Access-Control-Allow-Origin", 
+            "Access-Control-Allow-Credentials",
+            "Access-Control-Allow-Methods",
+            "Access-Control-Allow-Headers"
+        ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
