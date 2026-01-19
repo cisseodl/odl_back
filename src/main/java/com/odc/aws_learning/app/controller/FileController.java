@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
-@CrossOrigin
+@CrossOrigin(origins = "*", maxAge = 3600, allowedHeaders = "*", exposedHeaders = {"Authorization", "Content-Type"})
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
