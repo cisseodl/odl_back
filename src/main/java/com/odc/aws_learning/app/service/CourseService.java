@@ -88,41 +88,57 @@ public class CourseService {
             // Vérifier si l'utilisateur est inscrit au cours (sauf pour ADMIN et INSTRUCTOR)
             boolean canAccessModules = false;
             if (user != null) {
-                boolean isAdmin = user.getAdmin() != null;
-                boolean isInstructor = user.getInstructor() != null;
-                
-                // Les admins et instructeurs peuvent voir tous les modules sans inscription
-                if (isAdmin || isInstructor) {
-                    canAccessModules = true;
-                } else {
-                    // Vérifier l'inscription pour les autres utilisateurs
-                    Optional<DetailsCourse> enrollment = detailsCourseRepo
-                            .findByCourseIdAndLearnerId(id, user.getId());
-                    canAccessModules = enrollment.isPresent() && enrollment.get().isActivate();
+                try {
+                    boolean isAdmin = user.getAdmin() != null;
+                    boolean isInstructor = user.getInstructor() != null;
+                    
+                    // Les admins et instructeurs peuvent voir tous les modules sans inscription
+                    if (isAdmin || isInstructor) {
+                        canAccessModules = true;
+                    } else {
+                        // Vérifier l'inscription pour les autres utilisateurs
+                        Optional<DetailsCourse> enrollment = detailsCourseRepo
+                                .findByCourseIdAndLearnerId(id, user.getId());
+                        canAccessModules = enrollment.isPresent() && enrollment.get().isActivate();
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error checking enrollment for user " + user.getId() + " and course " + id + ": " + e.getMessage());
+                    e.printStackTrace();
+                    // En cas d'erreur, on considère que l'utilisateur n'est pas inscrit
+                    canAccessModules = false;
                 }
             }
 
             // Charger explicitement les modules avec leurs leçons seulement si l'utilisateur est inscrit
             if (canAccessModules) {
-                List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(id);
-                if (modules != null && !modules.isEmpty()) {
-                    // Trier les modules par moduleOrder
-                    modules.sort((m1, m2) -> {
-                        Integer order1 = m1.getModuleOrder() != null ? m1.getModuleOrder() : Integer.MAX_VALUE;
-                        Integer order2 = m2.getModuleOrder() != null ? m2.getModuleOrder() : Integer.MAX_VALUE;
-                        return order1.compareTo(order2);
-                    });
-                    // Trier les leçons de chaque module par lessonOrder
-                    modules.forEach(module -> {
-                        if (module.getLessons() != null && !module.getLessons().isEmpty()) {
-                            module.getLessons().sort((l1, l2) -> {
-                                Integer order1 = l1.getLessonOrder() != null ? l1.getLessonOrder() : Integer.MAX_VALUE;
-                                Integer order2 = l2.getLessonOrder() != null ? l2.getLessonOrder() : Integer.MAX_VALUE;
-                                return order1.compareTo(order2);
-                            });
-                        }
-                    });
-                    course.setModules(modules);
+                try {
+                    List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(id);
+                    if (modules != null && !modules.isEmpty()) {
+                        // Trier les modules par moduleOrder
+                        modules.sort((m1, m2) -> {
+                            Integer order1 = m1.getModuleOrder() != null ? m1.getModuleOrder() : Integer.MAX_VALUE;
+                            Integer order2 = m2.getModuleOrder() != null ? m2.getModuleOrder() : Integer.MAX_VALUE;
+                            return order1.compareTo(order2);
+                        });
+                        // Trier les leçons de chaque module par lessonOrder
+                        modules.forEach(module -> {
+                            if (module.getLessons() != null && !module.getLessons().isEmpty()) {
+                                module.getLessons().sort((l1, l2) -> {
+                                    Integer order1 = l1.getLessonOrder() != null ? l1.getLessonOrder() : Integer.MAX_VALUE;
+                                    Integer order2 = l2.getLessonOrder() != null ? l2.getLessonOrder() : Integer.MAX_VALUE;
+                                    return order1.compareTo(order2);
+                                });
+                            }
+                        });
+                        course.setModules(modules);
+                    } else {
+                        course.setModules(new ArrayList<>());
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error loading modules for course " + id + ": " + e.getMessage());
+                    e.printStackTrace();
+                    // En cas d'erreur, on met une liste vide
+                    course.setModules(new ArrayList<>());
                 }
             } else {
                 // Ne pas charger les modules si l'utilisateur n'est pas inscrit
@@ -132,9 +148,24 @@ public class CourseService {
             CourseDto courseDto = courseMapper.toDto(course);
             populateCalculatedFields(courseDto, course);
             return courseDto;
+        } catch (RuntimeException e) {
+            // Re-lancer les RuntimeException (comme Course not found)
+            throw e;
         } catch (Exception e) {
             System.err.println("Error in getCourseById for id " + id + ": " + e.getMessage());
             e.printStackTrace();
+            // Retourner un cours minimal plutôt que de faire échouer la requête
+            try {
+                Courses course = coursesRepository.findById(id).orElse(null);
+                if (course != null) {
+                    course.setModules(new ArrayList<>());
+                    CourseDto courseDto = courseMapper.toDto(course);
+                    populateCalculatedFields(courseDto, course);
+                    return courseDto;
+                }
+            } catch (Exception e2) {
+                System.err.println("Error creating minimal course DTO: " + e2.getMessage());
+            }
             throw new RuntimeException("Erreur lors de la récupération du cours: " + e.getMessage(), e);
         }
     }
