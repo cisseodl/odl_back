@@ -103,9 +103,22 @@ public class CoursesController {
     // Endpoint authentifié : seuls les utilisateurs authentifiés peuvent voir les modules et leçons
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<CourseDto> getCourseById(@PathVariable Long id) {
-        User currentUser = getCurrentUser();
-        CourseDto courseDto = courseService.getCourseById(id, currentUser);
-        return CResponse.success(courseDto);
+        try {
+            User currentUser = getCurrentUser();
+            CourseDto courseDto = courseService.getCourseById(id, currentUser);
+            return CResponse.success(courseDto);
+        } catch (RuntimeException e) {
+            log.error("Error getting course by id {}: {}", id, e.getMessage(), e);
+            // Si c'est "Course not found", retourner une erreur appropriée
+            if (e.getMessage() != null && e.getMessage().contains("not found")) {
+                return CResponse.error("Cours non trouvé avec l'ID: " + id);
+            }
+            // Sinon, retourner une erreur générique
+            return CResponse.error("Erreur lors de la récupération du cours: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error getting course by id {}: {}", id, e.getMessage(), e);
+            return CResponse.error("Erreur inattendue lors de la récupération du cours");
+        }
     }
 
 
