@@ -7,8 +7,10 @@ import com.odc.aws_learning.app.entity.Lesson;
 import com.odc.aws_learning.app.repository.ModuleRepository;
 import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.LessonRepository;
+import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.wrapper.ModuleAndCoursePayload;
 import com.odc.aws_learning.auth.base.response.CResponse;
+import com.odc.aws_learning.auth.entities.User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,12 +26,14 @@ public class ModuleService {
     private final CoursesRepository coursesRepository;
     private final UploadFileService uploadFileService;
     private final LessonRepository lessonRepository;
+    private final DetailsCourseRepo detailsCourseRepo;
 
-    public ModuleService(ModuleRepository moduleRepository, CoursesRepository coursesRepository, UploadFileService uploadFileService, LessonRepository lessonRepository) {
+    public ModuleService(ModuleRepository moduleRepository, CoursesRepository coursesRepository, UploadFileService uploadFileService, LessonRepository lessonRepository, DetailsCourseRepo detailsCourseRepo) {
         this.moduleRepository = moduleRepository;
         this.coursesRepository = coursesRepository;
         this.uploadFileService = uploadFileService;
         this.lessonRepository = lessonRepository;
+        this.detailsCourseRepo = detailsCourseRepo;
     }
 
     public CResponse<?> saveModule(ModuleAndCoursePayload moduleAndCoursePayload, MultipartFile pdfFile) {
@@ -146,15 +150,35 @@ public class ModuleService {
         }
     }
 
-    public CResponse<?> getModulesByCourse(Long courseId) {
+    public CResponse<?> getModulesByCourse(Long courseId, User user) {
         try {
             Optional<Courses> coursesOptional = coursesRepository.findById(courseId);
-            if (coursesOptional.isPresent()) {
-                // Utiliser la méthode qui charge les leçons avec les modules
-                List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
-                return CResponse.success(modules, "Modules");
+            if (coursesOptional.isEmpty()) {
+                return CResponse.error("Cours introuvable");
             }
-            return CResponse.error("Cours introuvable");
+
+            // Vérifier si l'utilisateur est inscrit au cours (sauf pour ADMIN et INSTRUCTOR)
+            if (user != null) {
+                boolean isAdmin = user.getAdmin() != null;
+                boolean isInstructor = user.getInstructor() != null;
+                
+                // Les admins et instructeurs peuvent voir tous les modules sans inscription
+                if (!isAdmin && !isInstructor) {
+                    Optional<com.odc.aws_learning.app.entity.DetailsCourse> enrollment = detailsCourseRepo
+                            .findByCourseIdAndLearnerId(courseId, user.getId());
+                    
+                    if (enrollment.isEmpty() || !enrollment.get().isActivate()) {
+                        return CResponse.error("Vous devez vous inscrire à ce cours pour accéder aux modules et leçons");
+                    }
+                }
+            } else {
+                // Utilisateur non authentifié
+                return CResponse.error("Vous devez être authentifié et inscrit à ce cours pour accéder aux modules et leçons");
+            }
+
+            // Utiliser la méthode qui charge les leçons avec les modules
+            List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
+            return CResponse.success(modules, "Modules");
         } catch (Exception e) {
             e.printStackTrace();
             return CResponse.error("Erreur de récupération: " + e.getMessage());

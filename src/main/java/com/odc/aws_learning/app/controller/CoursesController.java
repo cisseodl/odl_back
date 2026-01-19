@@ -103,7 +103,8 @@ public class CoursesController {
     // Endpoint authentifié : seuls les utilisateurs authentifiés peuvent voir les modules et leçons
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<CourseDto> getCourseById(@PathVariable Long id) {
-        CourseDto courseDto = courseService.getCourseById(id);
+        User currentUser = getCurrentUser();
+        CourseDto courseDto = courseService.getCourseById(id, currentUser);
         return CResponse.success(courseDto);
     }
 
