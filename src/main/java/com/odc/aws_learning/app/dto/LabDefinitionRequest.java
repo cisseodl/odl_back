@@ -36,6 +36,10 @@ public class LabDefinitionRequest {
     @Min(value = 1, message = "La durée estimée doit être supérieure à 0")
     private Integer estimatedDurationMinutes;
     
+    @NotNull(message = "La durée maximale est requise")
+    @Min(value = 1, message = "La durée maximale doit être supérieure à 0")
+    private Integer maxDurationMinutes;
+    
     private Boolean activate = true;
 }
 

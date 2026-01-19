@@ -91,6 +91,7 @@ public class LabService {
             lab.setResourceLinks(request.getResourceLinks());
             lab.setInstructions(request.getInstructions());
             lab.setEstimatedDurationMinutes(request.getEstimatedDurationMinutes());
+            lab.setMaxDurationMinutes(request.getMaxDurationMinutes());
             lab.setActivate(request.getActivate() != null ? request.getActivate() : true);
             
             LabDefinition savedLab = labDefinitionRepository.save(lab);
@@ -123,6 +124,7 @@ public class LabService {
             lab.setResourceLinks(request.getResourceLinks());
             lab.setInstructions(request.getInstructions());
             lab.setEstimatedDurationMinutes(request.getEstimatedDurationMinutes());
+            lab.setMaxDurationMinutes(request.getMaxDurationMinutes());
             if (request.getActivate() != null) {
                 lab.setActivate(request.getActivate());
             }

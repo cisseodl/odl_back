@@ -61,6 +61,12 @@ public class LabDefinition extends BaseEntity {
     private Integer estimatedDurationMinutes;
     
     /**
+     * Durée maximale du lab en minutes (le lab sera automatiquement arrêté après cette durée)
+     */
+    @Column(name = "max_duration_minutes")
+    private Integer maxDurationMinutes;
+    
+    /**
      * Liste des sessions créées pour ce lab
      */
     @OneToMany(mappedBy = "labDefinition", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -71,13 +77,14 @@ public class LabDefinition extends BaseEntity {
         super();
     }
 
-    public LabDefinition(String title, String description, String uploadedFiles, String resourceLinks, String instructions, Integer estimatedDurationMinutes, List<LabSession> sessions) {
+    public LabDefinition(String title, String description, String uploadedFiles, String resourceLinks, String instructions, Integer estimatedDurationMinutes, Integer maxDurationMinutes, List<LabSession> sessions) {
         this.title = title;
         this.description = description;
         this.uploadedFiles = uploadedFiles;
         this.resourceLinks = resourceLinks;
         this.instructions = instructions;
         this.estimatedDurationMinutes = estimatedDurationMinutes;
+        this.maxDurationMinutes = maxDurationMinutes;
         this.sessions = sessions;
     }
 
@@ -129,6 +136,14 @@ public class LabDefinition extends BaseEntity {
         this.estimatedDurationMinutes = estimatedDurationMinutes;
     }
 
+    public Integer getMaxDurationMinutes() {
+        return maxDurationMinutes;
+    }
+
+    public void setMaxDurationMinutes(Integer maxDurationMinutes) {
+        this.maxDurationMinutes = maxDurationMinutes;
+    }
+
     public List<LabSession> getSessions() {
         return sessions;
     }
@@ -149,12 +164,13 @@ public class LabDefinition extends BaseEntity {
                Objects.equals(resourceLinks, that.resourceLinks) &&
                Objects.equals(instructions, that.instructions) &&
                Objects.equals(estimatedDurationMinutes, that.estimatedDurationMinutes) &&
+               Objects.equals(maxDurationMinutes, that.maxDurationMinutes) &&
                Objects.equals(sessions, that.sessions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), title, description, uploadedFiles, resourceLinks, instructions, estimatedDurationMinutes, sessions);
+        return Objects.hash(super.hashCode(), title, description, uploadedFiles, resourceLinks, instructions, estimatedDurationMinutes, maxDurationMinutes, sessions);
     }
 
     @Override
@@ -166,6 +182,7 @@ public class LabDefinition extends BaseEntity {
                ", resourceLinks='" + resourceLinks + '\'' +
                ", instructions='" + instructions + '\'' +
                ", estimatedDurationMinutes=" + estimatedDurationMinutes +
+               ", maxDurationMinutes=" + maxDurationMinutes +
                ", sessions=" + (sessions != null ? sessions.size() : "null") +
                ", id=" + id +
                '}';
