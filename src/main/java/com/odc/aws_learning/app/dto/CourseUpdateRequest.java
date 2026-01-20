@@ -16,7 +16,15 @@ public class CourseUpdateRequest {
     private String imagePath;
     @NotNull
     private Long instructorId;
-    @NotNull
+    /**
+     * ID de la formation (nouvelle hiérarchie)
+     * Si formationId est fourni, il sera utilisé. Sinon, categoryId sera utilisé pour la compatibilité.
+     */
+    private Long formationId;
+    /**
+     * ID de la catégorie (ancien système, déprécié)
+     * Utilisé uniquement si formationId n'est pas fourni
+     */
     private Long categoryId;
     private CourseLevel level;
     private String language;
@@ -101,6 +109,14 @@ public class CourseUpdateRequest {
 
     public void setInstructorId(Long instructorId) {
         this.instructorId = instructorId;
+    }
+
+    public Long getFormationId() {
+        return formationId;
+    }
+
+    public void setFormationId(Long formationId) {
+        this.formationId = formationId;
     }
 
     public Long getCategoryId() {
