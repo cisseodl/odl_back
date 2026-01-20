@@ -1,6 +1,7 @@
 package com.odc.aws_learning.app.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference; // Added
+import com.fasterxml.jackson.annotation.JsonBackReference; // Added for Lesson
 import com.odc.aws_learning.auth.base.entity.BaseEntity;
 // import lombok.Data; // Removed
 // import lombok.EqualsAndHashCode; // Removed
@@ -67,6 +68,14 @@ public class LabDefinition extends BaseEntity {
     private Integer maxDurationMinutes;
     
     /**
+     * Leçon associée à ce lab
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_id", nullable = true)
+    @JsonBackReference
+    private Lesson lesson;
+    
+    /**
      * Liste des sessions créées pour ce lab
      */
     @OneToMany(mappedBy = "labDefinition", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -77,7 +86,7 @@ public class LabDefinition extends BaseEntity {
         super();
     }
 
-    public LabDefinition(String title, String description, String uploadedFiles, String resourceLinks, String instructions, Integer estimatedDurationMinutes, Integer maxDurationMinutes, List<LabSession> sessions) {
+    public LabDefinition(String title, String description, String uploadedFiles, String resourceLinks, String instructions, Integer estimatedDurationMinutes, Integer maxDurationMinutes, Lesson lesson, List<LabSession> sessions) {
         this.title = title;
         this.description = description;
         this.uploadedFiles = uploadedFiles;
@@ -85,6 +94,7 @@ public class LabDefinition extends BaseEntity {
         this.instructions = instructions;
         this.estimatedDurationMinutes = estimatedDurationMinutes;
         this.maxDurationMinutes = maxDurationMinutes;
+        this.lesson = lesson;
         this.sessions = sessions;
     }
 
@@ -150,6 +160,14 @@ public class LabDefinition extends BaseEntity {
 
     public void setSessions(List<LabSession> sessions) {
         this.sessions = sessions;
+    }
+
+    public Lesson getLesson() {
+        return lesson;
+    }
+
+    public void setLesson(Lesson lesson) {
+        this.lesson = lesson;
     }
 
     @Override

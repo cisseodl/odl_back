@@ -9,6 +9,10 @@ public class EvaluationRequest {
     private String title;
     private String description;
     private Long courseId;
+    /**
+     * ID de la leçon associée à cette évaluation
+     */
+    private Long lessonId;
     private EvaluationType type; // QUIZ ou TP
     private String tpInstructions; // Pour les TPs
     private String tpFileUrl; // Pour les TPs

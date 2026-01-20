@@ -2,6 +2,7 @@ package com.odc.aws_learning.app.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonManagedReference; // Added
+import com.fasterxml.jackson.annotation.JsonBackReference; // Added for Lesson
 // import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // Replaced
 import com.odc.aws_learning.auth.base.entity.BaseEntity;
 // import lombok.Data; // Removed
@@ -17,6 +18,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Column;
 import javax.persistence.ManyToOne;
 import javax.persistence.JoinColumn;
+import javax.persistence.FetchType; // Added for Lesson
 import com.odc.aws_learning.auth.entities.User;
 import java.util.List;
 import java.util.Objects; // Added for equals/hashCode
@@ -50,6 +52,14 @@ public class Evaluations extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "instructor_id", nullable = false)
     private User instructor; // Instructeur qui crée l'évaluation
+    
+    /**
+     * Leçon associée à cette évaluation
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_id", nullable = true)
+    @JsonBackReference
+    private Lesson lesson;
     
     @Column(nullable = true, length = 5000)
     private String tpInstructions; // Instructions pour les TPs (optionnel)
@@ -177,6 +187,14 @@ public class Evaluations extends BaseEntity {
     
     public void setAttempts(List<com.odc.aws_learning.app.entity.EvaluationAttempt> attempts) {
         this.attempts = attempts;
+    }
+
+    public Lesson getLesson() {
+        return lesson;
+    }
+
+    public void setLesson(Lesson lesson) {
+        this.lesson = lesson;
     }
 
     @Override

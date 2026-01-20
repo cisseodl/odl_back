@@ -26,6 +26,7 @@ public class QuizService {
     private final QuizReponseRepository quizReponseRepository;
     private final UserQuizAttemptRepository userQuizAttemptRepository;
     private final CoursesRepository coursesRepository;
+    private final LessonRepository lessonRepository;
     
     /**
      * Crée un quiz complet avec ses questions et réponses
@@ -45,6 +46,14 @@ public class QuizService {
             quiz.setDureeMinutes(quizDTO.getDurationMinutes()); // Changed setDureeMinutes to setDurationMinutes
             quiz.setScoreMinimum(80); // Règle métier : 80% pour réussir
             quiz.setActivate(true);
+            
+            // Associer la leçon si lessonId est fourni
+            if (quizDTO.getLessonId() != null) {
+                Optional<Lesson> lessonOptional = lessonRepository.findById(quizDTO.getLessonId());
+                if (lessonOptional.isPresent()) {
+                    quiz.setLesson(lessonOptional.get());
+                }
+            }
             
             Quiz savedQuiz = quizRepository.save(quiz);
             
@@ -234,6 +243,7 @@ public class QuizService {
         dto.setTitle(quiz.getTitre()); // Changed quiz.getTitre() to quiz.getTitle()
         dto.setDescription(quiz.getDescription());
         dto.setCourseId(quiz.getCourse() != null ? quiz.getCourse().getId() : null);
+        dto.setLessonId(quiz.getLesson() != null ? quiz.getLesson().getId() : null);
         dto.setDurationMinutes(quiz.getDureeMinutes()); // Changed quiz.getDureeMinutes() to quiz.getDuration()
         dto.setScoreMinimum(quiz.getScoreMinimum());
         
@@ -289,6 +299,18 @@ public class QuizService {
                 if (courseOptional.isPresent()) {
                     quiz.setCourse(courseOptional.get());
                 }
+            }
+            
+            // Mettre à jour la leçon si lessonId est fourni
+            if (quizDTO.getLessonId() != null) {
+                Optional<Lesson> lessonOptional = lessonRepository.findById(quizDTO.getLessonId());
+                if (lessonOptional.isPresent()) {
+                    quiz.setLesson(lessonOptional.get());
+                } else {
+                    quiz.setLesson(null);
+                }
+            } else {
+                quiz.setLesson(null);
             }
             
             // Supprimer les anciennes questions et réponses

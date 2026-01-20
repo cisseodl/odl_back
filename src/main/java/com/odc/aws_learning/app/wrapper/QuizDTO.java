@@ -13,6 +13,10 @@ public class QuizDTO {
     private String title; // Changed from titre to title
     private String description;
     private Long courseId;
+    /**
+     * ID de la leçon associée à ce quiz
+     */
+    private Long lessonId;
     private Integer durationMinutes; // Changed from dureeMinutes to durationMinutes
     private Integer scoreMinimum;
     private List<QuestionDTO> questions = new ArrayList<>(); // Initialize list
@@ -39,6 +43,8 @@ public class QuizDTO {
     public void setDescription(String description) { this.description = description; }
     public Long getCourseId() { return courseId; }
     public void setCourseId(Long courseId) { this.courseId = courseId; }
+    public Long getLessonId() { return lessonId; }
+    public void setLessonId(Long lessonId) { this.lessonId = lessonId; }
     public Integer getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
     public Integer getScoreMinimum() { return scoreMinimum; }

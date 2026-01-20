@@ -29,6 +29,14 @@ public class Quiz extends BaseEntity {
     @JsonBackReference // Added (assuming Courses has a List<Quiz>)
     private Courses course;
     
+    /**
+     * Leçon associée à ce quiz
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_id", nullable = true)
+    @JsonBackReference
+    private Lesson lesson;
+    
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     // @JsonIgnoreProperties(value = {"quiz"}, allowSetters = true) // Replaced by @JsonManagedReference
     @JsonManagedReference // Added (corresponds to QuizQuestion.quiz @JsonBackReference)
@@ -72,6 +80,14 @@ public class Quiz extends BaseEntity {
 
     public void setCourse(Courses course) {
         this.course = course;
+    }
+
+    public Lesson getLesson() {
+        return lesson;
+    }
+
+    public void setLesson(Lesson lesson) {
+        this.lesson = lesson;
     }
 
     public List<QuizQuestion> getQuestions() {

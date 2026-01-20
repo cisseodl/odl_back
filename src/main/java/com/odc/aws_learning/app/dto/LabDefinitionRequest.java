@@ -40,6 +40,11 @@ public class LabDefinitionRequest {
     @Min(value = 1, message = "La durée maximale doit être supérieure à 0")
     private Integer maxDurationMinutes;
     
+    /**
+     * ID de la leçon associée à ce lab
+     */
+    private Long lessonId;
+    
     private Boolean activate = true;
 }
 

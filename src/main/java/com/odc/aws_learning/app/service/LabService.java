@@ -4,8 +4,10 @@ import com.odc.aws_learning.app.dto.LabDefinitionRequest;
 import com.odc.aws_learning.app.entity.LabDefinition;
 import com.odc.aws_learning.app.entity.LabSession;
 import com.odc.aws_learning.app.entity.LabSessionStatus;
+import com.odc.aws_learning.app.entity.Lesson;
 import com.odc.aws_learning.app.repository.LabDefinitionRepository;
 import com.odc.aws_learning.app.repository.LabSessionRepository;
+import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -37,11 +39,13 @@ public class LabService {
     private final LabDefinitionRepository labDefinitionRepository;
     private final LabSessionRepository labSessionRepository;
     private final UserRepository userRepository;
+    private final LessonRepository lessonRepository;
 
-    public LabService(LabDefinitionRepository labDefinitionRepository, LabSessionRepository labSessionRepository, UserRepository userRepository) {
+    public LabService(LabDefinitionRepository labDefinitionRepository, LabSessionRepository labSessionRepository, UserRepository userRepository, LessonRepository lessonRepository) {
         this.labDefinitionRepository = labDefinitionRepository;
         this.labSessionRepository = labSessionRepository;
         this.userRepository = userRepository;
+        this.lessonRepository = lessonRepository;
     }
     
     /**
@@ -94,6 +98,16 @@ public class LabService {
             lab.setMaxDurationMinutes(request.getMaxDurationMinutes());
             lab.setActivate(request.getActivate() != null ? request.getActivate() : true);
             
+            // Associer la leçon si lessonId est fourni
+            if (request.getLessonId() != null) {
+                Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
+                if (lessonOptional.isPresent()) {
+                    lab.setLesson(lessonOptional.get());
+                } else {
+                    log.warn("Leçon non trouvée avec l'ID: {}. Le lab sera créé sans leçon associée.", request.getLessonId());
+                }
+            }
+            
             LabDefinition savedLab = labDefinitionRepository.save(lab);
             log.info("Lab créé avec succès - ID: {}, Titre: {}", savedLab.getId(), savedLab.getTitle());
             return CResponse.success(savedLab, "Lab créé avec succès");
@@ -127,6 +141,19 @@ public class LabService {
             lab.setMaxDurationMinutes(request.getMaxDurationMinutes());
             if (request.getActivate() != null) {
                 lab.setActivate(request.getActivate());
+            }
+            
+            // Mettre à jour la leçon si lessonId est fourni
+            if (request.getLessonId() != null) {
+                Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
+                if (lessonOptional.isPresent()) {
+                    lab.setLesson(lessonOptional.get());
+                } else {
+                    log.warn("Leçon non trouvée avec l'ID: {}. La leçon ne sera pas associée au lab.", request.getLessonId());
+                }
+            } else {
+                // Si lessonId est null, on peut vouloir retirer l'association
+                lab.setLesson(null);
             }
             
             LabDefinition updatedLab = labDefinitionRepository.save(lab);

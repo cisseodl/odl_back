@@ -6,6 +6,7 @@ import com.odc.aws_learning.app.entity.Questions;
 import com.odc.aws_learning.app.entity.Reponses;
 import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.entity.Certificate;
+import com.odc.aws_learning.app.entity.Lesson;
 import com.odc.aws_learning.app.repository.EvaluationsRepository;
 import com.odc.aws_learning.app.repository.EvaluationAttemptRepository;
 import com.odc.aws_learning.app.repository.QuestionsRepository;
@@ -14,6 +15,7 @@ import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.CertificateRepository;
 import com.odc.aws_learning.app.repository.CourseSatisfactionRepository;
 import com.odc.aws_learning.app.entity.CourseSatisfaction;
+import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.app.dto.EvaluationRequest;
 import com.odc.aws_learning.app.dto.EvaluationSubmissionRequest;
 import com.odc.aws_learning.app.dto.EvaluationCorrectionRequest;
@@ -42,6 +44,7 @@ public class EvaluationsService {
     private final CertificateRepository certificateRepository;
     private final CertificateService certificateService;
     private final CourseSatisfactionRepository courseSatisfactionRepository;
+    private final LessonRepository lessonRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     public CResponse<?> saveEvaluations(Evaluations evaluations) {
         try {
@@ -131,6 +134,14 @@ public class EvaluationsService {
             evaluation.setCourse(courseOpt.get());
             evaluation.setInstructor(instructor);
             evaluation.setStatus("ACTIVE");
+            
+            // Associer la leçon si lessonId est fourni
+            if (request.getLessonId() != null) {
+                Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
+                if (lessonOptional.isPresent()) {
+                    evaluation.setLesson(lessonOptional.get());
+                }
+            }
             
             if (request.getType() == Evaluations.EvaluationType.TP) {
                 evaluation.setTpInstructions(request.getTpInstructions());
