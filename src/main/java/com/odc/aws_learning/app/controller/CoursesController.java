@@ -235,19 +235,25 @@ public class CoursesController {
 
 
     /**
-     * S'inscrire à un cours (inscription gratuite directe).
+     * S'inscrire à un cours avec attentes obligatoires.
      * POST /courses/enroll/{courseId}
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN)
      */
     @PostMapping("/enroll/{courseId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
-    public ResponseEntity<CResponse<?>> enrollInCourse(@PathVariable Long courseId) {
+    public ResponseEntity<CResponse<?>> enrollInCourse(
+            @PathVariable Long courseId,
+            @RequestBody(required = false) com.odc.aws_learning.app.dto.EnrollmentRequest request) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.ok(CResponse.error("Utilisateur non authentifié"));
         }
         
-        CResponse<?> response = courseService.enrollUserInCourse(currentUser, courseId);
+        String expectations = (request != null && request.getExpectations() != null) 
+            ? request.getExpectations() 
+            : "";
+        
+        CResponse<?> response = courseService.enrollUserInCourse(currentUser, courseId, expectations);
         return ResponseEntity.ok(response);
     }
 

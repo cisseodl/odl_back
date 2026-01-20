@@ -13,7 +13,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,6 +57,7 @@ public class SecurityConfiguration {
                                 "/api/v1/rubriques/read", // Endpoint public pour lire les rubriques (piliers)
                                 "/api/v1/rubriques/read/**", // Endpoint public pour lire une rubrique par ID
                                 "/api/dashboard/public-stats", // Endpoint public pour les statistiques publiques
+                                "/api/odc-formations/read", // Endpoint public pour lire les formations ODC
                                 "/api/files/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

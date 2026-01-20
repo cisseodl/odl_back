@@ -5,6 +5,7 @@ import com.odc.aws_learning.app.service.EvaluationsService;
 import com.odc.aws_learning.app.dto.EvaluationRequest;
 import com.odc.aws_learning.app.dto.EvaluationSubmissionRequest;
 import com.odc.aws_learning.app.dto.EvaluationCorrectionRequest;
+import com.odc.aws_learning.app.dto.SatisfactionRequest;
 import com.odc.aws_learning.app.wrapper.Quiz_Answer;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -70,6 +71,20 @@ public class EvaluationsController {
     public CResponse<?> getAll() {
         return evaluationsService.getAll();
     }
+
+    /**
+     * Récupère l'examen d'un cours pour l'apprenant authentifié
+     * GET /api/evaluations/course/{courseId}
+     */
+    @GetMapping("/course/{courseId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
+    public CResponse<?> getCourseExam(@PathVariable Long courseId) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.getCourseExam(courseId, currentUser);
+    }
     
     /**
      * Créer une nouvelle évaluation (instructeur)
@@ -127,7 +142,42 @@ public class EvaluationsController {
     public CResponse<?> getPendingEvaluations(@PathVariable Long instructorId) {
         return evaluationsService.getPendingEvaluationsForInstructor(instructorId);
     }
-    
+
+    /**
+     * Soumettre la satisfaction de l'apprenant après avoir soumis l'examen
+     * POST /api/evaluations/attempts/{attemptId}/satisfaction
+     */
+    @PostMapping("/attempts/{attemptId}/satisfaction")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
+    public CResponse<?> submitSatisfaction(
+            @PathVariable Long attemptId,
+            @org.springframework.web.bind.annotation.RequestBody SatisfactionRequest request) {
+        User learner = getCurrentUser();
+        if (learner == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.submitSatisfaction(
+                attemptId,
+                learner,
+                request.getSatisfaction(),
+                request.getRating()
+        );
+    }
+
+    /**
+     * Récupère les résultats d'un examen (après soumission de la satisfaction)
+     * GET /api/evaluations/attempts/{attemptId}/results
+     */
+    @GetMapping("/attempts/{attemptId}/results")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
+    public CResponse<?> getExamResults(@PathVariable Long attemptId) {
+        User learner = getCurrentUser();
+        if (learner == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.getExamResults(attemptId, learner);
+    }
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {

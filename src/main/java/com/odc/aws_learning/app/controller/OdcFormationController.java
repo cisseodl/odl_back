@@ -30,7 +30,24 @@ public class OdcFormationController {
     private final UserRepository userRepository;
 
     /**
-     * Récupère toutes les formations ODC
+     * Récupère toutes les formations ODC (endpoint public)
+     * GET /api/odc-formations/read
+     * Accessible à tous (public)
+     */
+    @GetMapping("/read")
+    public ResponseEntity<CResponse<List<OdcFormationDto>>> getAllFormationsPublic() {
+        try {
+            List<OdcFormationDto> formations = odcFormationService.getAllFormations();
+            return ResponseEntity.ok(CResponse.success(formations, "Liste des formations ODC récupérée avec succès"));
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des formations ODC", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CResponse.error("Erreur lors de la récupération des formations ODC: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Récupère toutes les formations ODC (endpoint authentifié)
      * GET /api/odc-formations
      * Accessible à tous les utilisateurs authentifiés
      */

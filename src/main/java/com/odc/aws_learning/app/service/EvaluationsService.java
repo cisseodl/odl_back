@@ -12,21 +12,24 @@ import com.odc.aws_learning.app.repository.QuestionsRepository;
 import com.odc.aws_learning.app.repository.ReponsesRepository;
 import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.CertificateRepository;
+import com.odc.aws_learning.app.repository.CourseSatisfactionRepository;
+import com.odc.aws_learning.app.entity.CourseSatisfaction;
 import com.odc.aws_learning.app.dto.EvaluationRequest;
 import com.odc.aws_learning.app.dto.EvaluationSubmissionRequest;
 import com.odc.aws_learning.app.dto.EvaluationCorrectionRequest;
-import com.odc.aws_learning.app.dto.QuestionRequest;
-import com.odc.aws_learning.app.dto.ResponseRequest;
 import com.odc.aws_learning.app.wrapper.Quiz_Answer;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +41,8 @@ public class EvaluationsService {
     private final CoursesRepository coursesRepository;
     private final CertificateRepository certificateRepository;
     private final CertificateService certificateService;
+    private final CourseSatisfactionRepository courseSatisfactionRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     public CResponse<?> saveEvaluations(Evaluations evaluations) {
         try {
             Evaluations evaluations1 = evaluationsRepository.save(evaluations);
@@ -53,6 +58,31 @@ public class EvaluationsService {
             return CResponse.success(evaluations, "Les evaluations");
         } catch (Exception e) {
             return CResponse.error("Erreur de récupération");
+        }
+    }
+
+    /**
+     * Récupère l'examen d'un cours (premier examen de type QUIZ trouvé)
+     * Vérifie que le cours est complété avant de permettre l'accès
+     */
+    @Transactional(readOnly = true)
+    public CResponse<?> getCourseExam(Long courseId, User user) {
+        try {
+            // Vérifier que l'apprenant est inscrit au cours
+            // TODO: Ajouter vérification d'inscription si nécessaire
+            
+            // Récupérer l'examen du cours (premier examen de type QUIZ trouvé)
+            List<Evaluations> exams = evaluationsRepository.findByCourseId(courseId);
+            Optional<Evaluations> exam = exams.stream()
+                    .filter(e -> e.getType() == Evaluations.EvaluationType.QUIZ)
+                    .findFirst();
+            if (exam.isEmpty()) {
+                return CResponse.error("Aucun examen disponible pour ce cours");
+            }
+
+            return CResponse.success(exam.get(), "Examen récupéré avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération de l'examen: " + e.getMessage());
         }
     }
     public CResponse<?> createEvaluation(Quiz_Answer quiz_answer){
@@ -144,7 +174,7 @@ public class EvaluationsService {
     
     /**
      * Soumettre une évaluation (apprenant)
-     * - Pour QUIZ: calcule automatiquement le score
+     * - Pour QUIZ: crée une tentative avec statut PENDING (score calculé après satisfaction)
      * - Pour TP: crée une tentative en attente de correction
      */
     @Transactional
@@ -156,18 +186,31 @@ public class EvaluationsService {
             }
             
             Evaluations evaluation = evalOpt.get();
+            
+            // Vérifier si l'apprenant est inscrit au cours
+            // TODO: Ajouter vérification d'inscription si nécessaire
+            
+            // Vérifier s'il existe déjà une tentative
+            List<EvaluationAttempt> existingAttempts = evaluationAttemptRepository
+                    .findByEvaluationIdAndUserIdOrderByCreatedAtDesc(request.getEvaluationId(), learner.getId());
+            if (!existingAttempts.isEmpty()) {
+                return CResponse.error("Vous avez déjà soumis cet examen");
+            }
+            
             EvaluationAttempt attempt = new EvaluationAttempt(evaluation, learner);
             
             if (evaluation.getType() == Evaluations.EvaluationType.QUIZ) {
-                // Calculer le score automatiquement
-                Double score = calculateQuizScore(evaluation, request.getAnswers(), request.getTextAnswers());
-                attempt.setScore(score);
-                attempt.setStatus(score >= 70.0 ? EvaluationAttempt.AttemptStatus.PASSED : EvaluationAttempt.AttemptStatus.FAILED);
-                
-                // Vérifier si certificat doit être généré
-                if (score >= 70.0) {
-                    checkAndGenerateCertificate(learner, evaluation.getCourse(), score);
+                // Pour les QUIZ, on ne calcule PAS le score maintenant
+                // Le score sera calculé après la soumission de la satisfaction
+                // Stocker les réponses dans instructorFeedback temporairement (sera remplacé par la satisfaction)
+                try {
+                    String answersJson = objectMapper.writeValueAsString(request.getAnswers());
+                    attempt.setInstructorFeedback("ANSWERS:" + answersJson); // Stockage temporaire
+                } catch (JsonProcessingException e) {
+                    // En cas d'erreur, continuer sans stocker les réponses
                 }
+                attempt.setStatus(EvaluationAttempt.AttemptStatus.PENDING);
+                // Le score reste null pour l'instant
             } else if (evaluation.getType() == Evaluations.EvaluationType.TP) {
                 // TP: en attente de correction par l'instructeur
                 attempt.setSubmittedFileUrl(request.getSubmittedFileUrl());
@@ -175,7 +218,7 @@ public class EvaluationsService {
             }
             
             EvaluationAttempt saved = evaluationAttemptRepository.save(attempt);
-            return CResponse.success(saved, "Évaluation soumise avec succès");
+            return CResponse.success(saved, "Évaluation soumise avec succès. Veuillez remplir le formulaire de satisfaction pour voir vos résultats.");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la soumission: " + e.getMessage());
         }
@@ -323,6 +366,129 @@ public class EvaluationsService {
             return CResponse.success(pending, "Évaluations en attente récupérées avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Soumettre la satisfaction de l'apprenant après avoir soumis l'examen
+     * Calcule le score et met à jour la tentative
+     */
+    @Transactional
+    public CResponse<?> submitSatisfaction(Long attemptId, User learner, String satisfaction, Integer rating) {
+        try {
+            Optional<EvaluationAttempt> attemptOpt = evaluationAttemptRepository.findById(attemptId);
+            if (attemptOpt.isEmpty()) {
+                return CResponse.error("Tentative d'examen non trouvée");
+            }
+
+            EvaluationAttempt attempt = attemptOpt.get();
+
+            // Vérifier que la tentative appartient à l'utilisateur
+            if (!attempt.getUser().getId().equals(learner.getId())) {
+                return CResponse.error("Cette tentative ne vous appartient pas");
+            }
+
+            // Vérifier que la tentative est en PENDING (pas encore de score)
+            if (attempt.getStatus() != EvaluationAttempt.AttemptStatus.PENDING || attempt.getScore() != null) {
+                return CResponse.error("Cette évaluation a déjà été traitée");
+            }
+
+            // Vérifier si la satisfaction a déjà été soumise
+            Optional<CourseSatisfaction> existingSatisfaction = courseSatisfactionRepository
+                    .findByEvaluationAttemptId(attemptId);
+            if (existingSatisfaction.isPresent()) {
+                return CResponse.error("Vous avez déjà soumis votre satisfaction pour cet examen");
+            }
+
+            // Enregistrer la satisfaction
+            CourseSatisfaction courseSatisfaction = new CourseSatisfaction(
+                    attempt.getEvaluation().getCourse(),
+                    learner,
+                    attempt,
+                    satisfaction
+            );
+            if (rating != null) {
+                courseSatisfaction.setRating(rating);
+            }
+            courseSatisfactionRepository.save(courseSatisfaction);
+
+            // Maintenant, calculer le score de l'examen
+            // Récupérer les réponses stockées dans instructorFeedback
+            Map<Long, Long> answers = null;
+            Map<Long, String> textAnswers = null;
+            if (attempt.getInstructorFeedback() != null && attempt.getInstructorFeedback().startsWith("ANSWERS:")) {
+                try {
+                    String answersJson = attempt.getInstructorFeedback().substring(8); // Enlever "ANSWERS:"
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> answersMap = objectMapper.readValue(answersJson, Map.class);
+                    // Convertir les clés String en Long
+                    answers = new HashMap<>();
+                    for (Map.Entry<String, Object> entry : answersMap.entrySet()) {
+                        try {
+                            Long questionId = Long.parseLong(entry.getKey());
+                            Long responseId = entry.getValue() instanceof Number 
+                                ? ((Number) entry.getValue()).longValue() 
+                                : Long.parseLong(entry.getValue().toString());
+                            answers.put(questionId, responseId);
+                        } catch (NumberFormatException e) {
+                            // Ignorer les entrées invalides
+                        }
+                    }
+                } catch (Exception e) {
+                    // En cas d'erreur, continuer sans les réponses
+                }
+            }
+
+            // Calculer le score
+            Double score = calculateQuizScore(attempt.getEvaluation(), answers, textAnswers);
+            attempt.setScore(score);
+            attempt.setInstructorFeedback(null); // Nettoyer le champ temporaire
+
+            // Mettre à jour le statut
+            if (score >= 70.0) {
+                attempt.setStatus(EvaluationAttempt.AttemptStatus.PASSED);
+                // Générer le certificat si le score est suffisant
+                checkAndGenerateCertificate(learner, attempt.getEvaluation().getCourse(), score);
+            } else {
+                attempt.setStatus(EvaluationAttempt.AttemptStatus.FAILED);
+            }
+
+            evaluationAttemptRepository.save(attempt);
+
+            return CResponse.success(attempt, "Satisfaction enregistrée. Vos résultats sont maintenant disponibles.");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la soumission de la satisfaction: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère les résultats d'un examen (après soumission de la satisfaction)
+     */
+    @Transactional(readOnly = true)
+    public CResponse<?> getExamResults(Long attemptId, User user) {
+        try {
+            Optional<EvaluationAttempt> attemptOpt = evaluationAttemptRepository.findById(attemptId);
+            if (attemptOpt.isEmpty()) {
+                return CResponse.error("Tentative d'examen non trouvée");
+            }
+
+            EvaluationAttempt attempt = attemptOpt.get();
+
+            // Vérifier que la tentative appartient à l'utilisateur
+            if (!attempt.getUser().getId().equals(user.getId())) {
+                return CResponse.error("Cette tentative ne vous appartient pas");
+            }
+
+            // Vérifier que la satisfaction a été soumise
+            Optional<CourseSatisfaction> satisfaction = courseSatisfactionRepository
+                    .findByEvaluationAttemptId(attemptId);
+            if (satisfaction.isEmpty()) {
+                return CResponse.error("Vous devez d'abord soumettre votre satisfaction pour voir les résultats");
+            }
+
+            return CResponse.success(attempt, "Résultats de l'examen récupérés avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération des résultats: " + e.getMessage());
         }
     }
 }

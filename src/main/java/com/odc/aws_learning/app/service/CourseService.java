@@ -26,6 +26,7 @@ import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.app.repository.CertificateRepository; // Added
+import com.odc.aws_learning.app.repository.CourseEnrollmentExpectationsRepository;
 import com.odc.aws_learning.app.service.NotificationService;
 import com.odc.aws_learning.app.service.SendEmailService;
 import com.odc.aws_learning.auth.entities.User;
@@ -60,10 +61,11 @@ public class CourseService {
     private final ModuleRepository moduleRepository;
     private final LessonRepository lessonRepository;
     private final CertificateRepository certificateRepository; // Injected
+    private final CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository;
     private final NotificationService notificationService;
     private final SendEmailService sendEmailService;
 
-    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, NotificationService notificationService, SendEmailService sendEmailService) {
+    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, SendEmailService sendEmailService) {
         this.coursesRepository = coursesRepository;
         this.courseMapper = courseMapper;
         this.instructorMapper = instructorMapper;
@@ -76,6 +78,7 @@ public class CourseService {
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
         this.certificateRepository = certificateRepository;
+        this.courseEnrollmentExpectationsRepository = courseEnrollmentExpectationsRepository;
         this.notificationService = notificationService;
         this.sendEmailService = sendEmailService;
     }
@@ -635,9 +638,14 @@ public class CourseService {
         }
     }
 
-    // NOUVEAU: Inscrit un utilisateur à un cours
-    public CResponse<?> enrollUserInCourse(User user, Long courseId) {
+    // NOUVEAU: Inscrit un utilisateur à un cours avec attentes
+    public CResponse<?> enrollUserInCourse(User user, Long courseId, String expectations) {
         try {
+            // Vérifier que les attentes sont fournies
+            if (expectations == null || expectations.trim().isEmpty()) {
+                return CResponse.error("Les attentes sont obligatoires pour s'inscrire au cours");
+            }
+
             // Vérifier le nombre de cours en cours
             long activeCourses = detailsCourseRepo.countByLearnerIdAndCourseStatut(user.getId(), com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
             if (activeCourses >= 3) {
@@ -665,7 +673,12 @@ public class CourseService {
             detailsCourse.setCourse(course);
             detailsCourse.setLearner(user);
             detailsCourse.setActivate(true);
-            detailsCourseRepo.save(detailsCourse);
+            detailsCourse = detailsCourseRepo.save(detailsCourse);
+
+            // Enregistrer les attentes
+            com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectationsEntity = 
+                new com.odc.aws_learning.app.entity.CourseEnrollmentExpectations(detailsCourse, expectations);
+            courseEnrollmentExpectationsRepository.save(expectationsEntity);
 
             // Envoyer une notification au formateur du cours
             if (course.getInstructor() != null) {
