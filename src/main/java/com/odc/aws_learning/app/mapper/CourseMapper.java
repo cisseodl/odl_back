@@ -13,7 +13,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {ModuleMapper.class, InstructorMapper.class})
 public interface CourseMapper {
 
-    @Mapping(target = "category", source = "categorie.title")
+    @Mapping(target = "category", source = "course", qualifiedByName = "getCategoryTitle")
     @Mapping(target = "instructor", ignore = true) // Set by service
     @Mapping(target = "curriculum", source = "modules")
     @Mapping(target = "duration", source = "duration", qualifiedByName = "formatDuration")
@@ -64,5 +64,18 @@ public interface CourseMapper {
         }
         // Example format, adjust as needed by frontend
         return lastModifiedAt.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+    }
+
+    @Named("getCategoryTitle")
+    default String getCategoryTitle(Courses course) {
+        // Nouvelle hiérarchie : Formation -> Cours
+        // Si formation existe, utiliser formation.getCategorie().getTitle()
+        // Sinon, utiliser categorie.getTitle() (ancien système)
+        if (course.getFormation() != null && course.getFormation().getCategorie() != null) {
+            return course.getFormation().getCategorie().getTitle();
+        } else if (course.getCategorie() != null) {
+            return course.getCategorie().getTitle();
+        }
+        return null;
     }
 }

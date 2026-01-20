@@ -337,7 +337,8 @@ public class CourseService {
 
     public List<CourseDto> getCoursesByInstructorId(Long instructorId) {
         try {
-            List<Courses> courses = coursesRepository.findByInstructor_Id(instructorId);
+            // Utiliser la méthode avec FETCH pour charger les relations (formation, categorie)
+            List<Courses> courses = coursesRepository.findByInstructor_IdWithRelations(instructorId);
             return courses.stream()
                     .map(course -> {
                         try {
@@ -348,8 +349,32 @@ public class CourseService {
                             System.err.println("Error processing course " + course.getId() + ": " + e.getMessage());
                             e.printStackTrace();
                             // Retourner un DTO minimal en cas d'erreur
-                            CourseDto dto = courseMapper.toDto(course);
-                            return dto;
+                            try {
+                                CourseDto dto = courseMapper.toDto(course);
+                                return dto;
+                            } catch (Exception e2) {
+                                System.err.println("Error creating minimal DTO for course " + course.getId() + ": " + e2.getMessage());
+                                e2.printStackTrace();
+                                // Créer un DTO basique manuellement
+                                CourseDto minimalDto = new CourseDto();
+                                minimalDto.setId(course.getId());
+                                minimalDto.setTitle(course.getTitle() != null ? course.getTitle() : "Sans titre");
+                                minimalDto.setSubtitle(course.getSubtitle());
+                                minimalDto.setDescription(course.getDescription());
+                                minimalDto.setImageUrl(course.getImagePath());
+                                minimalDto.setLevel(course.getLevel());
+                                minimalDto.setLanguage(course.getLanguage());
+                                minimalDto.setStatus(course.getStatus());
+                                // Déterminer la catégorie via formation ou directement
+                                String categoryTitle = null;
+                                if (course.getFormation() != null && course.getFormation().getCategorie() != null) {
+                                    categoryTitle = course.getFormation().getCategorie().getTitle();
+                                } else if (course.getCategorie() != null) {
+                                    categoryTitle = course.getCategorie().getTitle();
+                                }
+                                minimalDto.setCategory(categoryTitle);
+                                return minimalDto;
+                            }
                         }
                     })
                     .collect(Collectors.toList());

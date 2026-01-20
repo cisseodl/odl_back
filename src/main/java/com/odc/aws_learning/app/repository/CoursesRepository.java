@@ -24,6 +24,15 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
 
     // New method for AnalyticsService
     List<Courses> findByInstructor_Id(Long instructorId);
+    
+    // Méthode avec jointures FETCH pour charger les relations nécessaires pour un instructeur
+    @Query("SELECT DISTINCT c FROM Courses c " +
+           "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.formation f " +
+           "LEFT JOIN FETCH f.categorie " +
+           "LEFT JOIN FETCH c.categorie " +
+           "WHERE c.instructor.id = :instructorId")
+    List<Courses> findByInstructor_IdWithRelations(@Param("instructorId") Long instructorId);
 
     long countByInstructorIdAndStatus(Long instructorId, CourseStatus status);
 
@@ -38,9 +47,11 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
 
     // Méthodes avec jointures FETCH pour charger les relations nécessaires
     // Note: On ne peut pas FETCH plusieurs collections simultanément (MultipleBagFetchException)
-    // On charge seulement instructor et categorie, les modules seront chargés séparément si nécessaire
+    // On charge seulement instructor, formation, categorie (via formation ou directement)
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.formation f " +
+           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie")
     List<Courses> findAllWithRelations();
 
