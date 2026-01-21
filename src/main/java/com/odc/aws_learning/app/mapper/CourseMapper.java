@@ -90,6 +90,10 @@ public interface CourseMapper {
                         // Essayer d'initialiser le proxy
                         try {
                             Hibernate.initialize(formation);
+                            // Essayer aussi d'initialiser la catégorie de la formation
+                            if (formation.getCategorie() != null && formation.getCategorie() instanceof HibernateProxy) {
+                                Hibernate.initialize(formation.getCategorie());
+                            }
                         } catch (Exception e) {
                             // Si l'initialisation échoue, utiliser la catégorie directe
                             formation = null;
@@ -102,8 +106,20 @@ public interface CourseMapper {
                     try {
                         // Vérifier si la catégorie est accessible
                         if (Hibernate.isInitialized(formation) || !(formation instanceof HibernateProxy)) {
-                            if (formation.getCategorie() != null) {
-                                return formation.getCategorie().getTitle();
+                            com.odc.aws_learning.app.entity.Categorie formationCategorie = formation.getCategorie();
+                            if (formationCategorie != null) {
+                                // Vérifier si la catégorie est un proxy non initialisé
+                                if (formationCategorie instanceof HibernateProxy) {
+                                    try {
+                                        Hibernate.initialize(formationCategorie);
+                                    } catch (Exception e) {
+                                        // Si l'initialisation échoue, continuer avec la catégorie directe
+                                        formationCategorie = null;
+                                    }
+                                }
+                                if (formationCategorie != null && formationCategorie.getTitle() != null && !formationCategorie.getTitle().trim().isEmpty()) {
+                                    return formationCategorie.getTitle();
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -117,8 +133,20 @@ public interface CourseMapper {
         
         // Utiliser la catégorie directe (ancien système)
         try {
-            if (course.getCategorie() != null) {
-                return course.getCategorie().getTitle();
+            com.odc.aws_learning.app.entity.Categorie categorie = course.getCategorie();
+            if (categorie != null) {
+                // Vérifier si la catégorie est un proxy non initialisé
+                if (categorie instanceof HibernateProxy) {
+                    try {
+                        Hibernate.initialize(categorie);
+                    } catch (Exception e) {
+                        // Si l'initialisation échoue, retourner null
+                        return null;
+                    }
+                }
+                if (categorie.getTitle() != null && !categorie.getTitle().trim().isEmpty()) {
+                    return categorie.getTitle();
+                }
             }
         } catch (Exception e) {
             // Ignorer les erreurs d'accès à la catégorie
