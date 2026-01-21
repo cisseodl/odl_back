@@ -514,8 +514,13 @@ public class ApprenantService {
             System.err.println("Message: " + errorMessage);
             System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "null"));
             if (e.getCause() != null) {
+                System.err.println("=== Stack Trace de la Cause ===");
                 e.getCause().printStackTrace();
             }
+            // Logger la stack trace complète
+            System.err.println("=== Stack Trace Complète ===");
+            e.printStackTrace();
+            
             if (errorMessage != null && (errorMessage.contains("foreign key constraint") || errorMessage.contains("constraint"))) {
                 // Extraire le nom de la contrainte si possible
                 String constraintName = "";
@@ -528,7 +533,7 @@ public class ApprenantService {
                 }
                 return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. " + 
                     (constraintName.isEmpty() ? "" : "Contrainte: " + constraintName + ". ") +
-                    "Veuillez d'abord supprimer les données associées.");
+                    "Veuillez d'abord supprimer les données associées. Détails: " + errorMessage);
             }
             return CResponse.error("Erreur de contrainte lors de la suppression de l'apprenant: " + errorMessage);
         } catch (RuntimeException e) {
@@ -539,8 +544,11 @@ public class ApprenantService {
             System.err.println("Message: " + errorMessage);
             System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "null"));
             if (e.getCause() != null) {
+                System.err.println("=== Stack Trace de la Cause ===");
                 e.getCause().printStackTrace();
             }
+            System.err.println("=== Stack Trace Complète ===");
+            e.printStackTrace();
             return CResponse.error("Erreur lors de la suppression de l'apprenant: " + (errorMessage != null ? errorMessage : e.getClass().getSimpleName()));
         } catch (Exception e) {
             e.printStackTrace();
@@ -550,8 +558,11 @@ public class ApprenantService {
             System.err.println("Message: " + errorMessage);
             System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "null"));
             if (e.getCause() != null) {
+                System.err.println("=== Stack Trace de la Cause ===");
                 e.getCause().printStackTrace();
             }
+            System.err.println("=== Stack Trace Complète ===");
+            e.printStackTrace();
             return CResponse.error("Erreur lors de la suppression de l'apprenant: " + (errorMessage != null ? errorMessage : e.getClass().getSimpleName()));
         }
     }
