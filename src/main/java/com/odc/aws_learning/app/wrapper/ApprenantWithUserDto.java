@@ -26,7 +26,18 @@ public class ApprenantWithUserDto {
     private String niveauEtude;
     private String filiere;
     private String attentes;
-    private Boolean satisfaction;
+    private Boolean conditionsAccepted; // Acceptation des conditions (anciennement satisfaction)
+    
+    // Méthode de compatibilité pour l'ancien nom (deprecated)
+    @Deprecated
+    public Boolean getSatisfaction() {
+        return conditionsAccepted;
+    }
+    
+    @Deprecated
+    public void setSatisfaction(Boolean satisfaction) {
+        this.conditionsAccepted = satisfaction;
+    }
     private Long cohorteId;
     private String cohorteNom;
     
@@ -67,7 +78,7 @@ public class ApprenantWithUserDto {
                 .niveauEtude(apprenant.getNiveauEtude())
                 .filiere(apprenant.getFiliere())
                 .attentes(apprenant.getAttentes())
-                .satisfaction(apprenant.getSatisfaction());
+                .conditionsAccepted(apprenant.getConditionsAccepted());
         
         if (apprenant.getCohorte() != null) {
             builder.cohorteId(apprenant.getCohorte().getId())
