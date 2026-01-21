@@ -290,7 +290,33 @@ public class ApprenantService {
             
             System.out.println("User ID: " + user.getId());
             
-            // Supprimer d'abord les DetailsCourse (inscriptions aux cours) associés à cet utilisateur
+            // IMPORTANT: Ordre de suppression pour éviter les contraintes de clé étrangère
+            // 1. CourseEnrollmentExpectations (référence DetailsCourse) - DOIT être supprimé AVANT DetailsCourse
+            // 2. DetailsCourse
+            // 3. CourseSatisfaction (référence EvaluationAttempt) - DOIT être supprimé AVANT EvaluationAttempt
+            // 4. EvaluationAttempt
+            // 5. Autres relations...
+            
+            // 1. Supprimer CourseEnrollmentExpectations AVANT DetailsCourse
+            try {
+                System.out.println("Suppression des CourseEnrollmentExpectations...");
+                List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCoursesForExpectations = detailsCourseRepo.findByLearnerId(user.getId());
+                int expectationsDeleted = 0;
+                for (com.odc.aws_learning.app.entity.DetailsCourse dc : detailsCoursesForExpectations) {
+                    courseEnrollmentExpectationsRepository.findByDetailsCourseId(dc.getId())
+                            .ifPresent(expectation -> {
+                                courseEnrollmentExpectationsRepository.delete(expectation);
+                            });
+                    expectationsDeleted++;
+                }
+                System.out.println("CourseEnrollmentExpectations supprimés: " + expectationsDeleted);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des CourseEnrollmentExpectations pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des CourseEnrollmentExpectations: " + e.getMessage(), e);
+            }
+            
+            // 2. Supprimer DetailsCourse (inscriptions aux cours) associés à cet utilisateur
             // car DetailsCourse n'a pas de cascade depuis User
             try {
                 System.out.println("Suppression des DetailsCourse...");
@@ -303,9 +329,10 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des DetailsCourse pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des DetailsCourse: " + e.getMessage(), e);
             }
             
-            // Supprimer les UserQuizAttempt car cette relation n'a pas de cascade depuis User
+            // 5. Supprimer les UserQuizAttempt car cette relation n'a pas de cascade depuis User
             try {
                 System.out.println("Suppression des UserQuizAttempt...");
                 List<com.odc.aws_learning.app.entity.UserQuizAttempt> quizAttempts = userQuizAttemptRepository.findByUserId(user.getId());
@@ -317,6 +344,7 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des UserQuizAttempt pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des UserQuizAttempt: " + e.getMessage(), e);
             }
             
             // Supprimer les LearnerModule car cette relation utilise "learner" au lieu de "user"
@@ -333,6 +361,7 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des LearnerModule pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des LearnerModule: " + e.getMessage(), e);
             }
             
             // Supprimer les UserProgress car cette relation peut avoir des problèmes de cascade
@@ -347,6 +376,7 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des UserProgress pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des UserProgress: " + e.getMessage(), e);
             }
             
             // Supprimer les Review car cette relation peut avoir des problèmes de cascade
@@ -361,6 +391,7 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des Review pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des Review: " + e.getMessage(), e);
             }
             
             // Supprimer les LabSession car cette relation peut avoir des problèmes de cascade
@@ -375,6 +406,40 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des LabSession pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des LabSession: " + e.getMessage(), e);
+            }
+            
+            // 3. IMPORTANT: Supprimer CourseSatisfaction AVANT EvaluationAttempt
+            // car CourseSatisfaction a une clé étrangère vers EvaluationAttempt
+            try {
+                System.out.println("Suppression des CourseSatisfaction...");
+                List<com.odc.aws_learning.app.entity.CourseSatisfaction> satisfactions = courseSatisfactionRepository.findAll().stream()
+                        .filter(cs -> cs.getUser() != null && cs.getUser().getId().equals(user.getId()))
+                        .collect(java.util.stream.Collectors.toList());
+                System.out.println("Nombre de CourseSatisfaction trouvés: " + satisfactions.size());
+                if (!satisfactions.isEmpty()) {
+                    courseSatisfactionRepository.deleteAll(satisfactions);
+                    System.out.println("CourseSatisfaction supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des CourseSatisfaction pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des CourseSatisfaction: " + e.getMessage(), e);
+            }
+            
+            // 4. Supprimer les EvaluationAttempt APRÈS CourseSatisfaction
+            try {
+                System.out.println("Suppression des EvaluationAttempt...");
+                List<com.odc.aws_learning.app.entity.EvaluationAttempt> evaluationAttempts = evaluationAttemptRepository.findByUser(user);
+                System.out.println("Nombre de EvaluationAttempt trouvés: " + evaluationAttempts.size());
+                if (!evaluationAttempts.isEmpty()) {
+                    evaluationAttemptRepository.deleteAll(evaluationAttempts);
+                    System.out.println("EvaluationAttempt supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des EvaluationAttempt pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des EvaluationAttempt: " + e.getMessage(), e);
             }
             
             // Supprimer les Certificate car cette relation peut avoir des problèmes de cascade
@@ -392,51 +457,7 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des Certificate pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
-            }
-            
-            // Supprimer les EvaluationAttempt car cette relation peut avoir des problèmes de cascade
-            try {
-                System.out.println("Suppression des EvaluationAttempt...");
-                List<com.odc.aws_learning.app.entity.EvaluationAttempt> evaluationAttempts = evaluationAttemptRepository.findByUser(user);
-                System.out.println("Nombre de EvaluationAttempt trouvés: " + evaluationAttempts.size());
-                if (!evaluationAttempts.isEmpty()) {
-                    evaluationAttemptRepository.deleteAll(evaluationAttempts);
-                    System.out.println("EvaluationAttempt supprimés avec succès");
-                }
-            } catch (Exception e) {
-                System.err.println("Erreur lors de la suppression des EvaluationAttempt pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                e.printStackTrace();
-            }
-            
-            // Supprimer les CourseEnrollmentExpectations via DetailsCourse
-            try {
-                System.out.println("Suppression des CourseEnrollmentExpectations...");
-                List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCourses = detailsCourseRepo.findByLearnerId(user.getId());
-                for (com.odc.aws_learning.app.entity.DetailsCourse dc : detailsCourses) {
-                    courseEnrollmentExpectationsRepository.findByDetailsCourseId(dc.getId())
-                            .ifPresent(courseEnrollmentExpectationsRepository::delete);
-                }
-                System.out.println("CourseEnrollmentExpectations supprimés avec succès");
-            } catch (Exception e) {
-                System.err.println("Erreur lors de la suppression des CourseEnrollmentExpectations pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                e.printStackTrace();
-            }
-            
-            // Supprimer les CourseSatisfaction
-            try {
-                System.out.println("Suppression des CourseSatisfaction...");
-                // CourseSatisfaction a une relation avec User via userId
-                List<com.odc.aws_learning.app.entity.CourseSatisfaction> satisfactions = courseSatisfactionRepository.findAll().stream()
-                        .filter(cs -> cs.getUser() != null && cs.getUser().getId().equals(user.getId()))
-                        .collect(java.util.stream.Collectors.toList());
-                System.out.println("Nombre de CourseSatisfaction trouvés: " + satisfactions.size());
-                if (!satisfactions.isEmpty()) {
-                    courseSatisfactionRepository.deleteAll(satisfactions);
-                    System.out.println("CourseSatisfaction supprimés avec succès");
-                }
-            } catch (Exception e) {
-                System.err.println("Erreur lors de la suppression des CourseSatisfaction pour l'utilisateur " + user.getId() + ": " + e.getMessage());
-                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des Certificate: " + e.getMessage(), e);
             }
             
             // Supprimer les Notification
@@ -451,6 +472,7 @@ public class ApprenantService {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des Notification pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des Notification: " + e.getMessage(), e);
             }
             
             // Supprimer d'abord l'Apprenant avant l'utilisateur pour éviter les problèmes de contrainte
