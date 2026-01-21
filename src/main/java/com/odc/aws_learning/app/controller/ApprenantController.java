@@ -78,6 +78,18 @@ public class ApprenantController {
     }
 
     /**
+     * Récupérer les statistiques d'un apprenant (cours inscrits, complétés, certificats)
+     */
+    @GetMapping(
+            value = "/{id}/stats",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @PreAuthorize("hasAnyRole('ADMIN', 'APPRENANT')")
+    public CResponse<?> getApprenantStats(@PathVariable Long id) {
+        return apprenantService.getApprenantStats(id);
+    }
+
+    /**
      * Mise à jour d'un apprenant
      */
     @PutMapping(

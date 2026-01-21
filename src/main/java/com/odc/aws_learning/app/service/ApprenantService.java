@@ -11,6 +11,7 @@ import com.odc.aws_learning.app.repository.LearnerModuleRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.LabSessionRepository;
+import com.odc.aws_learning.app.repository.CertificateRepository;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -43,6 +44,7 @@ public class ApprenantService {
     private final UserProgressRepository userProgressRepository;
     private final ReviewRepository reviewRepository;
     private final LabSessionRepository labSessionRepository;
+    private final CertificateRepository certificateRepository;
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
@@ -174,6 +176,43 @@ public class ApprenantService {
         } catch (Exception e) {
             e.printStackTrace();
             return CResponse.error("Erreur lors de la récupération de l'apprenant: " + e.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public CResponse<?> getApprenantStats(Long id) {
+        try {
+            Optional<Apprenant> apprenantOptional = apprenantRepository.findByIdWithUserAndCohorte(id);
+            if (apprenantOptional.isEmpty()) {
+                return CResponse.error("Apprenant non trouvé avec l'ID: " + id);
+            }
+            
+            Apprenant apprenant = apprenantOptional.get();
+            User user = apprenant.getUser();
+            
+            if (user == null) {
+                return CResponse.error("L'apprenant n'a pas d'utilisateur associé.");
+            }
+            
+            Long userId = user.getId();
+            
+            // Calculer les statistiques
+            long coursesEnrolled = detailsCourseRepo.countByLearnerId(userId);
+            long coursesCompleted = detailsCourseRepo.findByLearnerId(userId).stream()
+                    .filter(detailsCourse -> detailsCourse.isCompleted())
+                    .count();
+            long totalCertificates = certificateRepository.countByUser(user);
+            
+            // Créer un objet de réponse avec les statistiques
+            java.util.Map<String, Object> stats = new java.util.HashMap<>();
+            stats.put("coursesEnrolled", coursesEnrolled);
+            stats.put("completedCourses", coursesCompleted);
+            stats.put("totalCertificates", totalCertificates);
+            
+            return CResponse.success(stats, "Statistiques de l'apprenant récupérées avec succès.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des statistiques: " + e.getMessage());
         }
     }
 
