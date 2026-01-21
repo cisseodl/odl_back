@@ -12,6 +12,10 @@ import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.LabSessionRepository;
 import com.odc.aws_learning.app.repository.CertificateRepository;
+import com.odc.aws_learning.app.repository.EvaluationAttemptRepository;
+import com.odc.aws_learning.app.repository.CourseEnrollmentExpectationsRepository;
+import com.odc.aws_learning.app.repository.CourseSatisfactionRepository;
+import com.odc.aws_learning.app.repository.NotificationRepository;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -45,6 +49,10 @@ public class ApprenantService {
     private final ReviewRepository reviewRepository;
     private final LabSessionRepository labSessionRepository;
     private final CertificateRepository certificateRepository;
+    private final EvaluationAttemptRepository evaluationAttemptRepository;
+    private final CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository;
+    private final CourseSatisfactionRepository courseSatisfactionRepository;
+    private final NotificationRepository notificationRepository;
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
@@ -369,9 +377,89 @@ public class ApprenantService {
                 e.printStackTrace();
             }
             
+            // Supprimer les Certificate car cette relation peut avoir des problèmes de cascade
+            try {
+                System.out.println("Suppression des Certificate...");
+                // Utiliser une requête pour trouver les certificats par utilisateur
+                List<com.odc.aws_learning.app.entity.Certificate> certificates = certificateRepository.findAll().stream()
+                        .filter(cert -> cert.getUser() != null && cert.getUser().getId().equals(user.getId()))
+                        .collect(java.util.stream.Collectors.toList());
+                System.out.println("Nombre de Certificate trouvés: " + certificates.size());
+                if (!certificates.isEmpty()) {
+                    certificateRepository.deleteAll(certificates);
+                    System.out.println("Certificate supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des Certificate pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les EvaluationAttempt car cette relation peut avoir des problèmes de cascade
+            try {
+                System.out.println("Suppression des EvaluationAttempt...");
+                List<com.odc.aws_learning.app.entity.EvaluationAttempt> evaluationAttempts = evaluationAttemptRepository.findByUser(user);
+                System.out.println("Nombre de EvaluationAttempt trouvés: " + evaluationAttempts.size());
+                if (!evaluationAttempts.isEmpty()) {
+                    evaluationAttemptRepository.deleteAll(evaluationAttempts);
+                    System.out.println("EvaluationAttempt supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des EvaluationAttempt pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les CourseEnrollmentExpectations via DetailsCourse
+            try {
+                System.out.println("Suppression des CourseEnrollmentExpectations...");
+                List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCourses = detailsCourseRepo.findByLearnerId(user.getId());
+                for (com.odc.aws_learning.app.entity.DetailsCourse dc : detailsCourses) {
+                    courseEnrollmentExpectationsRepository.findByDetailsCourseId(dc.getId())
+                            .ifPresent(courseEnrollmentExpectationsRepository::delete);
+                }
+                System.out.println("CourseEnrollmentExpectations supprimés avec succès");
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des CourseEnrollmentExpectations pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les CourseSatisfaction
+            try {
+                System.out.println("Suppression des CourseSatisfaction...");
+                // CourseSatisfaction a une relation avec User via userId
+                List<com.odc.aws_learning.app.entity.CourseSatisfaction> satisfactions = courseSatisfactionRepository.findAll().stream()
+                        .filter(cs -> cs.getUser() != null && cs.getUser().getId().equals(user.getId()))
+                        .collect(java.util.stream.Collectors.toList());
+                System.out.println("Nombre de CourseSatisfaction trouvés: " + satisfactions.size());
+                if (!satisfactions.isEmpty()) {
+                    courseSatisfactionRepository.deleteAll(satisfactions);
+                    System.out.println("CourseSatisfaction supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des CourseSatisfaction pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer les Notification
+            try {
+                System.out.println("Suppression des Notification...");
+                List<com.odc.aws_learning.app.entity.Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+                System.out.println("Nombre de Notification trouvés: " + notifications.size());
+                if (!notifications.isEmpty()) {
+                    notificationRepository.deleteAll(notifications);
+                    System.out.println("Notification supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des Notification pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Supprimer d'abord l'Apprenant avant l'utilisateur pour éviter les problèmes de contrainte
+            System.out.println("Suppression de l'apprenant...");
+            apprenantRepository.delete(apprenant);
+            System.out.println("Apprenant supprimé avec succès");
+            
             System.out.println("Suppression de l'utilisateur...");
-            // Supprimer l'utilisateur, ce qui supprimera automatiquement l'Apprenant en cascade
-            // grâce à CascadeType.ALL et orphanRemoval = true dans la relation User -> Apprenant
+            // Supprimer l'utilisateur après avoir supprimé toutes les relations
             userRepository.delete(user);
             System.out.println("Utilisateur supprimé avec succès");
             
