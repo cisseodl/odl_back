@@ -53,6 +53,7 @@ public class ApprenantService {
     private final CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository;
     private final CourseSatisfactionRepository courseSatisfactionRepository;
     private final NotificationRepository notificationRepository;
+    private final com.odc.aws_learning.app.repository.CourseFeedbackRepository courseFeedbackRepository;
     private final SendEmailService sendEmailService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
@@ -292,31 +293,51 @@ public class ApprenantService {
             
             // IMPORTANT: Ordre de suppression pour éviter les contraintes de clé étrangère
             // 1. CourseEnrollmentExpectations (référence DetailsCourse) - DOIT être supprimé AVANT DetailsCourse
-            // 2. DetailsCourse
-            // 3. CourseSatisfaction (référence EvaluationAttempt) - DOIT être supprimé AVANT EvaluationAttempt
-            // 4. EvaluationAttempt
-            // 5. Autres relations...
+            // 2. CourseFeedback (référence DetailsCourse) - DOIT être supprimé AVANT DetailsCourse
+            // 3. DetailsCourse
+            // 4. CourseSatisfaction (référence EvaluationAttempt) - DOIT être supprimé AVANT EvaluationAttempt
+            // 5. EvaluationAttempt
+            // 6. Autres relations...
             
             // 1. Supprimer CourseEnrollmentExpectations AVANT DetailsCourse
             try {
                 System.out.println("Suppression des CourseEnrollmentExpectations...");
                 List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCoursesForExpectations = detailsCourseRepo.findByLearnerId(user.getId());
-                int expectationsDeleted = 0;
+                final int[] expectationsDeleted = {0};
                 for (com.odc.aws_learning.app.entity.DetailsCourse dc : detailsCoursesForExpectations) {
                     courseEnrollmentExpectationsRepository.findByDetailsCourseId(dc.getId())
                             .ifPresent(expectation -> {
                                 courseEnrollmentExpectationsRepository.delete(expectation);
+                                expectationsDeleted[0]++;
                             });
-                    expectationsDeleted++;
                 }
-                System.out.println("CourseEnrollmentExpectations supprimés: " + expectationsDeleted);
+                System.out.println("CourseEnrollmentExpectations supprimés: " + expectationsDeleted[0]);
             } catch (Exception e) {
                 System.err.println("Erreur lors de la suppression des CourseEnrollmentExpectations pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
                 throw new RuntimeException("Erreur lors de la suppression des CourseEnrollmentExpectations: " + e.getMessage(), e);
             }
             
-            // 2. Supprimer DetailsCourse (inscriptions aux cours) associés à cet utilisateur
+            // 2. Supprimer CourseFeedback AVANT DetailsCourse
+            try {
+                System.out.println("Suppression des CourseFeedback...");
+                List<com.odc.aws_learning.app.entity.DetailsCourse> detailsCoursesForFeedback = detailsCourseRepo.findByLearnerId(user.getId());
+                final int[] feedbackDeleted = {0};
+                for (com.odc.aws_learning.app.entity.DetailsCourse dc : detailsCoursesForFeedback) {
+                    courseFeedbackRepository.findByDetailsCourseId(dc.getId())
+                            .ifPresent(feedback -> {
+                                courseFeedbackRepository.delete(feedback);
+                                feedbackDeleted[0]++;
+                            });
+                }
+                System.out.println("CourseFeedback supprimés: " + feedbackDeleted[0]);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des CourseFeedback pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des CourseFeedback: " + e.getMessage(), e);
+            }
+            
+            // 3. Supprimer DetailsCourse (inscriptions aux cours) associés à cet utilisateur
             // car DetailsCourse n'a pas de cascade depuis User
             try {
                 System.out.println("Suppression des DetailsCourse...");
@@ -489,16 +510,48 @@ public class ApprenantService {
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             e.printStackTrace();
             String errorMessage = e.getMessage();
-            System.err.println("DataIntegrityViolationException: " + errorMessage);
+            System.err.println("=== DataIntegrityViolationException ===");
+            System.err.println("Message: " + errorMessage);
+            System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "null"));
+            if (e.getCause() != null) {
+                e.getCause().printStackTrace();
+            }
             if (errorMessage != null && (errorMessage.contains("foreign key constraint") || errorMessage.contains("constraint"))) {
-                return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. Veuillez d'abord supprimer les données associées.");
+                // Extraire le nom de la contrainte si possible
+                String constraintName = "";
+                if (errorMessage.contains("constraint") && errorMessage.contains("\"")) {
+                    int start = errorMessage.indexOf("\"");
+                    int end = errorMessage.indexOf("\"", start + 1);
+                    if (end > start) {
+                        constraintName = errorMessage.substring(start + 1, end);
+                    }
+                }
+                return CResponse.error("Impossible de supprimer l'apprenant car il est référencé par d'autres données. " + 
+                    (constraintName.isEmpty() ? "" : "Contrainte: " + constraintName + ". ") +
+                    "Veuillez d'abord supprimer les données associées.");
             }
             return CResponse.error("Erreur de contrainte lors de la suppression de l'apprenant: " + errorMessage);
+        } catch (RuntimeException e) {
+            // Si c'est une RuntimeException qu'on a lancée nous-mêmes, la propager avec plus de détails
+            e.printStackTrace();
+            String errorMessage = e.getMessage();
+            System.err.println("=== RuntimeException ===");
+            System.err.println("Message: " + errorMessage);
+            System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "null"));
+            if (e.getCause() != null) {
+                e.getCause().printStackTrace();
+            }
+            return CResponse.error("Erreur lors de la suppression de l'apprenant: " + (errorMessage != null ? errorMessage : e.getClass().getSimpleName()));
         } catch (Exception e) {
             e.printStackTrace();
             String errorMessage = e.getMessage();
-            System.err.println("Exception lors de la suppression: " + errorMessage);
-            System.err.println("Type d'exception: " + e.getClass().getName());
+            System.err.println("=== Exception Générale ===");
+            System.err.println("Type: " + e.getClass().getName());
+            System.err.println("Message: " + errorMessage);
+            System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "null"));
+            if (e.getCause() != null) {
+                e.getCause().printStackTrace();
+            }
             return CResponse.error("Erreur lors de la suppression de l'apprenant: " + (errorMessage != null ? errorMessage : e.getClass().getSimpleName()));
         }
     }
