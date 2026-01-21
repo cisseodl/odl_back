@@ -31,7 +31,8 @@ public class Apprenant extends BaseEntity{
 
     @Lob
     private String attentes; // Nouveau champ: attentes (type Text)
-    private Boolean satisfaction; // Nouveau champ: satisfaction (type Boolean)
+    @Column(name = "satisfaction") // Garder le nom de colonne en base pour éviter la migration
+    private Boolean conditionsAccepted; // Acceptation des conditions (anciennement satisfaction)
 
     // Champ temporaire pour la désérialisation de cohorteId depuis le JSON
     private transient Long cohorteId;
@@ -135,12 +136,23 @@ public class Apprenant extends BaseEntity{
         this.attentes = attentes;
     }
 
-    public Boolean getSatisfaction() {
-        return satisfaction;
+    public Boolean getConditionsAccepted() {
+        return conditionsAccepted;
     }
 
+    public void setConditionsAccepted(Boolean conditionsAccepted) {
+        this.conditionsAccepted = conditionsAccepted;
+    }
+
+    // Méthode de compatibilité pour l'ancien nom (deprecated)
+    @Deprecated
+    public Boolean getSatisfaction() {
+        return conditionsAccepted;
+    }
+
+    @Deprecated
     public void setSatisfaction(Boolean satisfaction) {
-        this.satisfaction = satisfaction;
+        this.conditionsAccepted = satisfaction;
     }
 
     @Override
@@ -159,12 +171,12 @@ public class Apprenant extends BaseEntity{
                Objects.equals(cohorte, apprenant.cohorte) &&
                Objects.equals(user, apprenant.user) &&
                Objects.equals(attentes, apprenant.attentes) &&
-               Objects.equals(satisfaction, apprenant.satisfaction);
+               Objects.equals(conditionsAccepted, apprenant.conditionsAccepted);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), nom, prenom, email, numero, profession, niveauEtude, filiere, cohorte, user, attentes, satisfaction);
+        return Objects.hash(super.hashCode(), nom, prenom, email, numero, profession, niveauEtude, filiere, cohorte, user, attentes, conditionsAccepted);
     }
 
     @Override
@@ -180,7 +192,7 @@ public class Apprenant extends BaseEntity{
                ", cohorte=" + (cohorte != null ? cohorte.getId() : "null") + // Avoid circular reference
                ", user=" + (user != null ? user.getId() : "null") + // Avoid circular reference
                ", attentes='" + attentes + '\'' +
-               ", satisfaction=" + satisfaction +
+               ", conditionsAccepted=" + conditionsAccepted +
                '}';
     }
 }

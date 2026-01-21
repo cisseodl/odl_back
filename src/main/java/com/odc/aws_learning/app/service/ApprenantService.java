@@ -103,7 +103,18 @@ public class ApprenantService {
         apprenant.setNiveauEtude(request.getNiveauEtude());
         apprenant.setFiliere(request.getFiliere());
         apprenant.setAttentes(request.getAttentes());
-        apprenant.setSatisfaction(request.getSatisfaction());
+        // Utiliser conditionsAccepted si fourni, sinon utiliser satisfaction (compatibilité), sinon true par défaut
+        Boolean conditionsAcceptedValue = request.getConditionsAccepted();
+        if (conditionsAcceptedValue == null) {
+            // Compatibilité avec l'ancien nom (deprecated)
+            @SuppressWarnings("deprecation")
+            Boolean oldSatisfaction = request.getSatisfaction();
+            conditionsAcceptedValue = oldSatisfaction;
+        }
+        if (conditionsAcceptedValue == null) {
+            conditionsAcceptedValue = true; // Valeur par défaut
+        }
+        apprenant.setConditionsAccepted(conditionsAcceptedValue);
         apprenant.setUser(user);
 
         // cohorte si présente
@@ -226,7 +237,7 @@ public class ApprenantService {
     }
 
     @Transactional
-    public CResponse<?> updateApprenant(Long id, User userDetails, String username, String numero, String profession, String niveauEtude, String filiere, Long cohorteId, String attentes, Boolean satisfaction) {
+    public CResponse<?> updateApprenant(Long id, User userDetails, String username, String numero, String profession, String niveauEtude, String filiere, Long cohorteId, String attentes, Boolean conditionsAccepted) {
         return apprenantRepository.findById(id)
                 .map(apprenant -> {
                     // Update user details if necessary (e.g., from a DTO)
@@ -256,7 +267,7 @@ public class ApprenantService {
                     if (niveauEtude != null) apprenant.setNiveauEtude(niveauEtude);
                     if (filiere != null) apprenant.setFiliere(filiere);
                     if (attentes != null) apprenant.setAttentes(attentes);
-                    if (satisfaction != null) apprenant.setSatisfaction(satisfaction);
+                    if (conditionsAccepted != null) apprenant.setConditionsAccepted(conditionsAccepted);
 
                     if (cohorteId != null) {
                         cohorteRepository.findById(cohorteId).ifPresent(apprenant::setCohorte);

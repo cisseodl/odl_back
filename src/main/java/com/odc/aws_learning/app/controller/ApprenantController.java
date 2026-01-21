@@ -36,7 +36,7 @@ public class ApprenantController {
             examples = {
                 @ExampleObject(
                     name = "Create Apprenant Example (Authenticated User)",
-                    value = "{\"activate\": true, \"username\": \"Jean Dupont\", \"numero\": \"0123456789\", \"profession\": \"Etudiant\", \"niveauEtude\": \"Master\", \"filiere\": \"Informatique\", \"attentes\": \"Apprendre le développement backend avec Spring Boot\", \"satisfaction\": true, \"cohorteId\": 1}"
+                    value = "{\"activate\": true, \"username\": \"Jean Dupont\", \"numero\": \"0123456789\", \"profession\": \"Etudiant\", \"niveauEtude\": \"Master\", \"filiere\": \"Informatique\", \"attentes\": \"Apprendre le développement backend avec Spring Boot\", \"conditionsAccepted\": true, \"cohorteId\": 1}"
                 )
             }
         )
@@ -107,7 +107,8 @@ public class ApprenantController {
             @RequestParam(required = false) String niveauEtude,
             @RequestParam(required = false) String filiere,
             @RequestParam(required = false) String attentes,
-            @RequestParam(required = false) Boolean satisfaction,
+            @RequestParam(required = false) Boolean conditionsAccepted,
+            @RequestParam(required = false) @Deprecated Boolean satisfaction, // Ancien nom, déprécié
             @RequestParam(required = false) Long cohorteId
     ) {
         return apprenantService.updateApprenant(
@@ -120,7 +121,7 @@ public class ApprenantController {
                 filiere,
                 cohorteId,
                 attentes,
-                satisfaction
+                conditionsAccepted != null ? conditionsAccepted : satisfaction // Utiliser conditionsAccepted si fourni, sinon satisfaction (compatibilité)
         );
     }
 
