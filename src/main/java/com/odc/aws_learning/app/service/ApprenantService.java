@@ -128,21 +128,28 @@ public class ApprenantService {
         user.setApprenant(savedApprenant);
         userRepository.save(user);
 
-        // Envoyer un email à l'apprenant après création de compte (auto-inscription ou création par admin)
+        // Envoyer un email de bienvenue à l'apprenant après création de compte (auto-inscription ou création par admin)
         try {
+            String fullName = user.getFullName() != null && !user.getFullName().trim().isEmpty() 
+                ? user.getFullName() 
+                : (savedApprenant.getPrenom() != null && savedApprenant.getNom() != null 
+                    ? (savedApprenant.getPrenom() + " " + savedApprenant.getNom()).trim()
+                    : user.getEmail());
+            
             String emailMessage = sendEmailService.mailTemplateApprenantCreated(
-                user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                fullName,
                 user.getEmail(),
                 frontendUrl
             );
             sendEmailService.sendEmailWithAttachment(
                 user.getEmail(),
                 emailMessage,
-                "Votre compte apprenant a été créé - Orange Digital Learning"
+                "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé"
             );
+            System.out.println("Email de bienvenue envoyé à l'apprenant: " + user.getEmail());
         } catch (Exception e) {
             // Ne pas faire échouer la création si l'email échoue
-            System.err.println("Erreur lors de l'envoi de l'email à l'apprenant: " + e.getMessage());
+            System.err.println("Erreur lors de l'envoi de l'email de bienvenue à l'apprenant: " + e.getMessage());
             e.printStackTrace();
         }
 
