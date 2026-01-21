@@ -129,28 +129,57 @@ public class ApprenantService {
         userRepository.save(user);
 
         // Envoyer un email de bienvenue à l'apprenant après création de compte (auto-inscription ou création par admin)
+        System.out.println("=== TENTATIVE D'ENVOI D'EMAIL DE BIENVENUE ===");
+        System.out.println("Email destinataire: " + user.getEmail());
+        System.out.println("Frontend URL: " + frontendUrl);
+        
         try {
+            // Vérifier que le service d'email est disponible
+            if (sendEmailService == null) {
+                System.err.println("❌ ERREUR: SendEmailService est null !");
+                throw new RuntimeException("SendEmailService n'est pas injecté correctement");
+            }
+            
             String fullName = user.getFullName() != null && !user.getFullName().trim().isEmpty() 
                 ? user.getFullName() 
                 : (savedApprenant.getPrenom() != null && savedApprenant.getNom() != null 
                     ? (savedApprenant.getPrenom() + " " + savedApprenant.getNom()).trim()
                     : user.getEmail());
             
+            System.out.println("Nom complet pour l'email: " + fullName);
+            
             String emailMessage = sendEmailService.mailTemplateApprenantCreated(
                 fullName,
                 user.getEmail(),
                 frontendUrl
             );
+            
+            System.out.println("Template email généré, longueur: " + emailMessage.length() + " caractères");
+            
+            System.out.println("Appel de sendEmailWithAttachment...");
             sendEmailService.sendEmailWithAttachment(
                 user.getEmail(),
                 emailMessage,
                 "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé"
             );
-            System.out.println("Email de bienvenue envoyé à l'apprenant: " + user.getEmail());
+            
+            System.out.println("✅ Email de bienvenue envoyé avec succès à l'apprenant: " + user.getEmail());
         } catch (Exception e) {
-            // Ne pas faire échouer la création si l'email échoue
-            System.err.println("Erreur lors de l'envoi de l'email de bienvenue à l'apprenant: " + e.getMessage());
-            e.printStackTrace();
+            // Ne pas faire échouer la création si l'email échoue, mais logger l'erreur de manière visible
+            System.err.println("❌ ERREUR LORS DE L'ENVOI DE L'EMAIL DE BIENVENUE");
+            System.err.println("Destinataire: " + user.getEmail());
+            System.err.println("Type d'erreur: " + e.getClass().getName());
+            System.err.println("Message d'erreur: " + e.getMessage());
+            System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "Aucune"));
+            e.printStackTrace(System.err);
+            
+            // Logger aussi dans les logs Spring si disponible
+            try {
+                org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ApprenantService.class);
+                logger.error("Erreur lors de l'envoi de l'email de bienvenue à l'apprenant: {}", user.getEmail(), e);
+            } catch (Exception logException) {
+                // Si SLF4J n'est pas disponible, continuer sans
+            }
         }
 
         return CResponse.success(savedApprenant, "Apprenant créé avec succès.");
