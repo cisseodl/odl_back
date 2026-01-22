@@ -29,7 +29,9 @@ public class LabDefinitionRequest {
      */
     private String resourceLinks;
     
-    @NotBlank(message = "Les instructions sont requises")
+    /**
+     * Instructions complètes du lab (requis seulement si uploadedFiles et resourceLinks sont vides)
+     */
     private String instructions;
     
     @NotNull(message = "La durée estimée est requise")

@@ -99,6 +99,15 @@ public class LabService {
                 return CResponse.error("Leçon non trouvée avec l'ID: " + request.getLessonId());
             }
             
+            // Valider qu'au moins un type de contenu est fourni (fichiers, liens, ou instructions)
+            boolean hasFiles = request.getUploadedFiles() != null && !request.getUploadedFiles().trim().isEmpty() && !request.getUploadedFiles().equals("[]");
+            boolean hasLinks = request.getResourceLinks() != null && !request.getResourceLinks().trim().isEmpty() && !request.getResourceLinks().equals("[]");
+            boolean hasInstructions = request.getInstructions() != null && !request.getInstructions().trim().isEmpty();
+            
+            if (!hasFiles && !hasLinks && !hasInstructions) {
+                return CResponse.error("Vous devez fournir au moins un type de contenu : fichiers, liens ou instructions");
+            }
+            
             LabDefinition lab = new LabDefinition();
             lab.setTitle(request.getTitle());
             lab.setDescription(request.getDescription());
