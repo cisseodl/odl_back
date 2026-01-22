@@ -24,6 +24,7 @@ public class DashboardService {
     private final ReviewRepository reviewRepository;
     private final CertificateRepository certificateRepository;
     private final QuizRepository quizRepository;
+    private final InstructorProfileRepository instructorProfileRepository;
 
 
     public DashboardStatsDTO getStudentStats(User user) {
@@ -150,6 +151,10 @@ public class DashboardService {
             long totalCourses = coursesRepository.countByStatus(CourseStatus.PUBLIE);
             System.out.println("Total cours publiés: " + totalCourses);
             
+            // Compter le nombre total d'instructeurs actifs
+            long totalInstructors = instructorProfileRepository.count();
+            System.out.println("Total instructeurs actifs: " + totalInstructors);
+            
             // Trouver le cours avec le maximum d'inscriptions (cours le plus consulté)
             Long maxEnrollments = detailsCourseRepo.findMaxEnrollmentsByCourse();
             long mostViewedCourses = maxEnrollments != null ? maxEnrollments : 0;
@@ -165,6 +170,7 @@ public class DashboardService {
             Map<String, Object> stats = new HashMap<>();
             stats.put("totalStudents", totalStudents);
             stats.put("totalCourses", totalCourses);
+            stats.put("totalInstructors", totalInstructors);
             stats.put("mostViewedCourses", mostViewedCourses);
             stats.put("satisfactionRate", satisfactionRate);
             
