@@ -11,6 +11,8 @@ import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.wrapper.ModuleAndCoursePayload;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +23,8 @@ import java.util.Optional;
 
 @Service
 public class ModuleService {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuleService.class);
 
     private final ModuleRepository moduleRepository;
     private final CoursesRepository coursesRepository;
@@ -180,23 +184,23 @@ public class ModuleService {
             List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
             
             // DEBUG: Log pour vérifier le contentUrl des leçons
-            System.out.println("=== DEBUG: Modules récupérés pour le cours " + courseId + " ===");
-            System.out.println("Nombre de modules: " + modules.size());
+            // Ces logs s'affichent dans la console du serveur backend (pas dans le navigateur)
+            log.info("=== DEBUG: Modules récupérés pour le cours {} ===", courseId);
+            log.info("Nombre de modules: {}", modules.size());
             for (Module module : modules) {
-                System.out.println("Module: " + module.getTitle() + " (ID: " + module.getId() + ")");
+                log.info("Module: {} (ID: {})", module.getTitle(), module.getId());
                 if (module.getLessons() != null) {
-                    System.out.println("  Nombre de leçons: " + module.getLessons().size());
+                    log.info("  Nombre de leçons: {}", module.getLessons().size());
                     for (Lesson lesson : module.getLessons()) {
-                        System.out.println("  Leçon: " + lesson.getTitle() + 
-                                         " (ID: " + lesson.getId() + 
-                                         ", Type: " + lesson.getType() + 
-                                         ", contentUrl: " + (lesson.getContentUrl() != null ? lesson.getContentUrl() : "NULL") + ")");
+                        String contentUrl = lesson.getContentUrl() != null ? lesson.getContentUrl() : "NULL";
+                        log.info("  Leçon: {} (ID: {}, Type: {}, contentUrl: {})", 
+                                lesson.getTitle(), lesson.getId(), lesson.getType(), contentUrl);
                     }
                 } else {
-                    System.out.println("  Aucune leçon dans ce module");
+                    log.info("  Aucune leçon dans ce module");
                 }
             }
-            System.out.println("=== FIN DEBUG ===");
+            log.info("=== FIN DEBUG ===");
             
             return CResponse.success(modules, "Modules");
         } catch (Exception e) {
