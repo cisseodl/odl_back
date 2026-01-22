@@ -178,6 +178,26 @@ public class ModuleService {
 
             // Utiliser la méthode qui charge les leçons avec les modules
             List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
+            
+            // DEBUG: Log pour vérifier le contentUrl des leçons
+            System.out.println("=== DEBUG: Modules récupérés pour le cours " + courseId + " ===");
+            System.out.println("Nombre de modules: " + modules.size());
+            for (Module module : modules) {
+                System.out.println("Module: " + module.getTitle() + " (ID: " + module.getId() + ")");
+                if (module.getLessons() != null) {
+                    System.out.println("  Nombre de leçons: " + module.getLessons().size());
+                    for (Lesson lesson : module.getLessons()) {
+                        System.out.println("  Leçon: " + lesson.getTitle() + 
+                                         " (ID: " + lesson.getId() + 
+                                         ", Type: " + lesson.getType() + 
+                                         ", contentUrl: " + (lesson.getContentUrl() != null ? lesson.getContentUrl() : "NULL") + ")");
+                    }
+                } else {
+                    System.out.println("  Aucune leçon dans ce module");
+                }
+            }
+            System.out.println("=== FIN DEBUG ===");
+            
             return CResponse.success(modules, "Modules");
         } catch (Exception e) {
             e.printStackTrace();
