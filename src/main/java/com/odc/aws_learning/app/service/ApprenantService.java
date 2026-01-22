@@ -16,7 +16,6 @@ import com.odc.aws_learning.app.repository.EvaluationAttemptRepository;
 import com.odc.aws_learning.app.repository.CourseEnrollmentExpectationsRepository;
 import com.odc.aws_learning.app.repository.CourseSatisfactionRepository;
 import com.odc.aws_learning.app.repository.NotificationRepository;
-import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -129,60 +128,102 @@ public class ApprenantService {
         userRepository.save(user);
 
         // Envoyer un email de bienvenue à l'apprenant après création de compte (auto-inscription ou création par admin)
-        System.out.println("=== TENTATIVE D'ENVOI D'EMAIL DE BIENVENUE ===");
-        System.out.println("Email destinataire: " + user.getEmail());
-        System.out.println("Frontend URL: " + frontendUrl);
-        
-        try {
-            // Vérifier que le service d'email est disponible
-            if (sendEmailService == null) {
-                System.err.println("❌ ERREUR: SendEmailService est null !");
-                throw new RuntimeException("SendEmailService n'est pas injecté correctement");
-            }
-            
-            String fullName = user.getFullName() != null && !user.getFullName().trim().isEmpty() 
-                ? user.getFullName() 
-                : (savedApprenant.getPrenom() != null && savedApprenant.getNom() != null 
-                    ? (savedApprenant.getPrenom() + " " + savedApprenant.getNom()).trim()
-                    : user.getEmail());
-            
-            System.out.println("Nom complet pour l'email: " + fullName);
-            
-            String emailMessage = sendEmailService.mailTemplateApprenantCreated(
-                fullName,
-                user.getEmail(),
-                frontendUrl
-            );
-            
-            System.out.println("Template email généré, longueur: " + emailMessage.length() + " caractères");
-            
-            System.out.println("Appel de sendEmailWithAttachment...");
-            sendEmailService.sendEmailWithAttachment(
-                user.getEmail(),
-                emailMessage,
-                "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé"
-            );
-            
-            System.out.println("✅ Email de bienvenue envoyé avec succès à l'apprenant: " + user.getEmail());
-        } catch (Exception e) {
-            // Ne pas faire échouer la création si l'email échoue, mais logger l'erreur de manière visible
-            System.err.println("❌ ERREUR LORS DE L'ENVOI DE L'EMAIL DE BIENVENUE");
-            System.err.println("Destinataire: " + user.getEmail());
-            System.err.println("Type d'erreur: " + e.getClass().getName());
-            System.err.println("Message d'erreur: " + e.getMessage());
-            System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "Aucune"));
-            e.printStackTrace(System.err);
-            
-            // Logger aussi dans les logs Spring si disponible
-            try {
-                org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ApprenantService.class);
-                logger.error("Erreur lors de l'envoi de l'email de bienvenue à l'apprenant: {}", user.getEmail(), e);
-            } catch (Exception logException) {
-                // Si SLF4J n'est pas disponible, continuer sans
-            }
-        }
+        // IMPORTANT: L'email est envoyé de manière asynchrone pour ne pas bloquer la création du compte
+        // Si l'email échoue, on log l'erreur mais on ne fait pas échouer la création
+        sendWelcomeEmailAsync(user, savedApprenant, frontendUrl);
 
         return CResponse.success(savedApprenant, "Apprenant créé avec succès.");
+    }
+
+    /**
+     * Envoie un email de bienvenue de manière asynchrone avec retry
+     * Cette méthode est appelée après la création réussie d'un apprenant
+     */
+    private void sendWelcomeEmailAsync(User user, Apprenant apprenant, String frontendUrl) {
+        // Utiliser un thread séparé pour ne pas bloquer la création du compte
+        new Thread(() -> {
+            System.out.println("=== TENTATIVE D'ENVOI D'EMAIL DE BIENVENUE (ASYNC) ===");
+            System.out.println("Email destinataire: " + user.getEmail());
+            System.out.println("Frontend URL: " + frontendUrl);
+            
+            // Retry jusqu'à 3 fois avec délai exponentiel
+            int maxRetries = 3;
+            long delayMs = 1000; // 1 seconde initialement
+            
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    // Vérifier que le service d'email est disponible
+                    if (sendEmailService == null) {
+                        System.err.println("❌ ERREUR: SendEmailService est null !");
+                        throw new RuntimeException("SendEmailService n'est pas injecté correctement");
+                    }
+                    
+                    // Vérifier que l'email est valide
+                    if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+                        System.err.println("❌ ERREUR: Email invalide ou vide: " + user.getEmail());
+                        return; // Pas de retry si l'email est invalide
+                    }
+                    
+                    String fullName = user.getFullName() != null && !user.getFullName().trim().isEmpty() 
+                        ? user.getFullName() 
+                        : (apprenant.getPrenom() != null && apprenant.getNom() != null 
+                            ? (apprenant.getPrenom() + " " + apprenant.getNom()).trim()
+                            : user.getEmail());
+                    
+                    System.out.println("Tentative " + attempt + "/" + maxRetries + " - Nom complet pour l'email: " + fullName);
+                    
+                    String emailMessage = sendEmailService.mailTemplateApprenantCreated(
+                        fullName,
+                        user.getEmail(),
+                        frontendUrl
+                    );
+                    
+                    System.out.println("Template email généré, longueur: " + emailMessage.length() + " caractères");
+                    
+                    System.out.println("Appel de sendEmailWithAttachment (tentative " + attempt + "/" + maxRetries + ")...");
+                    sendEmailService.sendEmailWithAttachment(
+                        user.getEmail(),
+                        emailMessage,
+                        "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé"
+                    );
+                    
+                    System.out.println("✅ Email de bienvenue envoyé avec succès à l'apprenant: " + user.getEmail());
+                    return; // Succès, sortir de la boucle
+                    
+                } catch (Exception e) {
+                    System.err.println("❌ ERREUR LORS DE L'ENVOI DE L'EMAIL DE BIENVENUE (Tentative " + attempt + "/" + maxRetries + ")");
+                    System.err.println("Destinataire: " + user.getEmail());
+                    System.err.println("Type d'erreur: " + e.getClass().getName());
+                    System.err.println("Message d'erreur: " + e.getMessage());
+                    System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "Aucune"));
+                    
+                    // Si ce n'est pas la dernière tentative, attendre avant de réessayer
+                    if (attempt < maxRetries) {
+                        System.out.println("⏳ Attente de " + delayMs + "ms avant la prochaine tentative...");
+                        try {
+                            Thread.sleep(delayMs);
+                            delayMs *= 2; // Délai exponentiel: 1s, 2s, 4s
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            System.err.println("❌ Thread interrompu lors de l'attente");
+                            return;
+                        }
+                    } else {
+                        // Dernière tentative échouée, logger l'erreur de manière visible
+                        e.printStackTrace(System.err);
+                        
+                        // Logger aussi dans les logs Spring si disponible
+                        try {
+                            org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ApprenantService.class);
+                            logger.error("Échec définitif de l'envoi de l'email de bienvenue à l'apprenant après {} tentatives: {}", 
+                                maxRetries, user.getEmail(), e);
+                        } catch (Exception logException) {
+                            // Si SLF4J n'est pas disponible, continuer sans
+                        }
+                    }
+                }
+            }
+        }).start(); // Démarrer le thread asynchrone
     }
 
     @Transactional(readOnly = true)

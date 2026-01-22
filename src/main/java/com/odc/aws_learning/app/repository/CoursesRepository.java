@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface CoursesRepository extends JpaRepository<Courses, Long> {
@@ -57,24 +56,32 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.formation f " +
+           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.status = :status")
     List<Courses> findByStatusWithRelations(@Param("status") CourseStatus status);
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.formation f " +
+           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.categorie.id = :categoryId")
     List<Courses> findByCategorieIdWithRelations(@Param("categoryId") Long categoryId);
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.formation f " +
+           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.level = :level")
     List<Courses> findByLevelWithRelations(@Param("level") CourseLevel level);
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.formation f " +
+           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.bestseller = :bestseller")
     List<Courses> findByBestsellerWithRelations(@Param("bestseller") Boolean bestseller);
