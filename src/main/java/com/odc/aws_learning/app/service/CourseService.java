@@ -448,7 +448,13 @@ public class CourseService {
                 }
             });
         }
-        return courseMapper.toDto(savedCourse); // Calculated fields will be null here
+        
+        // Recharger le cours avec la catégorie pour s'assurer qu'elle est initialisée
+        // Utiliser une requête qui charge explicitement la catégorie avec FETCH JOIN
+        Courses courseWithCategory = coursesRepository.findByIdWithRelations(savedCourse.getId())
+                .orElseThrow(() -> new RuntimeException("Course not found after creation"));
+        
+        return courseMapper.toDto(courseWithCategory); // Calculated fields will be null here
         } catch (RuntimeException e) {
             throw e; // Re-throw RuntimeException avec le message d'erreur
         } catch (Exception e) {
