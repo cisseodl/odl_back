@@ -43,6 +43,8 @@ public class LabDefinitionRequest {
     /**
      * ID de la leçon associée à ce lab
      */
+    @NotNull(message = "La leçon est requise")
+    @Min(value = 1, message = "La leçon est requise")
     private Long lessonId;
     
     private Boolean activate = true;

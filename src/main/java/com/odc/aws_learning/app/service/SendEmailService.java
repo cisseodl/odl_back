@@ -9,23 +9,23 @@ import javax.mail.internet.MimeMessage;
 
 @Service
 public class SendEmailService {
-    @Autowired
+    @Autowired(required = false)
     private JavaMailSender javaMailSender;
 
     public void sendEmailWithAttachment(String email, String message, String subject) {
-        System.out.println("=== SendEmailService.sendEmailWithAttachment ===");
-        System.out.println("Destinataire: " + email);
-        System.out.println("Sujet: " + subject);
-        System.out.println("Longueur du message: " + (message != null ? message.length() : 0) + " caractères");
-        
         try {
             // Vérifier que JavaMailSender est injecté
             if (javaMailSender == null) {
-                System.err.println("❌ ERREUR: JavaMailSender est null ! Vérifiez la configuration Spring Mail.");
-                throw new RuntimeException("JavaMailSender n'est pas injecté. Vérifiez la configuration dans application.properties");
+                System.out.println("Email sender not configured. Skipping email to " + email);
+                return;
             }
             
+            System.out.println("=== SendEmailService.sendEmailWithAttachment ===");
+            System.out.println("Destinataire: " + email);
+            System.out.println("Sujet: " + subject);
+            System.out.println("Longueur du message: " + (message != null ? message.length() : 0) + " caractères");
             System.out.println("JavaMailSender est disponible, création du message...");
+            
             MimeMessage msg = javaMailSender.createMimeMessage();
 
             // true = multipart message
@@ -45,20 +45,20 @@ public class SendEmailService {
             System.err.println("Vérifiez les identifiants SMTP dans application.properties");
             System.err.println("Email: " + email);
             e.printStackTrace(System.err);
-            throw new RuntimeException("Erreur d'authentification email: " + e.getMessage(), e);
+            // Ne pas propager l'erreur pour que l'application continue de fonctionner
         } catch (javax.mail.MessagingException e) {
             System.err.println("❌ ERREUR DE MESSAGERIE EMAIL");
             System.err.println("Vérifiez la configuration SMTP dans application.properties");
             System.err.println("Email: " + email);
             e.printStackTrace(System.err);
-            throw new RuntimeException("Erreur de messagerie email: " + e.getMessage(), e);
+            // Ne pas propager l'erreur pour que l'application continue de fonctionner
         } catch (Exception e) {
             System.err.println("❌ ERREUR INATTENDUE LORS DE L'ENVOI D'EMAIL");
             System.err.println("Type: " + e.getClass().getName());
             System.err.println("Message: " + e.getMessage());
             System.err.println("Email: " + email);
             e.printStackTrace(System.err);
-            throw new RuntimeException("Erreur lors de l'envoi de l'email: " + e.getMessage(), e);
+            // Ne pas propager l'erreur pour que l'application continue de fonctionner
         }
     }
 

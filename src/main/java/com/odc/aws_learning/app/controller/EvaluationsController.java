@@ -177,6 +177,20 @@ public class EvaluationsController {
         }
         return evaluationsService.getExamResults(attemptId, learner);
     }
+    
+    /**
+     * Supprimer une évaluation (TD ou Quiz)
+     * DELETE /api/evaluations/delete/{id}
+     */
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> deleteEvaluation(@PathVariable Long id) {
+        User user = getCurrentUser();
+        if (user == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.deleteEvaluation(id, user);
+    }
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -502,4 +502,54 @@ public class EvaluationsService {
             return CResponse.error("Erreur lors de la récupération des résultats: " + e.getMessage());
         }
     }
+    
+    /**
+     * Supprimer une évaluation (TD ou Quiz)
+     * Supprime également toutes les questions, réponses et tentatives associées
+     */
+    @Transactional
+    public CResponse<?> deleteEvaluation(Long id, User user) {
+        try {
+            Optional<Evaluations> evalOpt = evaluationsRepository.findById(id);
+            if (evalOpt.isEmpty()) {
+                return CResponse.error("Évaluation introuvable");
+            }
+            
+            Evaluations evaluation = evalOpt.get();
+            
+            // Vérifier que l'utilisateur est l'instructeur ou un admin
+            boolean isAdmin = user.getAdmin() != null;
+            boolean isInstructor = user.getInstructor() != null;
+            boolean isOwner = evaluation.getInstructor() != null && evaluation.getInstructor().getId().equals(user.getId());
+            
+            if (!isAdmin && (!isInstructor || !isOwner)) {
+                return CResponse.error("Vous n'êtes pas autorisé à supprimer cette évaluation");
+            }
+            
+            // Supprimer toutes les tentatives associées
+            List<EvaluationAttempt> attempts = evaluationAttemptRepository.findByEvaluation(evaluation);
+            if (attempts != null && !attempts.isEmpty()) {
+                evaluationAttemptRepository.deleteAll(attempts);
+            }
+            
+            // Supprimer toutes les questions et leurs réponses
+            if (evaluation.getQuestions() != null && !evaluation.getQuestions().isEmpty()) {
+                for (Questions question : evaluation.getQuestions()) {
+                    // Supprimer les réponses
+                    if (question.getReponses() != null && !question.getReponses().isEmpty()) {
+                        reponsesRepository.deleteAll(question.getReponses());
+                    }
+                    // Supprimer la question
+                    questionsRepository.delete(question);
+                }
+            }
+            
+            // Supprimer l'évaluation
+            evaluationsRepository.delete(evaluation);
+            
+            return CResponse.success(null, "Évaluation supprimée avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la suppression: " + e.getMessage());
+        }
+    }
 }

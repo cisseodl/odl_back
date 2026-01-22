@@ -88,6 +88,17 @@ public class LabService {
     @Transactional
     public CResponse<LabDefinition> createLab(LabDefinitionRequest request) {
         try {
+            // Valider que lessonId est fourni
+            if (request.getLessonId() == null || request.getLessonId() <= 0) {
+                return CResponse.error("La leçon est requise pour créer un lab");
+            }
+            
+            // Vérifier que la leçon existe
+            Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
+            if (lessonOptional.isEmpty()) {
+                return CResponse.error("Leçon non trouvée avec l'ID: " + request.getLessonId());
+            }
+            
             LabDefinition lab = new LabDefinition();
             lab.setTitle(request.getTitle());
             lab.setDescription(request.getDescription());
@@ -98,15 +109,8 @@ public class LabService {
             lab.setMaxDurationMinutes(request.getMaxDurationMinutes());
             lab.setActivate(request.getActivate() != null ? request.getActivate() : true);
             
-            // Associer la leçon si lessonId est fourni
-            if (request.getLessonId() != null) {
-                Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
-                if (lessonOptional.isPresent()) {
-                    lab.setLesson(lessonOptional.get());
-                } else {
-                    log.warn("Leçon non trouvée avec l'ID: {}. Le lab sera créé sans leçon associée.", request.getLessonId());
-                }
-            }
+            // Associer la leçon (obligatoire)
+            lab.setLesson(lessonOptional.get());
             
             LabDefinition savedLab = labDefinitionRepository.save(lab);
             log.info("Lab créé avec succès - ID: {}, Titre: {}", savedLab.getId(), savedLab.getTitle());
@@ -143,18 +147,17 @@ public class LabService {
                 lab.setActivate(request.getActivate());
             }
             
-            // Mettre à jour la leçon si lessonId est fourni
-            if (request.getLessonId() != null) {
-                Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
-                if (lessonOptional.isPresent()) {
-                    lab.setLesson(lessonOptional.get());
-                } else {
-                    log.warn("Leçon non trouvée avec l'ID: {}. La leçon ne sera pas associée au lab.", request.getLessonId());
-                }
-            } else {
-                // Si lessonId est null, on peut vouloir retirer l'association
-                lab.setLesson(null);
+            // Valider que lessonId est fourni
+            if (request.getLessonId() == null || request.getLessonId() <= 0) {
+                return CResponse.error("La leçon est requise pour mettre à jour un lab");
             }
+            
+            // Vérifier que la leçon existe et mettre à jour
+            Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
+            if (lessonOptional.isEmpty()) {
+                return CResponse.error("Leçon non trouvée avec l'ID: " + request.getLessonId());
+            }
+            lab.setLesson(lessonOptional.get());
             
             LabDefinition updatedLab = labDefinitionRepository.save(lab);
             log.info("Lab mis à jour avec succès - ID: {}, Titre: {}", updatedLab.getId(), updatedLab.getTitle());
