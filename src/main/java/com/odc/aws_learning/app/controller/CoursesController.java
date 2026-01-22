@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import javax.validation.Valid;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,6 +49,14 @@ public class CoursesController {
     private String serverBaseUrl;
 
 
+    /**
+     * Crée un nouveau cours avec une image optionnelle
+     * @param catId ID de la catégorie
+     * @param coursestring JSON stringifié du CourseCreationRequest
+     * @param image Image optionnelle du cours
+     * @return CResponse contenant le CourseDto créé
+     * @throws IOException Si l'upload de l'image échoue
+     */
     @PostMapping(value = "/save/{catId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<?> addCourseWithImage(
@@ -243,7 +252,7 @@ public class CoursesController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
     public ResponseEntity<CResponse<?>> enrollInCourse(
             @PathVariable Long courseId,
-            @RequestBody(required = false) com.odc.aws_learning.app.dto.EnrollmentRequest request) {
+            @Valid @RequestBody(required = false) com.odc.aws_learning.app.dto.EnrollmentRequest request) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.ok(CResponse.error("Utilisateur non authentifié"));

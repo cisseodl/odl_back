@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize; // Keep for other methods
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
+import javax.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -24,7 +25,12 @@ import java.security.Principal; // Added for Principal
 public class ApprenantController {
     private final ApprenantService apprenantService;
 
-    // Endpoint for creating an Apprenant (Authenticated User creates their own Apprenant profile)
+    /**
+     * Crée un nouveau profil Apprenant pour l'utilisateur authentifié
+     * @param principal Utilisateur authentifié
+     * @param request Données de création de l'apprenant
+     * @return CResponse contenant l'apprenant créé
+     */
     @Operation(summary = "Crée un nouveau profil Apprenant pour l'utilisateur authentifié")
     @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("isAuthenticated()") // Only authenticated users can create their Apprenant profile
@@ -43,7 +49,7 @@ public class ApprenantController {
     )
     public CResponse<?> create(
             Principal principal, // To get authenticated user's details
-            @org.springframework.web.bind.annotation.RequestBody ApprenantCreateRequest request) {
+            @Valid @org.springframework.web.bind.annotation.RequestBody ApprenantCreateRequest request) {
         // Si userId ou userEmail est fourni dans la requête, l'utiliser (pour permettre aux admins de créer un apprenant pour un autre utilisateur)
         // Sinon, utiliser l'email de l'utilisateur connecté (comportement par défaut)
         String emailToUse = request.getUserEmail() != null ? request.getUserEmail() : principal.getName();

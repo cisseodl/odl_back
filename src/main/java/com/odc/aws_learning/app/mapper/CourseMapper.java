@@ -140,8 +140,8 @@ public interface CourseMapper {
                     try {
                         Hibernate.initialize(categorie);
                     } catch (Exception e) {
-                        // Si l'initialisation échoue, retourner null
-                        return null;
+                        // Si l'initialisation échoue, retourner "Non catégorisé"
+                        return "Non catégorisé";
                     }
                 }
                 if (categorie.getTitle() != null && !categorie.getTitle().trim().isEmpty()) {
@@ -152,6 +152,7 @@ public interface CourseMapper {
             // Ignorer les erreurs d'accès à la catégorie
         }
         
-        return null;
+        // Retourner "Non catégorisé" au lieu de null pour éviter les problèmes frontend
+        return "Non catégorisé";
     }
 }
