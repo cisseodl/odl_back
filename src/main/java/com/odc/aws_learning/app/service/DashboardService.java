@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -151,8 +152,20 @@ public class DashboardService {
             long totalCourses = coursesRepository.countByStatus(CourseStatus.PUBLIE);
             System.out.println("Total cours publiés: " + totalCourses);
             
-            // Compter le nombre total d'instructeurs actifs
-            long totalInstructors = instructorProfileRepository.count();
+            // Compter le nombre total d'instructeurs actifs (utilisateurs avec instructor != null et activate = true)
+            // Compter les User qui ont un instructor associé et sont actifs
+            long totalInstructors = 0;
+            try {
+                List<User> allUsers = userRepository.findAll();
+                totalInstructors = allUsers.stream()
+                        .filter(user -> user.getInstructor() != null && user.getActivate() != null && user.getActivate())
+                        .count();
+            } catch (Exception e) {
+                System.err.println("Erreur lors du comptage des instructeurs: " + e.getMessage());
+                e.printStackTrace();
+                // Fallback: utiliser instructorProfileRepository si disponible
+                totalInstructors = instructorProfileRepository.count();
+            }
             System.out.println("Total instructeurs actifs: " + totalInstructors);
             
             // Trouver le cours avec le maximum d'inscriptions (cours le plus consulté)
