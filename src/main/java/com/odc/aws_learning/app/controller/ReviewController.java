@@ -41,7 +41,6 @@ public class ReviewController {
     }
 
     @GetMapping("/reviews/all")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CResponse<List<ReviewResponseDto>>> getAllReviews() {
         CResponse<List<ReviewResponseDto>> response = reviewService.getAllReviews();
         return new ResponseEntity<>(response, HttpStatus.OK);
