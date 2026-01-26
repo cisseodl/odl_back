@@ -9,6 +9,7 @@ import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Added for transactional operation
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,6 +69,17 @@ public class ReviewService {
                                                     .map(this::mapToReviewResponseDto)
                                                     .collect(Collectors.toList());
         return CResponse.success(reviewDtos, "All reviews fetched successfully");
+    }
+
+    @Transactional // Ensure the operation is transactional
+    public CResponse<?> deleteReview(Long reviewId) {
+        Optional<Review> reviewOptional = reviewRepository.findById(reviewId);
+        if (reviewOptional.isEmpty()) {
+            return CResponse.error("Review not found with ID: " + reviewId);
+        }
+
+        reviewRepository.deleteById(reviewId);
+        return CResponse.success(null, "Review with ID: " + reviewId + " deleted successfully.");
     }
 
     // New mapping method

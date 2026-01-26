@@ -46,4 +46,12 @@ public class ReviewController {
         CResponse<List<ReviewResponseDto>> response = reviewService.getAllReviews(); // Changed return type
         return new ResponseEntity<>(response, HttpStatus.OK); // Changed to ResponseEntity
     }
+
+    // New DELETE endpoint for reviews
+    @DeleteMapping("/reviews/{reviewId}")
+    @PreAuthorize("hasRole('ADMIN')") // Only Admin can delete reviews
+    public ResponseEntity<CResponse<?>> deleteReview(@PathVariable Long reviewId) {
+        CResponse<?> response = reviewService.deleteReview(reviewId);
+        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.NOT_FOUND); // NOT_FOUND if review not found
+    }
 }
