@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List; // Keep this import as it's used by CResponse<List<ReviewResponseDto>>
 
-@RequestMapping("/api/courses")
+@RequestMapping("/api")
 @RestController
 public class ReviewController {
 
@@ -22,29 +22,29 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
-    @PostMapping("/{courseId}/reviews")
-    public ResponseEntity<CResponse<ReviewResponseDto>> addReview(@PathVariable Long courseId, // Changed return type
+    @PostMapping("/courses/{courseId}/reviews")
+    public ResponseEntity<CResponse<ReviewResponseDto>> addReview(@PathVariable Long courseId,
                                   @RequestParam Integer rating,
                                   @RequestParam String comment,
                                   @AuthenticationPrincipal User currentUser) {
         if (currentUser == null) {
-            return new ResponseEntity<>(CResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED); // Changed to ResponseEntity
+            return new ResponseEntity<>(CResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED);
         }
-        CResponse<ReviewResponseDto> response = reviewService.addReview(courseId, currentUser.getId(), rating, comment); // Changed return type
-        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST); // Changed to ResponseEntity and using isSuccess
+        CResponse<ReviewResponseDto> response = reviewService.addReview(courseId, currentUser.getId(), rating, comment);
+        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
 
-    @GetMapping("/{courseId}/reviews")
-    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getReviewsByCourse(@PathVariable Long courseId) { // Changed return type
-        CResponse<List<ReviewResponseDto>> response = reviewService.getReviewsByCourse(courseId); // Changed return type
-        return new ResponseEntity<>(response, HttpStatus.OK); // Changed to ResponseEntity
+    @GetMapping("/courses/{courseId}/reviews")
+    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getReviewsByCourse(@PathVariable Long courseId) {
+        CResponse<List<ReviewResponseDto>> response = reviewService.getReviewsByCourse(courseId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/reviews/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getAllReviews() { // Changed return type
-        CResponse<List<ReviewResponseDto>> response = reviewService.getAllReviews(); // Changed return type
-        return new ResponseEntity<>(response, HttpStatus.OK); // Changed to ResponseEntity
+    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getAllReviews() {
+        CResponse<List<ReviewResponseDto>> response = reviewService.getAllReviews();
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     // New DELETE endpoint for reviews
@@ -52,6 +52,6 @@ public class ReviewController {
     @PreAuthorize("hasRole('ADMIN')") // Only Admin can delete reviews
     public ResponseEntity<CResponse<?>> deleteReview(@PathVariable Long reviewId) {
         CResponse<?> response = reviewService.deleteReview(reviewId);
-        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.NOT_FOUND); // NOT_FOUND if review not found
+        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.NOT_FOUND);
     }
 }
