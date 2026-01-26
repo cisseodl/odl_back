@@ -59,6 +59,7 @@ public class SecurityConfiguration {
                                 "/api/dashboard/public-stats", // Endpoint public pour les statistiques publiques
                                 "/api/odc-formations/read", // Endpoint public pour lire les formations ODC
                                 "/api/reviews/all", // Endpoint public pour lire toutes les revues
+                                "/api/testimonials", // Endpoint public pour lire tous les témoignages
                                 "/api/files/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
