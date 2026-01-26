@@ -1,5 +1,3 @@
-package com.odc.aws_learning.app.controller;
-
 import com.odc.aws_learning.app.dto.TestimonialRequest;
 import com.odc.aws_learning.app.dto.TestimonialResponse;
 import com.odc.aws_learning.app.service.TestimonialService;
@@ -7,6 +5,7 @@ import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // Nouvelle importation
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,9 +23,12 @@ public class TestimonialController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()") // Annotation ajoutée
     public ResponseEntity<CResponse<TestimonialResponse>> addTestimonial(
             @Valid @RequestBody TestimonialRequest request,
             @AuthenticationPrincipal User currentUser) {
+        // Le contrôle `if (currentUser == null)` est maintenu pour la robustesse,
+        // mais @PreAuthorize le gérera généralement avant d'atteindre ce point.
         if (currentUser == null) {
             return new ResponseEntity<>(CResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED);
         }
