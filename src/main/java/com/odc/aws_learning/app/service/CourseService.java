@@ -343,6 +343,18 @@ public class CourseService {
                     .map(course -> {
                         try {
                             CourseDto dto = courseMapper.toDto(course);
+
+                            // FIX: Explicitly set the category title if the mapper didn't.
+                            if (dto.getCategory() == null || dto.getCategory().isEmpty()) {
+                                String categoryTitle = null;
+                                if (course.getFormation() != null && course.getFormation().getCategorie() != null) {
+                                    categoryTitle = course.getFormation().getCategorie().getTitle();
+                                } else if (course.getCategorie() != null) {
+                                    categoryTitle = course.getCategorie().getTitle();
+                                }
+                                dto.setCategory(categoryTitle);
+                            }
+                            
                             populateCalculatedFields(dto, course);
                             return dto;
                         } catch (Exception e) {
@@ -385,6 +397,7 @@ public class CourseService {
         }
     }
 
+    @Transactional
     public CourseDto createCourse(CourseCreationRequest request) {
         try {
             Courses course = new Courses();
