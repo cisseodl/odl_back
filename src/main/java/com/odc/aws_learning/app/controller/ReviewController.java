@@ -1,11 +1,16 @@
 package com.odc.aws_learning.app.controller;
 
+import com.odc.aws_learning.app.dto.ReviewResponseDto; // Import new DTO
 import com.odc.aws_learning.app.service.ReviewService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
+import org.springframework.http.HttpStatus; // Import HttpStatus
+import org.springframework.http.ResponseEntity; // Import ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List; // Keep this import as it's used by CResponse<List<ReviewResponseDto>>
 
 @RequestMapping("/api/courses")
 @RestController
@@ -18,24 +23,27 @@ public class ReviewController {
     }
 
     @PostMapping("/{courseId}/reviews")
-    public CResponse<?> addReview(@PathVariable Long courseId,
+    public ResponseEntity<CResponse<ReviewResponseDto>> addReview(@PathVariable Long courseId, // Changed return type
                                   @RequestParam Integer rating,
                                   @RequestParam String comment,
                                   @AuthenticationPrincipal User currentUser) {
         if (currentUser == null) {
-            return CResponse.error("User not authenticated");
+            return new ResponseEntity<>(CResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED); // Changed to ResponseEntity
         }
-        return reviewService.addReview(courseId, currentUser.getId(), rating, comment);
+        CResponse<ReviewResponseDto> response = reviewService.addReview(courseId, currentUser.getId(), rating, comment); // Changed return type
+        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST); // Changed to ResponseEntity and using isSuccess
     }
 
     @GetMapping("/{courseId}/reviews")
-    public CResponse<?> getReviewsByCourse(@PathVariable Long courseId) {
-        return reviewService.getReviewsByCourse(courseId);
+    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getReviewsByCourse(@PathVariable Long courseId) { // Changed return type
+        CResponse<List<ReviewResponseDto>> response = reviewService.getReviewsByCourse(courseId); // Changed return type
+        return new ResponseEntity<>(response, HttpStatus.OK); // Changed to ResponseEntity
     }
 
     @GetMapping("/reviews/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public CResponse<?> getAllReviews() {
-        return reviewService.getAllReviews();
+    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getAllReviews() { // Changed return type
+        CResponse<List<ReviewResponseDto>> response = reviewService.getAllReviews(); // Changed return type
+        return new ResponseEntity<>(response, HttpStatus.OK); // Changed to ResponseEntity
     }
 }

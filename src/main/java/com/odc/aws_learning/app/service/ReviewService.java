@@ -1,5 +1,6 @@
 package com.odc.aws_learning.app.service;
 
+import com.odc.aws_learning.app.dto.ReviewResponseDto; // Import new DTO
 import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.entity.Review;
 import com.odc.aws_learning.app.repository.CoursesRepository;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors; // For Collectors.toList()
 
 @Service
 public class ReviewService {
@@ -26,7 +28,7 @@ public class ReviewService {
         this.userRepository = userRepository;
     }
 
-    public CResponse<?> addReview(Long courseId, Long userId, Integer rating, String comment) {
+    public CResponse<ReviewResponseDto> addReview(Long courseId, Long userId, Integer rating, String comment) { // Changed return type
         Optional<Courses> courseOptional = coursesRepository.findById(courseId);
         Optional<User> userOptional = userRepository.findById(userId);
 
@@ -42,23 +44,58 @@ public class ReviewService {
         review.setUser(userOptional.get());
         review.setRating(rating);
         review.setComment(comment);
-        review.setCreatedAt(LocalDateTime.now()); // Ensure this is set or @PrePersist handles it.
+        review.setCreatedAt(LocalDateTime.now()); 
 
-        reviewRepository.save(review);
-        return CResponse.success(review, "Review added successfully");
+        Review savedReview = reviewRepository.save(review);
+        return CResponse.success(mapToReviewResponseDto(savedReview), "Review added successfully"); // Map to DTO
     }
 
-    public CResponse<?> getReviewsByCourse(Long courseId) {
+    public CResponse<List<ReviewResponseDto>> getReviewsByCourse(Long courseId) { // Changed return type
         Optional<Courses> courseOptional = coursesRepository.findById(courseId);
         if (courseOptional.isEmpty()) {
             return CResponse.error("Course not found");
         }
         List<Review> reviews = reviewRepository.findByCourseIdAndActivateIsTrue(courseId);
-        return CResponse.success(reviews, "Reviews fetched successfully");
+        List<ReviewResponseDto> reviewDtos = reviews.stream()
+                                                    .map(this::mapToReviewResponseDto)
+                                                    .collect(Collectors.toList());
+        return CResponse.success(reviewDtos, "Reviews fetched successfully");
     }
 
-    public CResponse<?> getAllReviews() {
+    public CResponse<List<ReviewResponseDto>> getAllReviews() { // Changed return type
         List<Review> reviews = reviewRepository.findAll();
-        return CResponse.success(reviews, "All reviews fetched successfully");
+        List<ReviewResponseDto> reviewDtos = reviews.stream()
+                                                    .map(this::mapToReviewResponseDto)
+                                                    .collect(Collectors.toList());
+        return CResponse.success(reviewDtos, "All reviews fetched successfully");
+    }
+
+    // New mapping method
+    private ReviewResponseDto mapToReviewResponseDto(Review review) {
+        ReviewResponseDto.ReviewUserInfo userInfo = null;
+        if (review.getUser() != null) {
+            userInfo = new ReviewResponseDto.ReviewUserInfo(
+                    review.getUser().getId(),
+                    review.getUser().getFullName(),
+                    review.getUser().getEmail()
+            );
+        }
+
+        ReviewResponseDto.ReviewCourseInfo courseInfo = null;
+        if (review.getCourse() != null) {
+            courseInfo = new ReviewResponseDto.ReviewCourseInfo(
+                    review.getCourse().getId(),
+                    review.getCourse().getTitle()
+            );
+        }
+
+        return new ReviewResponseDto(
+                review.getId(),
+                review.getRating(),
+                review.getComment(),
+                userInfo,
+                courseInfo,
+                review.getCreatedAt()
+        );
     }
 }
