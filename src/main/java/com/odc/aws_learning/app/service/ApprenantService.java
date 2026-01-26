@@ -172,25 +172,25 @@ public class ApprenantService {
                     
                     System.out.println("Tentative " + attempt + "/" + maxRetries + " - Nom complet pour l'email: " + fullName);
                     
-                    String emailMessage = sendEmailService.mailTemplateApprenantCreated(
+            String emailMessage = sendEmailService.mailTemplateApprenantCreated(
                         fullName,
-                        user.getEmail(),
-                        frontendUrl
-                    );
+                user.getEmail(),
+                frontendUrl
+            );
                     
                     System.out.println("Template email généré, longueur: " + emailMessage.length() + " caractères");
                     
                     System.out.println("Appel de sendEmailWithAttachment (tentative " + attempt + "/" + maxRetries + ")...");
-                    sendEmailService.sendEmailWithAttachment(
-                        user.getEmail(),
-                        emailMessage,
+            sendEmailService.sendEmailWithAttachment(
+                user.getEmail(),
+                emailMessage,
                         "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé"
-                    );
+            );
                     
                     System.out.println("✅ Email de bienvenue envoyé avec succès à l'apprenant: " + user.getEmail());
                     return; // Succès, sortir de la boucle
                     
-                } catch (Exception e) {
+        } catch (Exception e) {
                     System.err.println("❌ ERREUR LORS DE L'ENVOI DE L'EMAIL DE BIENVENUE (Tentative " + attempt + "/" + maxRetries + ")");
                     System.err.println("Destinataire: " + user.getEmail());
                     System.err.println("Type d'erreur: " + e.getClass().getName());

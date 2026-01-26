@@ -33,7 +33,7 @@ public class TestimonialController {
             return new ResponseEntity<>(CResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED);
         }
         CResponse<TestimonialResponse> response = testimonialService.addTestimonial(request, currentUser);
-        return new ResponseEntity<>(response, response.getStatus().equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(response, response.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
 
     @GetMapping
