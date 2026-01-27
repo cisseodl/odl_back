@@ -14,12 +14,12 @@ import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.entity.DetailsCourse; // Added
 import com.odc.aws_learning.app.entity.Module; // Added
 import com.odc.aws_learning.app.entity.Lesson; // Added
-import com.odc.aws_learning.app.entity.Formation; // Added
+
 import com.odc.aws_learning.auth.base.response.CResponse; // Added
 import com.odc.aws_learning.app.mapper.CourseMapper;
 import com.odc.aws_learning.app.mapper.InstructorMapper;
 import com.odc.aws_learning.app.repository.CategorieRepository;
-import com.odc.aws_learning.app.repository.FormationRepository; // Added
+
 import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.InstructorProfileRepository;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
@@ -58,7 +58,7 @@ public class CourseService {
     private final UserProgressRepository userProgressRepository;
     private final UserRepository userRepository;
     private final CategorieRepository categorieRepository;
-    private final FormationRepository formationRepository;
+
     private final InstructorProfileRepository instructorProfileRepository;
     private final DetailsCourseRepo detailsCourseRepo;
     private final ModuleRepository moduleRepository;
@@ -68,7 +68,7 @@ public class CourseService {
     private final NotificationService notificationService;
     private final SendEmailService sendEmailService;
 
-    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, FormationRepository formationRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, SendEmailService sendEmailService) {
+    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, SendEmailService sendEmailService) {
         this.coursesRepository = coursesRepository;
         this.courseMapper = courseMapper;
         this.instructorMapper = instructorMapper;
@@ -76,7 +76,7 @@ public class CourseService {
         this.userProgressRepository = userProgressRepository;
         this.userRepository = userRepository;
         this.categorieRepository = categorieRepository;
-        this.formationRepository = formationRepository;
+
         this.instructorProfileRepository = instructorProfileRepository;
         this.detailsCourseRepo = detailsCourseRepo;
         this.moduleRepository = moduleRepository;
@@ -347,9 +347,7 @@ public class CourseService {
                             // FIX: Explicitly set the category title if the mapper didn't.
                             if (dto.getCategory() == null || dto.getCategory().isEmpty()) {
                                 String categoryTitle = null;
-                                if (course.getFormation() != null && course.getFormation().getCategorie() != null) {
-                                    categoryTitle = course.getFormation().getCategorie().getTitle();
-                                } else if (course.getCategorie() != null) {
+                                if (course.getCategorie() != null) {
                                     categoryTitle = course.getCategorie().getTitle();
                                 }
                                 dto.setCategory(categoryTitle);
@@ -377,11 +375,9 @@ public class CourseService {
                                 minimalDto.setLevel(course.getLevel());
                                 minimalDto.setLanguage(course.getLanguage());
                                 minimalDto.setStatus(course.getStatus());
-                                // Déterminer la catégorie via formation ou directement
+                                // Déterminer la catégorie directement
                                 String categoryTitle = null;
-                                if (course.getFormation() != null && course.getFormation().getCategorie() != null) {
-                                    categoryTitle = course.getFormation().getCategorie().getTitle();
-                                } else if (course.getCategorie() != null) {
+                                if (course.getCategorie() != null) {
                                     categoryTitle = course.getCategorie().getTitle();
                                 }
                                 minimalDto.setCategory(categoryTitle);
@@ -417,22 +413,14 @@ public class CourseService {
                     .orElseThrow(() -> new RuntimeException("Instructor not found with id: " + request.getInstructorId()));
             course.setInstructor(instructor);
 
-            // Nouvelle hiérarchie : Formation -> Cours
-            // Si formationId est fourni, utiliser la formation, sinon utiliser categoryId (ancien système)
-            if (request.getFormationId() != null) {
-                Formation formation = formationRepository.findById(request.getFormationId())
-                        .orElseThrow(() -> new RuntimeException("Formation not found with id: " + request.getFormationId()));
-                course.setFormation(formation);
-                // Définir aussi la catégorie via la formation pour compatibilité
-                course.setCategorie(formation.getCategorie());
-            } else if (request.getCategoryId() != null) {
-                // Ancien système : Catégorie -> Cours (déprécié)
+            // Nouvelle hiérarchie : Catégorie -> Cours
+            // Si categoryId est fourni, l'utiliser
+            if (request.getCategoryId() != null) {
                 Categorie category = categorieRepository.findById(request.getCategoryId())
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
                 course.setCategorie(category);
-                // Formation reste null dans ce cas (pour migration progressive)
             } else {
-                throw new RuntimeException("Either formationId or categoryId must be provided");
+                throw new RuntimeException("CategoryId must be provided");
             }
 
             Courses savedCourse = coursesRepository.save(course);
@@ -498,20 +486,12 @@ public class CourseService {
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
         existingCourse.setInstructor(instructor);
 
-        // Nouvelle hiérarchie : Formation -> Cours
-        // Si formationId est fourni, utiliser la formation, sinon utiliser categoryId (ancien système)
-        if (request.getFormationId() != null) {
-            Formation formation = formationRepository.findById(request.getFormationId())
-                    .orElseThrow(() -> new RuntimeException("Formation not found with id: " + request.getFormationId()));
-            existingCourse.setFormation(formation);
-            // Définir aussi la catégorie via la formation pour compatibilité
-            existingCourse.setCategorie(formation.getCategorie());
-        } else if (request.getCategoryId() != null) {
-            // Ancien système : Catégorie -> Cours (déprécié)
+        // Nouvelle hiérarchie : Catégorie -> Cours
+        // Si categoryId est fourni, l'utiliser
+        if (request.getCategoryId() != null) {
             Categorie category = categorieRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Category not found"));
             existingCourse.setCategorie(category);
-            // Formation reste inchangée dans ce cas (pour migration progressive)
         }
 
         Courses updatedCourse = coursesRepository.save(existingCourse);

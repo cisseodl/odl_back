@@ -27,8 +27,6 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
     // Méthode avec jointures FETCH pour charger les relations nécessaires pour un instructeur
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.instructor.id = :instructorId")
     List<Courses> findByInstructor_IdWithRelations(@Param("instructorId") Long instructorId);
@@ -49,39 +47,29 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
     // On charge seulement instructor, formation, categorie (via formation ou directement)
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie")
     List<Courses> findAllWithRelations();
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.status = :status")
     List<Courses> findByStatusWithRelations(@Param("status") CourseStatus status);
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.categorie.id = :categoryId")
     List<Courses> findByCategorieIdWithRelations(@Param("categoryId") Long categoryId);
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.level = :level")
     List<Courses> findByLevelWithRelations(@Param("level") CourseLevel level);
 
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.bestseller = :bestseller")
     List<Courses> findByBestsellerWithRelations(@Param("bestseller") Boolean bestseller);
@@ -89,8 +77,6 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
     // Méthode pour charger un cours avec toutes ses relations nécessaires (catégorie, formation, instructeur)
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
-           "LEFT JOIN FETCH c.formation f " +
-           "LEFT JOIN FETCH f.categorie " +
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.id = :id")
     java.util.Optional<Courses> findByIdWithRelations(@Param("id") Long id);

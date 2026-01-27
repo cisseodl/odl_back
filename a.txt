@@ -1,0 +1,295 @@
+{
+  "documentationApi": "Endpoints CRUD pour le workflow pédagogique",
+  "baseURL": "/awsodclearning",
+  "entities": {
+    "categories": {
+      "description": "Gère les catégories qui sont au sommet de la hiérarchie de contenu.",
+      "basePath": "/api/categories",
+      "endpoints": [
+        {
+          "httpMethod": "POST",
+          "path": "/save",
+          "description": "Créer une nouvelle catégorie.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "requestBody": {
+            "type": "CategorieRequest",
+            "schema": "{ \"title\": \"string\", \"description\": \"string\" }"
+          }
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/read",
+          "description": "Récupérer la liste de toutes les catégories.",
+          "authorization": "Public"
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/read/{id}",
+          "description": "Récupérer une catégorie par son ID.",
+          "authorization": "Public",
+          "pathVariables": [
+            { "name": "id", "description": "ID de la catégorie" }
+          ]
+        },
+        {
+          "httpMethod": "PUT",
+          "path": "/update",
+          "description": "Mettre à jour une catégorie existante.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "requestBody": {
+            "type": "CategorieRequest",
+            "schema": "{ \"id\": \"number\", \"title\": \"string\", \"description\": \"string\" }"
+          }
+        },
+        {
+          "httpMethod": "DELETE",
+          "path": "/delete/{id}",
+          "description": "Supprimer une catégorie.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "id", "description": "ID de la catégorie" }
+          ]
+        }
+      ]
+    },
+    "courses": {
+      "description": "Gère les cours, qui sont des unités d'apprentissage complètes contenant des modules et des leçons.",
+      "basePath": "/courses",
+      "endpoints": [
+        {
+          "httpMethod": "POST",
+          "path": "/save/{categoryId}",
+          "description": "Créer un nouveau cours au sein d'une catégorie. Le corps de la requête est `multipart/form-data`.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "categoryId", "description": "ID de la catégorie" }
+          ],
+          "requestBody": {
+            "type": "Multipart/Form-Data",
+            "schema": "Clé 'courses': JSON de CourseCreationRequest. Clé 'image': fichier image optionnel."
+          }
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/read",
+          "description": "Récupérer la liste de tous les cours, avec options de filtrage et de pagination.",
+          "authorization": "Public"
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/read/{id}",
+          "description": "Récupérer un cours par son ID, avec ses modules et leçons si l'utilisateur est inscrit.",
+          "authorization": "Utilisateur authentifié",
+          "pathVariables": [
+            { "name": "id", "description": "ID du cours" }
+          ]
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/read/by-instructor/{instructorId}",
+          "description": "Récupérer tous les cours d'un instructeur spécifique.",
+          "authorization": "ADMIN, INSTRUCTOR",
+           "pathVariables": [
+            { "name": "instructorId", "description": "ID de l'instructeur" }
+          ]
+        },
+        {
+          "httpMethod": "PUT",
+          "path": "/{id}",
+          "description": "Mettre à jour un cours existant. Le corps de la requête est `multipart/form-data`.",
+          "authorization": "INSTRUCTOR",
+          "pathVariables": [
+            { "name": "id", "description": "ID du cours à mettre à jour" }
+          ],
+          "requestBody": {
+            "type": "Multipart/Form-Data",
+            "schema": "Clé 'courses': JSON de CourseUpdateRequest. Clé 'image': fichier image optionnel."
+          }
+        },
+        {
+          "httpMethod": "DELETE",
+          "path": "/delete/{id}",
+          "description": "Supprimer un cours.",
+          "authorization": "ADMIN",
+          "pathVariables": [
+            { "name": "id", "description": "ID du cours" }
+          ]
+        }
+      ]
+    },
+    "modules_lessons": {
+      "description": "Gère les modules et les leçons. Le workflow est centralisé : on crée/modifie les modules et leurs leçons en une seule fois.",
+      "basePath": "/modules",
+      "endpoints": [
+        {
+          "httpMethod": "POST",
+          "path": "/save",
+          "description": "Créer ou mettre à jour l'ensemble des modules et leçons pour un cours donné. C'est l'endpoint principal pour structurer un cours.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "requestBody": {
+            "type": "Multipart/Form-Data",
+            "schema": "Clé 'module': JSON de ModuleAndCoursePayload (contenant l'ID du cours et la liste des modules/leçons). Clé 'pdfFile': fichier PDF optionnel."
+          }
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/course/{courseId}",
+          "description": "Récupérer la liste des modules (et leçons imbriquées) pour un cours donné.",
+          "authorization": "Utilisateur authentifié",
+          "pathVariables": [
+            { "name": "courseId", "description": "ID du cours" }
+          ]
+        }
+      ]
+    },
+    "quizzes": {
+      "description": "Gère les quiz, qui peuvent être liés à un cours ou à une leçon.",
+      "basePath": "/quiz",
+      "endpoints": [
+        {
+          "httpMethod": "POST",
+          "path": "/create",
+          "description": "Créer un quiz complet avec ses questions et réponses.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "requestBody": {
+            "type": "QuizDTO",
+            "schema": "DTO complet du quiz, incluant questions et réponses."
+          }
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/course/{courseId}",
+          "description": "Récupérer tous les quiz associés à un cours.",
+          "authorization": "Utilisateur authentifié",
+          "pathVariables": [
+            { "name": "courseId", "description": "ID du cours" }
+          ]
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/{quizId}",
+          "description": "Récupérer un quiz par son ID.",
+          "authorization": "Utilisateur authentifié",
+          "pathVariables": [
+            { "name": "quizId", "description": "ID du quiz" }
+          ]
+        },
+        {
+          "httpMethod": "PUT",
+          "path": "/update/{quizId}",
+          "description": "Mettre à jour un quiz existant.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "quizId", "description": "ID du quiz" }
+          ],
+          "requestBody": {
+            "type": "QuizDTO",
+            "schema": "DTO complet du quiz, incluant questions et réponses."
+          }
+        },
+        {
+          "httpMethod": "DELETE",
+          "path": "/delete/{quizId}",
+          "description": "Supprimer un quiz.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "quizId", "description": "ID du quiz" }
+          ]
+        }
+      ]
+    },
+    "evaluations": {
+      "description": "Gère les évaluations, qui peuvent être des quiz ou des TP (Travaux Pratiques).",
+      "basePath": "/api/evaluations",
+      "endpoints": [
+        {
+          "httpMethod": "POST",
+          "path": "/create",
+          "description": "Créer une nouvelle évaluation (Quiz ou TP).",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "requestBody": {
+            "type": "EvaluationRequest",
+            "schema": "DTO pour la création d'une évaluation."
+          }
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/get-all",
+          "description": "Récupérer toutes les évaluations.",
+          "authorization": "Utilisateur authentifié"
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/course/{courseId}",
+          "description": "Récupérer l'examen final d'un cours pour l'utilisateur connecté.",
+          "authorization": "APPRENANT",
+          "pathVariables": [
+            { "name": "courseId", "description": "ID du cours" }
+          ]
+        },
+        {
+          "httpMethod": "DELETE",
+          "path": "/delete/{id}",
+          "description": "Supprimer une évaluation.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "id", "description": "ID de l'évaluation" }
+          ]
+        }
+      ]
+    },
+    "labs": {
+      "description": "Gère les définitions de Labs (exercices pratiques) et leur exécution.",
+      "basePath": "/api/labs",
+      "endpoints": [
+        {
+          "httpMethod": "POST",
+          "path": "/",
+          "description": "Créer une nouvelle définition de lab.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "requestBody": {
+            "type": "LabDefinitionRequest",
+            "schema": "DTO pour la création d'une définition de lab."
+          }
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/",
+          "description": "Récupérer la liste de toutes les définitions de labs.",
+          "authorization": "Utilisateur authentifié"
+        },
+        {
+          "httpMethod": "GET",
+          "path": "/{id}",
+          "description": "Récupérer une définition de lab par son ID.",
+          "authorization": "Utilisateur authentifié",
+          "pathVariables": [
+            { "name": "id", "description": "ID de la définition de lab" }
+          ]
+        },
+        {
+          "httpMethod": "PUT",
+          "path": "/{id}",
+          "description": "Mettre à jour une définition de lab existante.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "id", "description": "ID de la définition de lab" }
+          ],
+          "requestBody": {
+            "type": "LabDefinitionRequest",
+            "schema": "DTO pour la mise à jour d'une définition de lab."
+          }
+        },
+        {
+          "httpMethod": "DELETE",
+          "path": "/{id}",
+          "description": "Supprimer une définition de lab.",
+          "authorization": "ADMIN, INSTRUCTOR",
+          "pathVariables": [
+            { "name": "id", "description": "ID de la définition de lab" }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -39,19 +39,10 @@ public class Courses extends BaseEntity {
 
 
     /**
-     * Relation ManyToOne vers Formation (nouvelle hiérarchie)
+     * Relation ManyToOne vers Catégorie (principale)
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "formation_id", nullable = false)
-    @JsonBackReference
-    private Formation formation;
-
-    /**
-     * Relation ManyToOne vers Catégorie (dépréciée, conservée pour migration)
-     * À terme, la catégorie sera accessible via Formation.getCategorie()
-     */
-    @Deprecated
-    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categorie_id", nullable = false)
     @JsonBackReference
     private Categorie categorie;
 
@@ -100,7 +91,7 @@ public class Courses extends BaseEntity {
     }
 
     // AllArgsConstructor
-    public Courses(String title, String subtitle, String description, String imagePath, Integer duration, CourseLevel level, String language, Boolean bestseller, Formation formation, Categorie categorie, User instructor, Set<String> objectives, Set<String> features, List<Module> modules, List<DetailsCourse> detailsCourses, List<Quiz> quizzes, List<Review> reviews, CourseStatus status, String rejectionReason) {
+    public Courses(String title, String subtitle, String description, String imagePath, Integer duration, CourseLevel level, String language, Boolean bestseller, Categorie categorie, User instructor, Set<String> objectives, Set<String> features, List<Module> modules, List<DetailsCourse> detailsCourses, List<Quiz> quizzes, List<Review> reviews, CourseStatus status, String rejectionReason) {
         this.title = title;
         this.subtitle = subtitle;
         this.description = description;
@@ -109,7 +100,6 @@ public class Courses extends BaseEntity {
         this.level = level;
         this.language = language;
         this.bestseller = bestseller;
-        this.formation = formation;
         this.categorie = categorie;
         this.instructor = instructor;
         this.objectives = objectives;
@@ -155,15 +145,7 @@ public class Courses extends BaseEntity {
         return bestseller;
     }
 
-    public Formation getFormation() {
-        return formation;
-    }
-
     public Categorie getCategorie() {
-        // Retourner la catégorie via la formation si elle existe, sinon l'ancienne relation
-        if (formation != null && formation.getCategorie() != null) {
-            return formation.getCategorie();
-        }
         return categorie;
     }
 
@@ -234,9 +216,7 @@ public class Courses extends BaseEntity {
         this.bestseller = bestseller;
     }
 
-    public void setFormation(Formation formation) {
-        this.formation = formation;
-    }
+
 
     public void setCategorie(Categorie categorie) {
         this.categorie = categorie;

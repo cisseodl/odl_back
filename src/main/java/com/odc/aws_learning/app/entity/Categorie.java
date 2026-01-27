@@ -26,12 +26,7 @@ public class Categorie extends BaseEntity {
     @Lob
     private String description;
 
-    /**
-     * Relation OneToMany vers Formation (nouvelle hiérarchie)
-     */
-    @OneToMany(mappedBy = "categorie", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference // Added for Formation
-    private List<Formation> formations = new ArrayList<>();
+
 
     /**
      * Ancienne relation vers Courses (dépréciée, conservée pour migration)
@@ -68,14 +63,9 @@ public class Categorie extends BaseEntity {
         this.description = description;
     }
 
-    @JsonIgnore // Ajouté pour éviter les références circulaires lors de la sérialisation
-    public List<Formation> getFormations() {
-        return formations;
-    }
 
-    public void setFormations(List<Formation> formations) {
-        this.formations = formations;
-    }
+
+
 
     @JsonIgnore
     @Deprecated
@@ -95,13 +85,12 @@ public class Categorie extends BaseEntity {
         if (!super.equals(o)) return false;
         Categorie categorie = (Categorie) o;
         return Objects.equals(title, categorie.title) && 
-               Objects.equals(description, categorie.description) && 
-               Objects.equals(formations, categorie.formations);
+               Objects.equals(description, categorie.description);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), title, description, formations);
+        return Objects.hash(super.hashCode(), title, description);
     }
 
     @Override
@@ -109,7 +98,6 @@ public class Categorie extends BaseEntity {
         return "Categorie{" +
                "title='" + title + '\'' +
                ", description='" + description + '\'' +
-               ", formations=" + (formations != null ? formations.size() : "null") +
                ", courses=" + (courses != null ? courses.size() : "null") +
                ", id=" + id +
                '}';
