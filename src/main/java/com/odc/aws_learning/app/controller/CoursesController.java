@@ -61,14 +61,12 @@ public class CoursesController {
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<?> addCourseWithImage(
             @PathVariable Long catId,
-            @RequestParam("courses") String coursestring,
+            @RequestPart("courses") @Valid CourseCreationRequest request,
             @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             return CResponse.error("Utilisateur non authentifié");
         }
-
-        CourseCreationRequest request = objectMapper.readValue(coursestring, CourseCreationRequest.class);
 
         if (image != null && !image.isEmpty()) {
             try {
@@ -84,15 +82,19 @@ public class CoursesController {
             }
         }
 
-        // Si l'utilisateur est ADMIN et qu'un instructorId est fourni dans le payload, l'utiliser
-        // Sinon, utiliser l'ID de l'utilisateur connecté (pour les instructeurs qui créent leurs propres cours)
-        if (currentUser.getAdmin() != null && request.getInstructorId() != null) {
-            // Admin peut créer un cours pour un autre instructeur
-            // L'instructorId du payload est déjà défini, on le garde
-        } else {
-            // Pour les instructeurs, utiliser leur propre ID
+        // Si l'utilisateur est un instructeur, définir son ID.
+        // Si c'est un admin, l'ID de l'instructeur doit être dans la requête.
+        if (currentUser.getInstructor() != null) {
             request.setInstructorId(currentUser.getId());
+        } else if (currentUser.getAdmin() != null) {
+            if (request.getInstructorId() == null) {
+                return CResponse.error("L'ID de l'instructeur est requis pour les administrateurs.");
+            }
+            // L'ID de l'instructeur est déjà dans la requête, on ne fait rien.
+        } else {
+             return CResponse.error("L'utilisateur n'est ni instructeur ni admin.");
         }
+        
         request.setCategoryId(catId);
 
         try {

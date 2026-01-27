@@ -1,20 +1,40 @@
-duleLessonFormModal] handleSubmit appelé avec: {courseId: 2, title: 'Notion de base Amplify', moduleOrder: 1, lessons: Array(1)}
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Début de l'upload des fichiers...
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Traitement de la leçon 0: {title: 'Amplify 2', lessonOrder: 1, type: 'DOCUMENT', contentUrl: 'Cahier_des_Charges_Site_Ecommerce.pdf', contentFile: File, …}
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Upload du fichier pour la leçon 0 dans le dossier: documents
-279d96e1e4e094d4.js:1 [FileUploadService] uploadFile appelé - fichier: Cahier_des_Charges_Site_Ecommerce.pdf, taille: 3386, type: application/pdf, dossier: documents
-279d96e1e4e094d4.js:1 [FileUploadService] Token présent: true
-279d96e1e4e094d4.js:1 [FileUploadService] URL complète: https://api.smart-odc.com/awsodclearning/api/files/upload
-279d96e1e4e094d4.js:1 [FileUploadService] Réponse reçue - Status: 200, OK: true
-279d96e1e4e094d4.js:1 [FileUploadService] Réponse JSON complète: {data: 'https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf', message: 'Upload réussi', success: true, failed: false}
-279d96e1e4e094d4.js:1 [FileUploadService] URL extraite: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf
-279d96e1e4e094d4.js:1 [FileUploadService] Upload réussi, URL finale: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Fichier uploadé avec succès, URL: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Tous les fichiers uploadés, préparation du payload final
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Appel de onSubmit avec: {courseId: 2, title: 'Notion de base Amplify', moduleOrder: 1, lessons: Array(1)}
-279d96e1e4e094d4.js:1 [ModuleService] saveModules appelé avec payload: {courseId: 2, courseType: 'INTERMEDIAIRE', modules: Array(1)}
-279d96e1e4e094d4.js:1 [ModuleService] JSON stringifié: {"courseId":2,"courseType":"INTERMEDIAIRE","modules":[{"title":"Notion de base Amplify","description":"","moduleOrder":1,"lessons":[{"title":"Amplify 2","lessonOrder":1,"type":"DOCUMENT","contentUrl":"https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf","duration":22}]}]}
-279d96e1e4e094d4.js:1 [ModuleService] FormData créé, appel de fetchApi vers /modules/save
-279d96e1e4e094d4.js:1 [ModuleService] Réponse reçue du backend: {data: null, message: "Erreur d'enregistrement des modules/leçons : could…ntViolationException: could not execute statement", success: false, failed: true}data: nullfailed: truemessage: "Erreur d'enregistrement des modules/leçons : could not execute statement; SQL [n/a]; constraint [null]; nested exception is org.hibernate.exception.ConstraintViolationException: could not execute statement"success: false[[Prototype]]: Object
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] onSubmit terminé avec succès
-0caae56376e993bd.js:1 Déconnexion automatique après 1 minute d'inactivité
+{
+  "description": "Structure JSON du payload 'module' pour POST /modules/save (Multipart/Form-Data)",
+  "payload_example": {
+    "courseId": 1,                      // Long - ID du cours auquel ces modules/leçons appartiennent (obligatoire)
+    "courseType": "BEGINNER",           // Enum CourseLevel (ex: "BEGINNER", "INTERMEDIATE", "ADVANCED")
+    "modules": [                        // Liste des modules à créer ou mettre à jour
+      {
+        "title": "Introduction au développement Android", // String - Titre du module (obligatoire, non vide)
+        "description": "Ce module couvre les bases de la plateforme Android.", // String - Description du module
+        "moduleOrder": 1,               // Integer - Ordre du module dans le cours (obligatoire)
+        "lessons": [                    // Liste des leçons pour ce module
+          {
+            "title": "Présentation de Kotlin", // String - Titre de la leçon (obligatoire, non vide)
+            "lessonOrder": 1,           // Integer - Ordre de la leçon dans le module (obligatoire)
+            "type": "VIDEO",            // Enum LessonType (obligatoire, ex: "VIDEO", "QUIZ", "DOCUMENT", "LAB")
+            "contentUrl": "https://youtube.com/watch?v=some_video_id", // String - URL du contenu de la leçon (ex: URL YouTube, URL S3)
+            "duration": 30              // Integer - Durée de la leçon en minutes
+          },
+          {
+            "title": "Structure d'un projet Android", // String - Titre de la leçon (obligatoire, non vide)
+            "lessonOrder": 2,           // Integer - Ordre de la leçon dans le module (obligatoire)
+            "type": "DOCUMENT",         // Enum LessonType
+            "contentUrl": "https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/doc.pdf", // URL du contenu
+            "duration": 15              // Durée de la leçon en minutes
+          }
+        ]
+      },
+      {
+        "title": "Interfaces utilisateur avec Jetpack Compose", // Titre du second module
+        "description": "Apprenez à construire des UIs modernes et déclaratives.",
+        "moduleOrder": 2,
+        "lessons": [] // Un module peut ne pas avoir de leçons initialement
+      }
+    ]
+  },
+  "notes": [
+    "Ce JSON doit être envoyé sous la clé 'module' dans un payload 'multipart/form-data' à l'endpoint /modules/save.",
+    "Le champ 'pdfFile' dans le payload 'multipart/form-data' est optionnel et peut contenir un fichier PDF pour les leçons de type DOCUMENT."
+  ]
+}
