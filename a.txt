@@ -1,149 +1,20 @@
-ModuleLessonFormModal] Traitement de la leçon 0: Object
+duleLessonFormModal] handleSubmit appelé avec: {courseId: 2, title: 'Notion de base Amplify', moduleOrder: 1, lessons: Array(1)}
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Début de l'upload des fichiers...
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Traitement de la leçon 0: {title: 'Amplify 2', lessonOrder: 1, type: 'DOCUMENT', contentUrl: 'Cahier_des_Charges_Site_Ecommerce.pdf', contentFile: File, …}
 b95ff219e02d2814.js:1 [ModuleLessonFormModal] Upload du fichier pour la leçon 0 dans le dossier: documents
-279d96e1e4e094d4.js:1 [FileUploadService] uploadFile appelé - fichier: Cahier Des Charges – Site E-commerce Next (1).pdf, taille: 30615, type: application/pdf, dossier: documents
+279d96e1e4e094d4.js:1 [FileUploadService] uploadFile appelé - fichier: Cahier_des_Charges_Site_Ecommerce.pdf, taille: 3386, type: application/pdf, dossier: documents
 279d96e1e4e094d4.js:1 [FileUploadService] Token présent: true
 279d96e1e4e094d4.js:1 [FileUploadService] URL complète: https://api.smart-odc.com/awsodclearning/api/files/upload
 279d96e1e4e094d4.js:1 [FileUploadService] Réponse reçue - Status: 200, OK: true
-279d96e1e4e094d4.js:1 [FileUploadService] Réponse JSON complète: Object
-279d96e1e4e094d4.js:1 [FileUploadService] URL extraite: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf
-279d96e1e4e094d4.js:1 [FileUploadService] Upload réussi, URL finale: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Fichier uploadé avec succès, URL: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf
+279d96e1e4e094d4.js:1 [FileUploadService] Réponse JSON complète: {data: 'https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf', message: 'Upload réussi', success: true, failed: false}
+279d96e1e4e094d4.js:1 [FileUploadService] URL extraite: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf
+279d96e1e4e094d4.js:1 [FileUploadService] Upload réussi, URL finale: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Fichier uploadé avec succès, URL: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf
 b95ff219e02d2814.js:1 [ModuleLessonFormModal] Tous les fichiers uploadés, préparation du payload final
-b95ff219e02d2814.js:1 [ModuleLessonFormModal] Appel de onSubmit avec: ObjectcourseId: 1lessons: [{…}]moduleOrder: 2title: "Les bases de Kotlin (les component)"[[Prototype]]: Object
-279d96e1e4e094d4.js:1 [ModuleService] saveModules appelé avec payload: Object
-279d96e1e4e094d4.js:1 [ModuleService] JSON stringifié: {"courseId":1,"courseType":"DEBUTANT","modules":[{"title":"Les bases de Kotlin (les component)","description":"","moduleOrder":2,"lessons":[{"title":"Component Column","lessonOrder":1,"type":"DOCUMENT","contentUrl":"https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf","duration":35}]}]}
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Appel de onSubmit avec: {courseId: 2, title: 'Notion de base Amplify', moduleOrder: 1, lessons: Array(1)}
+279d96e1e4e094d4.js:1 [ModuleService] saveModules appelé avec payload: {courseId: 2, courseType: 'INTERMEDIAIRE', modules: Array(1)}
+279d96e1e4e094d4.js:1 [ModuleService] JSON stringifié: {"courseId":2,"courseType":"INTERMEDIAIRE","modules":[{"title":"Notion de base Amplify","description":"","moduleOrder":1,"lessons":[{"title":"Amplify 2","lessonOrder":1,"type":"DOCUMENT","contentUrl":"https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769524565861.pdf","duration":22}]}]}
 279d96e1e4e094d4.js:1 [ModuleService] FormData créé, appel de fetchApi vers /modules/save
-279d96e1e4e094d4.js:1 [ModuleService] Réponse reçue du backend: Objectdata: nullfailed: truemessage: "Erreur d'enregistrement: could not execute statement; SQL [n/a]; constraint [null]; nested exception is org.hibernate.exception.ConstraintViolationException: could not execute statement"success: false[[Prototype]]: Object
+279d96e1e4e094d4.js:1 [ModuleService] Réponse reçue du backend: {data: null, message: "Erreur d'enregistrement des modules/leçons : could…ntViolationException: could not execute statement", success: false, failed: true}data: nullfailed: truemessage: "Erreur d'enregistrement des modules/leçons : could not execute statement; SQL [n/a]; constraint [null]; nested exception is org.hibernate.exception.ConstraintViolationException: could not execute statement"success: false[[Prototype]]: Object
 b95ff219e02d2814.js:1 [ModuleLessonFormModal] onSubmit terminé avec succès
-
-Parfait — les logs sont strictement les mêmes, donc le diagnostic est définitif.
-Je vais être très direct et te donner la checklist exacte à appliquer, sans refaire toute l’histoire.
-
-🔴 CE QUI BLOQUE TOUJOURS (CONFIRMÉ)
-ConstraintViolationException: could not execute statement
-constraint [null]
-
-
-👉 Le backend essaie encore d’insérer une ligne avec une FK NULL
-👉 Rien n’a encore été corrigé côté JPA / service
-
-Le frontend fait TOUT correctement :
-
-upload fichier ✅
-
-payload JSON ✅
-
-appel API ✅
-
-🎯 LA CAUSE UNIQUE (IL N’Y EN A PAS DEUX)
-
-👉 Les relations JPA ne sont PAS assignées avant le save()
-
-Concrètement :
-
-module.course_id = NULL
-
-ou lesson.module_id = NULL
-
-Et ta base refuse (normal).
-
-✅ CE QUE TU DOIS VÉRIFIER / CORRIGER MAINTENANT
-1️⃣ Dans l’entity Lesson (OBLIGATOIRE)
-@ManyToOne(optional = false)
-@JoinColumn(name = "module_id", nullable = false)
-private Module module;
-
-
-⚠️ Si nullable = false est là → tu DOIS setter le module
-
-2️⃣ Dans l’entity Module
-@ManyToOne(optional = false)
-@JoinColumn(name = "course_id", nullable = false)
-private Course course;
-
-@OneToMany(mappedBy = "module", cascade = CascadeType.ALL)
-private List<Lesson> lessons;
-
-3️⃣ DANS LE SERVICE /modules/save (C’EST ICI QUE TOUT SE JOUE)
-❌ Si tu as un code du genre (BUG)
-moduleRepository.save(module);
-lessonRepository.saveAll(module.getLessons());
-
-
-➡️ ÇA NE PEUT PAS MARCHER
-
-✅ CODE MINIMAL QUI DOIT ABSOLUMENT EXISTER
-Course course = courseRepository.findById(payload.getCourseId())
-    .orElseThrow(() -> new RuntimeException("Course introuvable"));
-
-for (Module module : payload.getModules()) {
-
-    // 🔗 lier module → course
-    module.setCourse(course);
-
-    // 🔗 lier lesson → module
-    for (Lesson lesson : module.getLessons()) {
-        lesson.setModule(module);
-    }
-
-    // 💾 UN SEUL SAVE (cascade)
-    moduleRepository.save(module);
-}
-
-
-📌 Si tu ne fais pas ces setCourse() et setModule() → échec garanti
-
-4️⃣ CONFIRMATION TECHNIQUE (À FAIRE 1 FOIS)
-
-Ajoute temporairement dans application.properties :
-
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
-
-
-Tu dois voir :
-
-insert into module (course_id, ...) values (1, ...)
-insert into lesson (module_id, ...) values (X, ...)
-
-
-❌ Si tu vois NULL → bug toujours présent
-✅ Si tu vois des IDs → problème réglé
-
-⚠️ BUG FRONTEND À NE PAS IGNORER
-
-Tu affiches :
-
-onSubmit terminé avec succès
-
-
-Alors que :
-
-success: false
-
-
-➡️ C’est faux
-
-Correctif immédiat
-if (!response.success) {
-  throw new Error(response.message)
-}
-
-🧠 RÉSUMÉ ULTRA COURT
-
-❌ Ce n’est PAS l’upload
-
-❌ Ce n’est PAS le payload
-
-❌ Ce n’est PAS le frontend
-
-✅ C’est 100 % un setModule() / setCourse() manquant
-
-✅ Tant que ça n’est pas fait → ça plantera toujours
-
-🎯 PROCHAINE ÉTAPE (LA PLUS RAPIDE)
-
-👉 Colle ici le code de ton endpoint /modules/save
-Même s’il fait 100 lignes.
-
-Je te le corrige ligne par ligne, sans débat, et tu débloques définitivement 💪
+0caae56376e993bd.js:1 Déconnexion automatique après 1 minute d'inactivité

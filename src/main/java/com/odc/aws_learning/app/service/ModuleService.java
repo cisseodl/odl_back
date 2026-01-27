@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -84,6 +85,8 @@ public class ModuleService {
             // Construire les nouveaux modules et leçons
             for (com.odc.aws_learning.app.dto.ModuleCreationRequest moduleRequest : moduleAndCoursePayload.getModules()) {
                 Module newModule = new Module();
+                newModule.setCreatedAt(LocalDateTime.now()); // Explicitly set creation timestamp
+                newModule.setLastModifiedAt(LocalDateTime.now()); // Explicitly set modification timestamp
                 newModule.setTitle(moduleRequest.getTitle());
                 newModule.setDescription(moduleRequest.getDescription());
                 newModule.setModuleOrder(moduleRequest.getModuleOrder());
@@ -94,6 +97,8 @@ public class ModuleService {
                     List<Lesson> lessonsForModule = new ArrayList<>();
                     for (com.odc.aws_learning.app.dto.LessonCreationRequest lessonRequest : moduleRequest.getLessons()) {
                         Lesson newLesson = new Lesson();
+                        newLesson.setCreatedAt(LocalDateTime.now()); // Explicitly set creation timestamp
+                        newLesson.setLastModifiedAt(LocalDateTime.now()); // Explicitly set modification timestamp
                         newLesson.setTitle(lessonRequest.getTitle());
                         newLesson.setLessonOrder(lessonRequest.getLessonOrder());
                         newLesson.setType(lessonRequest.getType());
