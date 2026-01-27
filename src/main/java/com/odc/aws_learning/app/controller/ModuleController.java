@@ -44,49 +44,18 @@ public class ModuleController {
     }
     @PostMapping("/save")
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
-    public CResponse<?> saveModule(@RequestParam("module") String moduleAndCoursePayloadsString,
-                                    @RequestParam(value = "pdfFile", required = false) MultipartFile pdfFile) throws JsonProcessingException {
+    public CResponse<?> saveModule(@RequestPart("module") ModuleAndCoursePayload moduleAndCoursePayload,
+                                    @RequestParam(value = "pdfFile", required = false) MultipartFile pdfFile) {
         try {
-            System.out.println("=== RECEPTION DU PAYLOAD MODULES ===");
-            System.out.println("Payload JSON reçu: " + moduleAndCoursePayloadsString);
-            
-            if (moduleAndCoursePayloadsString == null || moduleAndCoursePayloadsString.trim().isEmpty()) {
-                System.err.println("ERREUR: Le payload module est null ou vide!");
-                return CResponse.error("Le payload module est requis.");
-            }
-            
-            ModuleAndCoursePayload moduleAndCoursePayload = new ObjectMapper().readValue(moduleAndCoursePayloadsString, ModuleAndCoursePayload.class);
-            
-            System.out.println("CourseId: " + moduleAndCoursePayload.getCourseId());
-            System.out.println("CourseType: " + (moduleAndCoursePayload.getCourseType() != null ? moduleAndCoursePayload.getCourseType() : "NULL"));
-            System.out.println("Nombre de modules: " + (moduleAndCoursePayload.getModules() != null ? moduleAndCoursePayload.getModules().size() : 0));
-            
             if (moduleAndCoursePayload.getCourseId() == null) {
-                System.err.println("ERREUR: courseId est null!");
                 return CResponse.error("Le courseId est requis.");
             }
             
             if (moduleAndCoursePayload.getModules() == null || moduleAndCoursePayload.getModules().isEmpty()) {
-                System.err.println("ERREUR: Aucun module dans le payload!");
                 return CResponse.error("Au moins un module est requis.");
             }
             
-            if (moduleAndCoursePayload.getModules() != null) {
-                for (int i = 0; i < moduleAndCoursePayload.getModules().size(); i++) {
-                    var m = moduleAndCoursePayload.getModules().get(i);
-                    System.out.println("Module " + i + ": " + m.getTitle() + ", Order: " + m.getModuleOrder() + ", Leçons: " + (m.getLessons() != null ? m.getLessons().size() : 0));
-                    if (m.getLessons() != null) {
-                        for (int j = 0; j < m.getLessons().size(); j++) {
-                            var l = m.getLessons().get(j);
-                            System.out.println("  Leçon " + j + ": " + l.getTitle() + ", Type: " + l.getType() + ", Order: " + l.getLessonOrder() + ", ContentUrl: " + l.getContentUrl());
-                        }
-                    }
-                }
-            }
-            
-            System.out.println("Appel de moduleService.saveModule...");
             CResponse<?> response = moduleService.saveModule(moduleAndCoursePayload, pdfFile);
-            System.out.println("Réponse du service: " + (response != null ? response.getMessage() : "NULL"));
             return response;
         } catch (Exception e) {
             System.err.println("ERREUR dans saveModule: " + e.getMessage());
