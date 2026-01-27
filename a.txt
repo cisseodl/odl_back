@@ -1,295 +1,149 @@
-{
-  "documentationApi": "Endpoints CRUD pour le workflow pédagogique",
-  "baseURL": "/awsodclearning",
-  "entities": {
-    "categories": {
-      "description": "Gère les catégories qui sont au sommet de la hiérarchie de contenu.",
-      "basePath": "/api/categories",
-      "endpoints": [
-        {
-          "httpMethod": "POST",
-          "path": "/save",
-          "description": "Créer une nouvelle catégorie.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "requestBody": {
-            "type": "CategorieRequest",
-            "schema": "{ \"title\": \"string\", \"description\": \"string\" }"
-          }
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/read",
-          "description": "Récupérer la liste de toutes les catégories.",
-          "authorization": "Public"
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/read/{id}",
-          "description": "Récupérer une catégorie par son ID.",
-          "authorization": "Public",
-          "pathVariables": [
-            { "name": "id", "description": "ID de la catégorie" }
-          ]
-        },
-        {
-          "httpMethod": "PUT",
-          "path": "/update",
-          "description": "Mettre à jour une catégorie existante.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "requestBody": {
-            "type": "CategorieRequest",
-            "schema": "{ \"id\": \"number\", \"title\": \"string\", \"description\": \"string\" }"
-          }
-        },
-        {
-          "httpMethod": "DELETE",
-          "path": "/delete/{id}",
-          "description": "Supprimer une catégorie.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "id", "description": "ID de la catégorie" }
-          ]
-        }
-      ]
-    },
-    "courses": {
-      "description": "Gère les cours, qui sont des unités d'apprentissage complètes contenant des modules et des leçons.",
-      "basePath": "/courses",
-      "endpoints": [
-        {
-          "httpMethod": "POST",
-          "path": "/save/{categoryId}",
-          "description": "Créer un nouveau cours au sein d'une catégorie. Le corps de la requête est `multipart/form-data`.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "categoryId", "description": "ID de la catégorie" }
-          ],
-          "requestBody": {
-            "type": "Multipart/Form-Data",
-            "schema": "Clé 'courses': JSON de CourseCreationRequest. Clé 'image': fichier image optionnel."
-          }
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/read",
-          "description": "Récupérer la liste de tous les cours, avec options de filtrage et de pagination.",
-          "authorization": "Public"
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/read/{id}",
-          "description": "Récupérer un cours par son ID, avec ses modules et leçons si l'utilisateur est inscrit.",
-          "authorization": "Utilisateur authentifié",
-          "pathVariables": [
-            { "name": "id", "description": "ID du cours" }
-          ]
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/read/by-instructor/{instructorId}",
-          "description": "Récupérer tous les cours d'un instructeur spécifique.",
-          "authorization": "ADMIN, INSTRUCTOR",
-           "pathVariables": [
-            { "name": "instructorId", "description": "ID de l'instructeur" }
-          ]
-        },
-        {
-          "httpMethod": "PUT",
-          "path": "/{id}",
-          "description": "Mettre à jour un cours existant. Le corps de la requête est `multipart/form-data`.",
-          "authorization": "INSTRUCTOR",
-          "pathVariables": [
-            { "name": "id", "description": "ID du cours à mettre à jour" }
-          ],
-          "requestBody": {
-            "type": "Multipart/Form-Data",
-            "schema": "Clé 'courses': JSON de CourseUpdateRequest. Clé 'image': fichier image optionnel."
-          }
-        },
-        {
-          "httpMethod": "DELETE",
-          "path": "/delete/{id}",
-          "description": "Supprimer un cours.",
-          "authorization": "ADMIN",
-          "pathVariables": [
-            { "name": "id", "description": "ID du cours" }
-          ]
-        }
-      ]
-    },
-    "modules_lessons": {
-      "description": "Gère les modules et les leçons. Le workflow est centralisé : on crée/modifie les modules et leurs leçons en une seule fois.",
-      "basePath": "/modules",
-      "endpoints": [
-        {
-          "httpMethod": "POST",
-          "path": "/save",
-          "description": "Créer ou mettre à jour l'ensemble des modules et leçons pour un cours donné. C'est l'endpoint principal pour structurer un cours.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "requestBody": {
-            "type": "Multipart/Form-Data",
-            "schema": "Clé 'module': JSON de ModuleAndCoursePayload (contenant l'ID du cours et la liste des modules/leçons). Clé 'pdfFile': fichier PDF optionnel."
-          }
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/course/{courseId}",
-          "description": "Récupérer la liste des modules (et leçons imbriquées) pour un cours donné.",
-          "authorization": "Utilisateur authentifié",
-          "pathVariables": [
-            { "name": "courseId", "description": "ID du cours" }
-          ]
-        }
-      ]
-    },
-    "quizzes": {
-      "description": "Gère les quiz, qui peuvent être liés à un cours ou à une leçon.",
-      "basePath": "/quiz",
-      "endpoints": [
-        {
-          "httpMethod": "POST",
-          "path": "/create",
-          "description": "Créer un quiz complet avec ses questions et réponses.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "requestBody": {
-            "type": "QuizDTO",
-            "schema": "DTO complet du quiz, incluant questions et réponses."
-          }
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/course/{courseId}",
-          "description": "Récupérer tous les quiz associés à un cours.",
-          "authorization": "Utilisateur authentifié",
-          "pathVariables": [
-            { "name": "courseId", "description": "ID du cours" }
-          ]
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/{quizId}",
-          "description": "Récupérer un quiz par son ID.",
-          "authorization": "Utilisateur authentifié",
-          "pathVariables": [
-            { "name": "quizId", "description": "ID du quiz" }
-          ]
-        },
-        {
-          "httpMethod": "PUT",
-          "path": "/update/{quizId}",
-          "description": "Mettre à jour un quiz existant.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "quizId", "description": "ID du quiz" }
-          ],
-          "requestBody": {
-            "type": "QuizDTO",
-            "schema": "DTO complet du quiz, incluant questions et réponses."
-          }
-        },
-        {
-          "httpMethod": "DELETE",
-          "path": "/delete/{quizId}",
-          "description": "Supprimer un quiz.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "quizId", "description": "ID du quiz" }
-          ]
-        }
-      ]
-    },
-    "evaluations": {
-      "description": "Gère les évaluations, qui peuvent être des quiz ou des TP (Travaux Pratiques).",
-      "basePath": "/api/evaluations",
-      "endpoints": [
-        {
-          "httpMethod": "POST",
-          "path": "/create",
-          "description": "Créer une nouvelle évaluation (Quiz ou TP).",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "requestBody": {
-            "type": "EvaluationRequest",
-            "schema": "DTO pour la création d'une évaluation."
-          }
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/get-all",
-          "description": "Récupérer toutes les évaluations.",
-          "authorization": "Utilisateur authentifié"
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/course/{courseId}",
-          "description": "Récupérer l'examen final d'un cours pour l'utilisateur connecté.",
-          "authorization": "APPRENANT",
-          "pathVariables": [
-            { "name": "courseId", "description": "ID du cours" }
-          ]
-        },
-        {
-          "httpMethod": "DELETE",
-          "path": "/delete/{id}",
-          "description": "Supprimer une évaluation.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "id", "description": "ID de l'évaluation" }
-          ]
-        }
-      ]
-    },
-    "labs": {
-      "description": "Gère les définitions de Labs (exercices pratiques) et leur exécution.",
-      "basePath": "/api/labs",
-      "endpoints": [
-        {
-          "httpMethod": "POST",
-          "path": "/",
-          "description": "Créer une nouvelle définition de lab.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "requestBody": {
-            "type": "LabDefinitionRequest",
-            "schema": "DTO pour la création d'une définition de lab."
-          }
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/",
-          "description": "Récupérer la liste de toutes les définitions de labs.",
-          "authorization": "Utilisateur authentifié"
-        },
-        {
-          "httpMethod": "GET",
-          "path": "/{id}",
-          "description": "Récupérer une définition de lab par son ID.",
-          "authorization": "Utilisateur authentifié",
-          "pathVariables": [
-            { "name": "id", "description": "ID de la définition de lab" }
-          ]
-        },
-        {
-          "httpMethod": "PUT",
-          "path": "/{id}",
-          "description": "Mettre à jour une définition de lab existante.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "id", "description": "ID de la définition de lab" }
-          ],
-          "requestBody": {
-            "type": "LabDefinitionRequest",
-            "schema": "DTO pour la mise à jour d'une définition de lab."
-          }
-        },
-        {
-          "httpMethod": "DELETE",
-          "path": "/{id}",
-          "description": "Supprimer une définition de lab.",
-          "authorization": "ADMIN, INSTRUCTOR",
-          "pathVariables": [
-            { "name": "id", "description": "ID de la définition de lab" }
-          ]
-        }
-      ]
+ModuleLessonFormModal] Traitement de la leçon 0: Object
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Upload du fichier pour la leçon 0 dans le dossier: documents
+279d96e1e4e094d4.js:1 [FileUploadService] uploadFile appelé - fichier: Cahier Des Charges – Site E-commerce Next (1).pdf, taille: 30615, type: application/pdf, dossier: documents
+279d96e1e4e094d4.js:1 [FileUploadService] Token présent: true
+279d96e1e4e094d4.js:1 [FileUploadService] URL complète: https://api.smart-odc.com/awsodclearning/api/files/upload
+279d96e1e4e094d4.js:1 [FileUploadService] Réponse reçue - Status: 200, OK: true
+279d96e1e4e094d4.js:1 [FileUploadService] Réponse JSON complète: Object
+279d96e1e4e094d4.js:1 [FileUploadService] URL extraite: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf
+279d96e1e4e094d4.js:1 [FileUploadService] Upload réussi, URL finale: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Fichier uploadé avec succès, URL: https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Tous les fichiers uploadés, préparation du payload final
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] Appel de onSubmit avec: ObjectcourseId: 1lessons: [{…}]moduleOrder: 2title: "Les bases de Kotlin (les component)"[[Prototype]]: Object
+279d96e1e4e094d4.js:1 [ModuleService] saveModules appelé avec payload: Object
+279d96e1e4e094d4.js:1 [ModuleService] JSON stringifié: {"courseId":1,"courseType":"DEBUTANT","modules":[{"title":"Les bases de Kotlin (les component)","description":"","moduleOrder":2,"lessons":[{"title":"Component Column","lessonOrder":1,"type":"DOCUMENT","contentUrl":"https://odl-learning-assets-prod.s3.us-east-1.amazonaws.com/documents/1769513442562.pdf","duration":35}]}]}
+279d96e1e4e094d4.js:1 [ModuleService] FormData créé, appel de fetchApi vers /modules/save
+279d96e1e4e094d4.js:1 [ModuleService] Réponse reçue du backend: Objectdata: nullfailed: truemessage: "Erreur d'enregistrement: could not execute statement; SQL [n/a]; constraint [null]; nested exception is org.hibernate.exception.ConstraintViolationException: could not execute statement"success: false[[Prototype]]: Object
+b95ff219e02d2814.js:1 [ModuleLessonFormModal] onSubmit terminé avec succès
+
+Parfait — les logs sont strictement les mêmes, donc le diagnostic est définitif.
+Je vais être très direct et te donner la checklist exacte à appliquer, sans refaire toute l’histoire.
+
+🔴 CE QUI BLOQUE TOUJOURS (CONFIRMÉ)
+ConstraintViolationException: could not execute statement
+constraint [null]
+
+
+👉 Le backend essaie encore d’insérer une ligne avec une FK NULL
+👉 Rien n’a encore été corrigé côté JPA / service
+
+Le frontend fait TOUT correctement :
+
+upload fichier ✅
+
+payload JSON ✅
+
+appel API ✅
+
+🎯 LA CAUSE UNIQUE (IL N’Y EN A PAS DEUX)
+
+👉 Les relations JPA ne sont PAS assignées avant le save()
+
+Concrètement :
+
+module.course_id = NULL
+
+ou lesson.module_id = NULL
+
+Et ta base refuse (normal).
+
+✅ CE QUE TU DOIS VÉRIFIER / CORRIGER MAINTENANT
+1️⃣ Dans l’entity Lesson (OBLIGATOIRE)
+@ManyToOne(optional = false)
+@JoinColumn(name = "module_id", nullable = false)
+private Module module;
+
+
+⚠️ Si nullable = false est là → tu DOIS setter le module
+
+2️⃣ Dans l’entity Module
+@ManyToOne(optional = false)
+@JoinColumn(name = "course_id", nullable = false)
+private Course course;
+
+@OneToMany(mappedBy = "module", cascade = CascadeType.ALL)
+private List<Lesson> lessons;
+
+3️⃣ DANS LE SERVICE /modules/save (C’EST ICI QUE TOUT SE JOUE)
+❌ Si tu as un code du genre (BUG)
+moduleRepository.save(module);
+lessonRepository.saveAll(module.getLessons());
+
+
+➡️ ÇA NE PEUT PAS MARCHER
+
+✅ CODE MINIMAL QUI DOIT ABSOLUMENT EXISTER
+Course course = courseRepository.findById(payload.getCourseId())
+    .orElseThrow(() -> new RuntimeException("Course introuvable"));
+
+for (Module module : payload.getModules()) {
+
+    // 🔗 lier module → course
+    module.setCourse(course);
+
+    // 🔗 lier lesson → module
+    for (Lesson lesson : module.getLessons()) {
+        lesson.setModule(module);
     }
-  }
+
+    // 💾 UN SEUL SAVE (cascade)
+    moduleRepository.save(module);
 }
+
+
+📌 Si tu ne fais pas ces setCourse() et setModule() → échec garanti
+
+4️⃣ CONFIRMATION TECHNIQUE (À FAIRE 1 FOIS)
+
+Ajoute temporairement dans application.properties :
+
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+
+Tu dois voir :
+
+insert into module (course_id, ...) values (1, ...)
+insert into lesson (module_id, ...) values (X, ...)
+
+
+❌ Si tu vois NULL → bug toujours présent
+✅ Si tu vois des IDs → problème réglé
+
+⚠️ BUG FRONTEND À NE PAS IGNORER
+
+Tu affiches :
+
+onSubmit terminé avec succès
+
+
+Alors que :
+
+success: false
+
+
+➡️ C’est faux
+
+Correctif immédiat
+if (!response.success) {
+  throw new Error(response.message)
+}
+
+🧠 RÉSUMÉ ULTRA COURT
+
+❌ Ce n’est PAS l’upload
+
+❌ Ce n’est PAS le payload
+
+❌ Ce n’est PAS le frontend
+
+✅ C’est 100 % un setModule() / setCourse() manquant
+
+✅ Tant que ça n’est pas fait → ça plantera toujours
+
+🎯 PROCHAINE ÉTAPE (LA PLUS RAPIDE)
+
+👉 Colle ici le code de ton endpoint /modules/save
+Même s’il fait 100 lignes.
+
+Je te le corrige ligne par ligne, sans débat, et tu débloques définitivement 💪

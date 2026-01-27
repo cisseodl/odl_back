@@ -25,8 +25,8 @@ public class Lesson extends BaseEntity {
 
     private Integer duration;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "module_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "module_id", nullable = false)
     @JsonBackReference // Added (corresponds to Module.lessons @JsonManagedReference)
     private Module module;
 
