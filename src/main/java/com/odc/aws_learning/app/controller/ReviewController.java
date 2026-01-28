@@ -1,6 +1,6 @@
 package com.odc.aws_learning.app.controller;
 
-import com.odc.aws_learning.app.dto.ReviewDto;
+import com.odc.aws_learning.app.dto.ReviewResponseDto;
 import com.odc.aws_learning.app.service.ReviewService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +23,12 @@ public class ReviewController {
      * Récupère tous les avis pour un cours donné.
      * Accessible publiquement, car les avis sont généralement visibles par tous.
      * @param courseId L'ID du cours.
-     * @return Une liste de ReviewDto.
+     * @return Une liste de ReviewResponseDto.
      */
     @GetMapping("/course/{courseId}")
     public CResponse<List<ReviewResponseDto>> getReviewsByCourse(@PathVariable Long courseId) {
         try {
-            List<ReviewDto> reviews = reviewService.getReviewsByCourse(courseId);
-            return CResponse.success(reviews, "Avis récupérés avec succès");
+            return reviewService.getReviewsByCourse(courseId);
         } catch (Exception e) {
             log.error("Erreur lors de la récupération des avis pour le cours {}: {}", courseId, e.getMessage(), e);
             return CResponse.error("Erreur lors de la récupération des avis: " + e.getMessage());
