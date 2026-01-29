@@ -36,7 +36,9 @@ public class TestimonialController {
 
     @GetMapping
     public ResponseEntity<CResponse<List<TestimonialResponse>>> getAllTestimonials() {
+        System.out.println("=== TestimonialController.getAllTestimonials() appelé ===");
         CResponse<List<TestimonialResponse>> response = testimonialService.getAllTestimonials();
+        System.out.println("=== Nombre de témoignages: " + (response.getData() != null ? response.getData().size() : 0) + " ===");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
