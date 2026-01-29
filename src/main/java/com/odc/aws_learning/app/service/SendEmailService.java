@@ -170,25 +170,60 @@ public class SendEmailService {
     }
 
     public String mailTemplateInstructorCreated(String fullName, String email, String password, String siteUrl) {
-        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 20px; text-align: center\">\n" +
-                "  <h1 style=\"color: #5e9ca0;'\">COMPTE FORMATEUR CRÉÉ - Orange Digital Learning</h1>\n" +
-                " <img style=\"height: 100px;\" class=\"welcomeImg\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"\">" +
-                "  <div style=\"border-bottom: 1px grey solid\">\n" +
+        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 30px; text-align: center; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
+                "  <h1 style=\"color: #FF6600; margin-bottom: 20px; font-size: 24px;\">COMPTE FORMATEUR CRÉÉ - Orange Digital Learning</h1>\n" +
+                " <img style=\"height: 100px; margin-bottom: 20px;\" class=\"welcomeImg\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"Orange Digital Learning Logo\">" +
+                "  <div style=\"border-bottom: 1px grey solid; margin: 20px 0;\">\n" +
                 "    \n" +
                 "  </div>\n" +
                 "\n" +
-                "<p>Bonjour <strong>" + fullName + "</strong>,</p>\n" +
-                "<p>Votre compte formateur a été créé avec succès sur Orange Digital Learning !</p>\n" +
-                "<p><strong>Vos identifiants de connexion:</strong></p>\n" +
-                "<p>Email: <strong>" + email + "</strong></p>\n" +
-                "<p>Mot de passe: <strong>" + password + "</strong></p>\n" +
+                "<p style=\"font-size: 16px; margin: 20px 0;\">Bonjour <strong>" + fullName + "</strong>,</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Nous sommes ravis de vous accueillir en tant que formateur sur Orange Digital Learning !</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Votre compte formateur a été créé avec succès. Vous pouvez désormais créer et gérer vos cours, suivre les progrès de vos apprenants et contribuer à leur formation.</p>\n" +
                 "<br>" +
-                "<p><strong>Lien de connexion:</strong></p>\n" +
-                "<p><a href=\"" + siteUrl + "\" style=\"color: #2e6c80; text-decoration: underline;\">" + siteUrl + "</a></p>\n" +
+                "<div style=\"background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;\">\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\"><strong>Vos identifiants de connexion:</strong></p>\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\">Email: <strong>" + email + "</strong></p>\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\">Mot de passe: <strong>" + password + "</strong></p>\n" +
+                "</div>\n" +
                 "<br>" +
-                "<p style=\"color: #2e6c80;\"><i>NB: Veuillez modifier votre mot de passe après la première connexion pour des raisons de sécurité.</i></p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\"><strong>Accédez à votre espace formateur:</strong></p>\n" +
+                "<p style=\"margin: 20px 0;\"><a href=\"" + siteUrl + "\" style=\"background-color: #FF6600; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;\">Se connecter</a></p>\n" +
                 "<br>" +
-                "<p>Bienvenue dans l'équipe des formateurs !</p>\n" +
+                "<p style=\"color: #d32f2f; font-size: 13px; margin: 15px 0; font-weight: bold;\">⚠️ IMPORTANT: Veuillez modifier votre mot de passe après votre première connexion pour des raisons de sécurité.</p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Nous vous souhaitons une excellente expérience en tant que formateur sur notre plateforme.</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Bienvenue dans l'équipe des formateurs Orange Digital Learning !</p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 12px; color: #666; margin-top: 30px;\">L'équipe Orange Digital Learning</p>\n" +
+                "</div>";
+    }
+
+    public String mailTemplateInstructorCreatedWithoutPassword(String fullName, String email, String siteUrl) {
+        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 30px; text-align: center; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
+                "  <h1 style=\"color: #FF6600; margin-bottom: 20px; font-size: 24px;\">COMPTE FORMATEUR CRÉÉ - Orange Digital Learning</h1>\n" +
+                " <img style=\"height: 100px; margin-bottom: 20px;\" class=\"welcomeImg\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"Orange Digital Learning Logo\">" +
+                "  <div style=\"border-bottom: 1px grey solid; margin: 20px 0;\">\n" +
+                "    \n" +
+                "  </div>\n" +
+                "\n" +
+                "<p style=\"font-size: 16px; margin: 20px 0;\">Bonjour <strong>" + fullName + "</strong>,</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Nous sommes ravis de vous accueillir en tant que formateur sur Orange Digital Learning !</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Votre compte formateur a été créé avec succès. Vous pouvez désormais créer et gérer vos cours, suivre les progrès de vos apprenants et contribuer à leur formation.</p>\n" +
+                "<br>" +
+                "<div style=\"background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;\">\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\"><strong>Vos identifiants de connexion:</strong></p>\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\">Email: <strong>" + email + "</strong></p>\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\">Utilisez votre mot de passe existant pour vous connecter.</p>\n" +
+                "</div>\n" +
+                "<br>" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\"><strong>Accédez à votre espace formateur:</strong></p>\n" +
+                "<p style=\"margin: 20px 0;\"><a href=\"" + siteUrl + "\" style=\"background-color: #FF6600; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;\">Se connecter</a></p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Nous vous souhaitons une excellente expérience en tant que formateur sur notre plateforme.</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Bienvenue dans l'équipe des formateurs Orange Digital Learning !</p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 12px; color: #666; margin-top: 30px;\">L'équipe Orange Digital Learning</p>\n" +
                 "</div>";
     }
 

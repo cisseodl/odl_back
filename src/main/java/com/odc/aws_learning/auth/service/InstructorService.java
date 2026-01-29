@@ -10,7 +10,7 @@ import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.InstructorRepository;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-// import org.springframework.security.crypto.password.PasswordEncoder; // Removed
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +30,7 @@ public class InstructorService {
     private final com.odc.aws_learning.app.service.AuditService auditService;
     private final com.odc.aws_learning.app.service.NotificationService notificationService;
     private final com.odc.aws_learning.auth.repository.AdminRepository adminRepository;
-    // private final PasswordEncoder passwordEncoder; // Removed
+    private final PasswordEncoder passwordEncoder;
     
     @Value("${app.frontend.url:https://admin.smart-odc.com}")
     private String frontendUrl;
@@ -48,6 +48,15 @@ public class InstructorService {
 
         if (instructorRepository.findByUserId(user.getId()).isPresent()) {
             return CResponse.error("Cet utilisateur est déjà un instructeur.");
+        }
+
+        // Vérifier si l'utilisateur a déjà un mot de passe, sinon lui attribuer le mot de passe par défaut
+        String plainPassword = null;
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            String defaultPassword = "formateur@odl";
+            plainPassword = defaultPassword;
+            user.setPassword(passwordEncoder.encode(defaultPassword));
+            userRepository.save(user);
         }
 
         Instructor instructor = new Instructor(user);
@@ -92,7 +101,23 @@ public class InstructorService {
                 ? user.getFullName()
                 : user.getEmail();
             
-            String emailMessage = sendEmailService.mailTemplateWelcome(fullName, user.getEmail());
+            // Si un nouveau mot de passe a été attribué, l'envoyer dans l'email
+            String emailMessage;
+            if (plainPassword != null) {
+                emailMessage = sendEmailService.mailTemplateInstructorCreated(
+                    fullName,
+                    user.getEmail(),
+                    plainPassword,
+                    dashboardUrl
+                );
+            } else {
+                // Si l'utilisateur avait déjà un mot de passe, envoyer un email sans mot de passe
+                emailMessage = sendEmailService.mailTemplateInstructorCreatedWithoutPassword(
+                    fullName,
+                    user.getEmail(),
+                    dashboardUrl
+                );
+            }
             String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
             
             System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
@@ -130,6 +155,15 @@ public class InstructorService {
             return CResponse.error("Cet utilisateur est déjà un instructeur.");
         }
 
+        // Mot de passe par défaut si aucun n'est fourni
+        String defaultPassword = "formateur@odl";
+        String passwordToUse = (password != null && !password.trim().isEmpty()) ? password : defaultPassword;
+        String plainPassword = passwordToUse; // Garder le mot de passe en clair pour l'email
+        
+        // Crypter et sauvegarder le mot de passe dans le User
+        user.setPassword(passwordEncoder.encode(passwordToUse));
+        userRepository.save(user);
+
         Instructor instructor = new Instructor(user);
         instructor.setBiography(biography);
         instructor.setSpecialization(specialization);
@@ -149,17 +183,19 @@ public class InstructorService {
 
         // Créer une notification pour l'admin
         try {
-            // Récupérer tous les admins via AdminRepository
-            List<com.odc.aws_learning.auth.entities.Admin> admins = 
-                com.odc.aws_learning.auth.repository.AdminRepository.class.cast(
-                    org.springframework.beans.factory.BeanFactoryUtils.beanOfType(
-                        org.springframework.context.ApplicationContext.class.cast(null),
-                        com.odc.aws_learning.auth.repository.AdminRepository.class
-                    )
-                ).findAll();
-            // Alternative: injecter AdminRepository via @RequiredArgsConstructor
-            // Pour l'instant, on utilise une approche simplifiée
-            // Les notifications seront créées via un service dédié ou un listener d'événements
+            // Récupérer tous les admins pour leur envoyer une notification
+            List<com.odc.aws_learning.auth.entities.Admin> admins = adminRepository.findAll();
+            for (com.odc.aws_learning.auth.entities.Admin admin : admins) {
+                User adminUser = admin.getUser();
+                if (adminUser != null && !adminUser.getId().equals(user.getId())) {
+                    notificationService.createNotification(
+                        adminUser.getId(),
+                        "Nouvel instructeur créé: " + (user.getFullName() != null ? user.getFullName() : user.getEmail()),
+                        "registration",
+                        "/admin/users/instructeurs"
+                    );
+                }
+            }
         } catch (Exception e) {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
@@ -170,21 +206,14 @@ public class InstructorService {
                 ? user.getFullName()
                 : user.getEmail();
             
-            String emailMessage;
+            // Toujours envoyer le mot de passe dans l'email (en clair pour que le formateur puisse se connecter)
+            String emailMessage = sendEmailService.mailTemplateInstructorCreated(
+                fullName,
+                user.getEmail(),
+                plainPassword, // Mot de passe en clair pour l'email
+                dashboardUrl // Lien du dashboard
+            );
             String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
-            
-            if (password != null && !password.trim().isEmpty()) {
-                // Si un mot de passe est fourni, l'envoyer dans l'email
-                emailMessage = sendEmailService.mailTemplateInstructorCreated(
-                    fullName,
-                    user.getEmail(),
-                    password, // Mot de passe non crypté fourni par l'admin
-                    dashboardUrl // Lien Amplify du dashboard
-                );
-            } else {
-                // Si pas de mot de passe, utiliser le template de bienvenue simple
-                emailMessage = sendEmailService.mailTemplateWelcome(fullName, user.getEmail());
-            }
             
             System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
             System.out.println("Email destinataire: " + user.getEmail());
