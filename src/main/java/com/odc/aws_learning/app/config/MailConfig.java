@@ -1,5 +1,7 @@
 package com.odc.aws_learning.app.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +13,8 @@ import java.util.Properties;
 
 @Configuration
 public class MailConfig {
+    
+    private static final Logger logger = LoggerFactory.getLogger(MailConfig.class);
 
     @Bean
     @ConditionalOnProperty(
@@ -24,18 +28,19 @@ public class MailConfig {
             @Value("${spring.mail.username:}") String username,
             @Value("${spring.mail.password:}") String password) {
         
-        System.out.println("=== CONFIGURATION DU SERVICE EMAIL ===");
-        System.out.println("Host: " + host);
-        System.out.println("Port: " + port);
-        System.out.println("Username: " + username);
-        System.out.println("Password: " + (password != null && !password.isEmpty() ? "***CONFIGURÉ***" : "❌ VIDE"));
+        logger.info("========================================");
+        logger.info("=== CONFIGURATION DU SERVICE EMAIL ===");
+        logger.info("Host: {}", host);
+        logger.info("Port: {}", port);
+        logger.info("Username: {}", username);
+        logger.info("Password: {}", (password != null && !password.isEmpty() ? "***CONFIGURÉ***" : "❌ VIDE"));
         
         if (username == null || username.trim().isEmpty()) {
-            System.err.println("❌ ERREUR: spring.mail.username est vide dans application.properties");
+            logger.error("❌ ERREUR: spring.mail.username est vide dans application.properties");
         }
         
         if (password == null || password.trim().isEmpty()) {
-            System.err.println("❌ ERREUR: spring.mail.password est vide dans application.properties");
+            logger.error("❌ ERREUR: spring.mail.password est vide dans application.properties");
         }
         
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
@@ -57,8 +62,8 @@ public class MailConfig {
         // Debug SMTP
         props.put("mail.debug", "false");
         
-        System.out.println("✅ Bean JavaMailSender créé avec succès");
-        System.out.println("========================================");
+        logger.info("✅ Bean JavaMailSender créé avec succès");
+        logger.info("========================================");
         
         return mailSender;
     }

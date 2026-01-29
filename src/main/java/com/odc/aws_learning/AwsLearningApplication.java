@@ -5,6 +5,8 @@ import com.odc.aws_learning.auth.entities.Admin;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.AdminRepository;
 import com.odc.aws_learning.auth.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -23,6 +25,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableScheduling // Enable scheduled tasks (for lab auto-stop)
 @EnableAsync // Enable async methods for email sending
 public class AwsLearningApplication implements CommandLineRunner {
+	
+	private static final Logger logger = LoggerFactory.getLogger(AwsLearningApplication.class);
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
     private final AdminRepository adminRepository; // Injected
@@ -43,20 +47,20 @@ public class AwsLearningApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) {
 		// Vérification du service email au démarrage
-		System.out.println("========================================");
-		System.out.println("=== VÉRIFICATION DU SERVICE EMAIL ===");
+		logger.info("========================================");
+		logger.info("=== VÉRIFICATION DU SERVICE EMAIL ===");
 		if (javaMailSender == null) {
-			System.err.println("❌❌❌ ATTENTION: JavaMailSender bean est NULL");
-			System.err.println("❌ Les emails ne pourront PAS être envoyés.");
-			System.err.println("❌ Vérifiez la configuration dans application.properties:");
-			System.err.println("   - spring.mail.enabled=true");
-			System.err.println("   - spring.mail.username=...");
-			System.err.println("   - spring.mail.password=...");
+			logger.error("❌❌❌ ATTENTION: JavaMailSender bean est NULL");
+			logger.error("❌ Les emails ne pourront PAS être envoyés.");
+			logger.error("❌ Vérifiez la configuration dans application.properties:");
+			logger.error("   - spring.mail.enabled=true");
+			logger.error("   - spring.mail.username=...");
+			logger.error("   - spring.mail.password=...");
 		} else {
-			System.out.println("✅ JavaMailSender bean est disponible");
-			System.out.println("✅ Le service d'envoi d'emails est opérationnel");
+			logger.info("✅ JavaMailSender bean est disponible");
+			logger.info("✅ Le service d'envoi d'emails est opérationnel");
 		}
-		System.out.println("========================================");
+		logger.info("========================================");
 		
 		Optional<User> userOptional = userRepository.findByEmail("cisseodl@gmail.com");
 		if (userOptional.isEmpty()) {
