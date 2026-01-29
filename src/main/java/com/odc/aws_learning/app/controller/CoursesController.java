@@ -228,6 +228,7 @@ public class CoursesController {
     // Récupérer tous les cours
     @GetMapping("/read")
     // Endpoint public pour permettre aux apprenants de consulter les cours sans authentification
+    // Par défaut, seuls les cours publiés sont retournés pour le frontend apprenant
     public CResponse<List<CourseDto>> getAllCourses(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) CourseLevel level,
@@ -238,7 +239,9 @@ public class CoursesController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
-        List<CourseDto> courses = courseService.getAllCourses(category, level, language, bestseller, status, page, size, sortBy, sortDir);
+        // Si aucun statut n'est spécifié, filtrer par défaut sur PUBLIE pour le frontend apprenant
+        CourseStatus finalStatus = status != null ? status : com.odc.aws_learning.app.constante.CourseStatus.PUBLIE;
+        List<CourseDto> courses = courseService.getAllCourses(category, level, language, bestseller, finalStatus, page, size, sortBy, sortDir);
         return CResponse.success(courses, "Liste des cours récupérée avec succès");
     }
 

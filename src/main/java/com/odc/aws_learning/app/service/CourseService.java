@@ -237,9 +237,8 @@ public class CourseService {
             List<Courses> coursesList;
             
             // Basic filtering logic avec jointures FETCH
-            if (status != null) {
-                coursesList = this.coursesRepository.findByStatusWithRelations(status);
-            } else if (category != null && !category.isEmpty()) {
+            // Récupérer les cours selon les filtres (category, level, bestseller)
+            if (category != null && !category.isEmpty()) {
                 // Find category by title (needs a method in CategorieRepository)
                 Optional<Categorie> cat = this.categorieRepository.findByTitle(category);
                 if (cat.isPresent()) {
@@ -253,6 +252,13 @@ public class CourseService {
                 coursesList = this.coursesRepository.findByBestsellerWithRelations(bestseller);
             } else {
                 coursesList = this.coursesRepository.findAllWithRelations();
+            }
+            
+            // Filtrer par statut si spécifié (appliqué après les autres filtres pour combiner les critères)
+            if (status != null) {
+                coursesList = coursesList.stream()
+                    .filter(course -> course.getStatus() == status)
+                    .collect(Collectors.toList());
             }
             
             // Appliquer la pagination manuellement après avoir récupéré les données avec les relations
