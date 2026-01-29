@@ -23,12 +23,10 @@ public class TestimonialController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()") // Annotation ajoutée
+    @PreAuthorize("hasAnyRole('APPRENANT', 'USER')") // Seuls les apprenants peuvent créer des témoignages
     public ResponseEntity<CResponse<TestimonialResponse>> addTestimonial(
             @Valid @RequestBody TestimonialRequest request,
             @AuthenticationPrincipal User currentUser) {
-        // Le contrôle `if (currentUser == null)` est maintenu pour la robustesse,
-        // mais @PreAuthorize le gérera généralement avant d'atteindre ce point.
         if (currentUser == null) {
             return new ResponseEntity<>(CResponse.error("User not authenticated"), HttpStatus.UNAUTHORIZED);
         }

@@ -3,7 +3,9 @@ package com.odc.aws_learning.app.service;
 import com.odc.aws_learning.app.dto.TestimonialRequest;
 import com.odc.aws_learning.app.dto.TestimonialResponse;
 import com.odc.aws_learning.app.entity.Testimonial;
+import com.odc.aws_learning.app.entity.Apprenant;
 import com.odc.aws_learning.app.repository.TestimonialRepository;
+import com.odc.aws_learning.app.repository.ApprenantRepository;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -19,11 +21,13 @@ import java.util.stream.Collectors; // Correct import for Collectors.toList()
 public class TestimonialService {
 
     private final TestimonialRepository testimonialRepository;
-    private final UserRepository userRepository; 
+    private final UserRepository userRepository;
+    private final ApprenantRepository apprenantRepository;
 
-    public TestimonialService(TestimonialRepository testimonialRepository, UserRepository userRepository) {
+    public TestimonialService(TestimonialRepository testimonialRepository, UserRepository userRepository, ApprenantRepository apprenantRepository) {
         this.testimonialRepository = testimonialRepository;
         this.userRepository = userRepository;
+        this.apprenantRepository = apprenantRepository;
     }
 
     @Transactional
@@ -32,8 +36,19 @@ public class TestimonialService {
             return CResponse.error("User not authenticated"); 
         }
         
-        if (request.getContent().trim().isEmpty()) {
-            return CResponse.error("Testimonial content cannot be empty.");
+        // Vérifier que l'utilisateur est un apprenant
+        Optional<Apprenant> apprenantOptional = apprenantRepository.findByUserId(currentUser.getId());
+        if (apprenantOptional.isEmpty()) {
+            return CResponse.error("Seuls les apprenants peuvent créer des témoignages. Veuillez créer votre profil apprenant d'abord.");
+        }
+        
+        Apprenant apprenant = apprenantOptional.get();
+        if (!apprenant.isActivate()) {
+            return CResponse.error("Votre profil apprenant n'est pas actif. Veuillez contacter l'administrateur.");
+        }
+        
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            return CResponse.error("Le contenu du témoignage ne peut pas être vide.");
         }
 
         Testimonial testimonial = new Testimonial();
@@ -59,7 +74,11 @@ public class TestimonialService {
     }
 
     public CResponse<List<TestimonialResponse>> getAllTestimonials() {
-        List<Testimonial> testimonials = testimonialRepository.findAll();
+        // Récupérer uniquement les témoignages actifs (activate = true)
+        List<Testimonial> testimonials = testimonialRepository.findAll()
+            .stream()
+            .filter(Testimonial::isActivate) // Filtrer les témoignages actifs
+            .collect(Collectors.toList());
         List<TestimonialResponse> responses = testimonials.stream().map(this::mapToTestimonialResponse).collect(Collectors.toList());
         return CResponse.success(responses, "Testimonials fetched successfully");
     }
