@@ -59,6 +59,12 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
     @Query("SELECT DISTINCT c FROM Courses c " +
            "LEFT JOIN FETCH c.instructor " +
            "LEFT JOIN FETCH c.categorie " +
+           "WHERE c.status IN :statuses")
+    List<Courses> findByStatusInWithRelations(@Param("statuses") java.util.List<CourseStatus> statuses);
+
+    @Query("SELECT DISTINCT c FROM Courses c " +
+           "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.categorie " +
            "WHERE c.categorie.id = :categoryId")
     List<Courses> findByCategorieIdWithRelations(@Param("categoryId") Long categoryId);
 

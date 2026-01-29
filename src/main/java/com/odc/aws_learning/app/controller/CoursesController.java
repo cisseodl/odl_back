@@ -234,7 +234,7 @@ public class CoursesController {
             @RequestParam(required = false) CourseLevel level,
             @RequestParam(required = false) String language,
             @RequestParam(required = false) Boolean bestseller,
-            @RequestParam(required = false) CourseStatus status,
+            @RequestParam(required = false) List<CourseStatus> status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,

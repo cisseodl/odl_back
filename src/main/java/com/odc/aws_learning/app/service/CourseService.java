@@ -230,15 +230,20 @@ public class CourseService {
     }
 
     public List<CourseDto> getAllCourses(
-            String category, CourseLevel level, String language, Boolean bestseller, CourseStatus status,
+            String category, CourseLevel level, String language, Boolean bestseller, List<CourseStatus> statusList,
             int page, int size, String sortBy, String sortDir) {
         try {
             // Utiliser les méthodes avec FETCH pour charger les relations nécessaires
             List<Courses> coursesList;
             
-            // Basic filtering logic avec jointures FETCH
-            // Récupérer les cours selon les filtres (category, level, bestseller)
-            if (category != null && !category.isEmpty()) {
+            // Filtre par statut : liste optionnelle (Tous / Publié / Non publié)
+            if (statusList != null && !statusList.isEmpty()) {
+                if (statusList.size() == 1) {
+                    coursesList = this.coursesRepository.findByStatusWithRelations(statusList.get(0));
+                } else {
+                    coursesList = this.coursesRepository.findByStatusInWithRelations(statusList);
+                }
+            } else if (category != null && !category.isEmpty()) {
                 // Find category by title (needs a method in CategorieRepository)
                 Optional<Categorie> cat = this.categorieRepository.findByTitle(category);
                 if (cat.isPresent()) {
@@ -252,13 +257,6 @@ public class CourseService {
                 coursesList = this.coursesRepository.findByBestsellerWithRelations(bestseller);
             } else {
                 coursesList = this.coursesRepository.findAllWithRelations();
-            }
-            
-            // Filtrer par statut si spécifié (appliqué après les autres filtres pour combiner les critères)
-            if (status != null) {
-                coursesList = coursesList.stream()
-                    .filter(course -> course.getStatus() == status)
-                    .collect(Collectors.toList());
             }
             
             // Appliquer la pagination manuellement après avoir récupéré les données avec les relations
