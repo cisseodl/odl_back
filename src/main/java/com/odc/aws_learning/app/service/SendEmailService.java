@@ -1,24 +1,30 @@
 package com.odc.aws_learning.app.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import javax.mail.internet.MimeMessage;
+import java.util.Optional;
 
 @Service
 public class SendEmailService {
-    @Autowired(required = false)
-    private JavaMailSender javaMailSender;
+    private final Optional<JavaMailSender> javaMailSender;
+    
+    public SendEmailService(Optional<JavaMailSender> javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
 
     public void sendEmailWithAttachment(String email, String message, String subject) {
         try {
             // Vérifier que JavaMailSender est injecté
-            if (javaMailSender == null) {
-                System.out.println("Email sender not configured. Skipping email to " + email);
+            if (!javaMailSender.isPresent()) {
+                System.err.println("❌ Email sender not configured. JavaMailSender bean not found. Skipping email to " + email);
+                System.err.println("Vérifiez que spring.mail.enabled=true dans application.properties");
                 return;
             }
+            
+            JavaMailSender mailSender = javaMailSender.get();
             
             System.out.println("=== SendEmailService.sendEmailWithAttachment ===");
             System.out.println("Destinataire: " + email);
@@ -26,7 +32,7 @@ public class SendEmailService {
             System.out.println("Longueur du message: " + (message != null ? message.length() : 0) + " caractères");
             System.out.println("JavaMailSender est disponible, création du message...");
             
-            MimeMessage msg = javaMailSender.createMimeMessage();
+            MimeMessage msg = mailSender.createMimeMessage();
 
             // true = multipart message
             MimeMessageHelper helper = new MimeMessageHelper(msg, true);
@@ -37,7 +43,7 @@ public class SendEmailService {
             helper.setText(message, true); // true = HTML content
             
             System.out.println("Message MIME créé, envoi en cours...");
-            javaMailSender.send(msg);
+            mailSender.send(msg);
             System.out.println("✅ Email envoyé avec succès à: " + email);
 
         } catch (javax.mail.AuthenticationFailedException e) {
