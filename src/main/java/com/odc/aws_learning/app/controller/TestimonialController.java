@@ -14,6 +14,7 @@ import java.util.List;
 
 @RequestMapping("/api/testimonials")
 @RestController
+@CrossOrigin(origins = {"https://smart-odc.com", "https://*.smart-odc.com", "https://api.smart-odc.com", "https://admin.smart-odc.com"}, maxAge = 3600)
 public class TestimonialController {
 
     private final TestimonialService testimonialService;
