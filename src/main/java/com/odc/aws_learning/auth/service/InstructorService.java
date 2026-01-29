@@ -1,6 +1,7 @@
 package com.odc.aws_learning.auth.service;
 
 import com.odc.aws_learning.app.service.SendEmailService;
+import com.odc.aws_learning.app.service.EmailAsyncService;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.dao.request.InstructorUpdateRequest;
 import com.odc.aws_learning.auth.dto.InstructorWithUserDto;
@@ -25,6 +26,7 @@ public class InstructorService {
     private final InstructorRepository instructorRepository;
     private final UserRepository userRepository; // To manage User entity
     private final SendEmailService sendEmailService;
+    private final EmailAsyncService emailAsyncService;
     private final com.odc.aws_learning.app.service.AuditService auditService;
     private final com.odc.aws_learning.app.service.NotificationService notificationService;
     private final com.odc.aws_learning.auth.repository.AdminRepository adminRepository;
@@ -84,23 +86,32 @@ public class InstructorService {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
 
-        // Envoyer un email de bienvenue au formateur
+        // Envoyer un email de bienvenue au formateur de manière asynchrone
         try {
-            String emailMessage = sendEmailService.mailTemplateWelcome(
-                user.getFullName() != null ? user.getFullName() : user.getEmail(),
-                user.getEmail()
-            );
+            String fullName = user.getFullName() != null && !user.getFullName().trim().isEmpty()
+                ? user.getFullName()
+                : user.getEmail();
             
-            sendEmailService.sendEmailWithAttachment(
-                user.getEmail(),
-                emailMessage,
-                "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé"
-            );
+            String emailMessage = sendEmailService.mailTemplateWelcome(fullName, user.getEmail());
+            String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
             
-            System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
+            System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
+            System.out.println("Email destinataire: " + user.getEmail());
+            
+            emailAsyncService.sendEmailAsync(user.getEmail(), emailMessage, subject)
+                .whenComplete((result, throwable) -> {
+                    if (throwable != null) {
+                        System.err.println("❌ ÉCHEC DE L'ENVOI DE L'EMAIL AU FORMATEUR");
+                        System.err.println("Destinataire: " + user.getEmail());
+                        System.err.println("Erreur: " + throwable.getMessage());
+                        throwable.printStackTrace(System.err);
+                    } else {
+                        System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
+                    }
+                });
         } catch (Exception e) {
             // Ne pas faire échouer la création si l'email échoue
-            System.err.println("❌ Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());
+            System.err.println("❌ Erreur lors de la préparation de l'envoi de l'email au formateur: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -153,35 +164,45 @@ public class InstructorService {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
 
-        // Envoyer un email de bienvenue au formateur
+        // Envoyer un email de bienvenue au formateur de manière asynchrone
         try {
+            String fullName = user.getFullName() != null && !user.getFullName().trim().isEmpty()
+                ? user.getFullName()
+                : user.getEmail();
+            
             String emailMessage;
+            String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
+            
             if (password != null && !password.trim().isEmpty()) {
                 // Si un mot de passe est fourni, l'envoyer dans l'email
                 emailMessage = sendEmailService.mailTemplateInstructorCreated(
-                    user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                    fullName,
                     user.getEmail(),
                     password, // Mot de passe non crypté fourni par l'admin
                     dashboardUrl // Lien Amplify du dashboard
                 );
             } else {
                 // Si pas de mot de passe, utiliser le template de bienvenue simple
-                emailMessage = sendEmailService.mailTemplateWelcome(
-                    user.getFullName() != null ? user.getFullName() : user.getEmail(),
-                    user.getEmail()
-                );
+                emailMessage = sendEmailService.mailTemplateWelcome(fullName, user.getEmail());
             }
             
-            sendEmailService.sendEmailWithAttachment(
-                user.getEmail(),
-                emailMessage,
-                "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé"
-            );
+            System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
+            System.out.println("Email destinataire: " + user.getEmail());
             
-            System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
+            emailAsyncService.sendEmailAsync(user.getEmail(), emailMessage, subject)
+                .whenComplete((result, throwable) -> {
+                    if (throwable != null) {
+                        System.err.println("❌ ÉCHEC DE L'ENVOI DE L'EMAIL AU FORMATEUR");
+                        System.err.println("Destinataire: " + user.getEmail());
+                        System.err.println("Erreur: " + throwable.getMessage());
+                        throwable.printStackTrace(System.err);
+                    } else {
+                        System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
+                    }
+                });
         } catch (Exception e) {
             // Ne pas faire échouer la création si l'email échoue
-            System.err.println("❌ Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());
+            System.err.println("❌ Erreur lors de la préparation de l'envoi de l'email au formateur: " + e.getMessage());
             e.printStackTrace();
         }
 

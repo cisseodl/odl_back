@@ -1,71 +1,98 @@
 package com.odc.aws_learning.app.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.mail.internet.MimeMessage;
-import java.util.Optional;
 
 @Service
 public class SendEmailService {
-    private final Optional<JavaMailSender> javaMailSender;
+    private final JavaMailSender javaMailSender;
+    private static final String FROM_EMAIL = "cisseodl@gmail.com";
     
-    public SendEmailService(Optional<JavaMailSender> javaMailSender) {
+    @Autowired(required = false)
+    public SendEmailService(JavaMailSender javaMailSender) {
         this.javaMailSender = javaMailSender;
     }
 
-    public void sendEmailWithAttachment(String email, String message, String subject) {
+    /**
+     * Vérifie si le service email est configuré et disponible
+     */
+    public boolean isEmailConfigured() {
+        return javaMailSender != null;
+    }
+
+    /**
+     * Envoie un email de manière synchrone
+     * Cette méthode peut être appelée directement ou depuis une méthode asynchrone
+     */
+    public void sendEmail(String email, String message, String subject) {
+        if (!isEmailConfigured()) {
+            System.err.println("❌ Email sender not configured. JavaMailSender bean not found.");
+            System.err.println("Vérifiez que spring.mail.enabled=true dans application.properties");
+            return;
+        }
+        
+        if (!StringUtils.hasText(email)) {
+            System.err.println("❌ Email destinataire vide ou null");
+            return;
+        }
+        
+        if (!StringUtils.hasText(message)) {
+            System.err.println("❌ Message email vide ou null");
+            return;
+        }
+        
         try {
-            // Vérifier que JavaMailSender est injecté
-            if (!javaMailSender.isPresent()) {
-                System.err.println("❌ Email sender not configured. JavaMailSender bean not found. Skipping email to " + email);
-                System.err.println("Vérifiez que spring.mail.enabled=true dans application.properties");
-                return;
-            }
-            
-            JavaMailSender mailSender = javaMailSender.get();
-            
-            System.out.println("=== SendEmailService.sendEmailWithAttachment ===");
+            System.out.println("=== SendEmailService.sendEmail ===");
             System.out.println("Destinataire: " + email);
             System.out.println("Sujet: " + subject);
             System.out.println("Longueur du message: " + (message != null ? message.length() : 0) + " caractères");
-            System.out.println("JavaMailSender est disponible, création du message...");
             
-            MimeMessage msg = mailSender.createMimeMessage();
-
-            // true = multipart message
-            MimeMessageHelper helper = new MimeMessageHelper(msg, true);
-            helper.setTo(new String[]{email});
-            helper.setFrom("cisseodl@gmail.com"); // Définir l'expéditeur
-
-            helper.setSubject(subject);
+            MimeMessage msg = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+            
+            helper.setTo(email);
+            helper.setFrom(FROM_EMAIL);
+            helper.setSubject(subject != null ? subject : "Orange Digital Learning");
             helper.setText(message, true); // true = HTML content
             
-            System.out.println("Message MIME créé, envoi en cours...");
-            mailSender.send(msg);
+            System.out.println("Envoi de l'email en cours...");
+            javaMailSender.send(msg);
             System.out.println("✅ Email envoyé avec succès à: " + email);
 
         } catch (javax.mail.AuthenticationFailedException e) {
             System.err.println("❌ ERREUR D'AUTHENTIFICATION EMAIL");
             System.err.println("Vérifiez les identifiants SMTP dans application.properties");
-            System.err.println("Email: " + email);
+            System.err.println("Email destinataire: " + email);
+            System.err.println("Erreur: " + e.getMessage());
             e.printStackTrace(System.err);
-            // Ne pas propager l'erreur pour que l'application continue de fonctionner
+            throw new RuntimeException("Erreur d'authentification email", e);
         } catch (javax.mail.MessagingException e) {
             System.err.println("❌ ERREUR DE MESSAGERIE EMAIL");
             System.err.println("Vérifiez la configuration SMTP dans application.properties");
-            System.err.println("Email: " + email);
+            System.err.println("Email destinataire: " + email);
+            System.err.println("Erreur: " + e.getMessage());
             e.printStackTrace(System.err);
-            // Ne pas propager l'erreur pour que l'application continue de fonctionner
+            throw new RuntimeException("Erreur de messagerie email", e);
         } catch (Exception e) {
             System.err.println("❌ ERREUR INATTENDUE LORS DE L'ENVOI D'EMAIL");
             System.err.println("Type: " + e.getClass().getName());
             System.err.println("Message: " + e.getMessage());
-            System.err.println("Email: " + email);
+            System.err.println("Email destinataire: " + email);
             e.printStackTrace(System.err);
-            // Ne pas propager l'erreur pour que l'application continue de fonctionner
+            throw new RuntimeException("Erreur lors de l'envoi d'email", e);
         }
+    }
+
+    /**
+     * Méthode de compatibilité avec l'ancienne API
+     */
+    public void sendEmailWithAttachment(String email, String message, String subject) {
+        sendEmail(email, message, subject);
     }
 
     public String mailTemplateVerificationCode(String confirmationCode) {
