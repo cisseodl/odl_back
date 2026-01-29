@@ -84,6 +84,26 @@ public class InstructorService {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
 
+        // Envoyer un email de bienvenue au formateur
+        try {
+            String emailMessage = sendEmailService.mailTemplateWelcome(
+                user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                user.getEmail()
+            );
+            
+            sendEmailService.sendEmailWithAttachment(
+                user.getEmail(),
+                emailMessage,
+                "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé"
+            );
+            
+            System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
+        } catch (Exception e) {
+            // Ne pas faire échouer la création si l'email échoue
+            System.err.println("❌ Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());
+            e.printStackTrace();
+        }
+
         return CResponse.success(savedInstructor, "Instructeur créé avec succès.");
     }
 
@@ -133,25 +153,35 @@ public class InstructorService {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
 
-        // Envoyer un email au formateur avec le lien Amplify et le mot de passe non crypté (si fourni par l'admin)
+        // Envoyer un email de bienvenue au formateur
         try {
+            String emailMessage;
             if (password != null && !password.trim().isEmpty()) {
                 // Si un mot de passe est fourni, l'envoyer dans l'email
-                String emailMessage = sendEmailService.mailTemplateInstructorCreated(
+                emailMessage = sendEmailService.mailTemplateInstructorCreated(
                     user.getFullName() != null ? user.getFullName() : user.getEmail(),
                     user.getEmail(),
                     password, // Mot de passe non crypté fourni par l'admin
                     dashboardUrl // Lien Amplify du dashboard
                 );
-                sendEmailService.sendEmailWithAttachment(
-                    user.getEmail(),
-                    emailMessage,
-                    "Votre compte formateur a été créé - Orange Digital Learning"
+            } else {
+                // Si pas de mot de passe, utiliser le template de bienvenue simple
+                emailMessage = sendEmailService.mailTemplateWelcome(
+                    user.getFullName() != null ? user.getFullName() : user.getEmail(),
+                    user.getEmail()
                 );
             }
+            
+            sendEmailService.sendEmailWithAttachment(
+                user.getEmail(),
+                emailMessage,
+                "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé"
+            );
+            
+            System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
         } catch (Exception e) {
             // Ne pas faire échouer la création si l'email échoue
-            System.err.println("Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());
+            System.err.println("❌ Erreur lors de l'envoi de l'email au formateur: " + e.getMessage());
             e.printStackTrace();
         }
 

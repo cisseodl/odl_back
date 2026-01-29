@@ -16,7 +16,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication(exclude = {MailSenderAutoConfiguration.class})
+@SpringBootApplication
 @EnableJpaAuditing // Added
 @EnableScheduling // Enable scheduled tasks (for lab auto-stop)
 public class AwsLearningApplication implements CommandLineRunner {
