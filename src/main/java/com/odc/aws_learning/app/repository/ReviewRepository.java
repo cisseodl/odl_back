@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
@@ -35,4 +36,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Find overall average rating across all courses
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.activate = true")
     Double findOverallAverageRating();
+
+    Optional<Review> findByCourseIdAndUserId(Long courseId, Long userId);
 }

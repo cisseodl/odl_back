@@ -86,14 +86,16 @@ public class ReviewResponseDto {
         private Long id;
         private String fullName;
         private String email;
+        private String avatar;
 
         public ReviewUserInfo() {
         }
 
-        public ReviewUserInfo(Long id, String fullName, String email) {
+        public ReviewUserInfo(Long id, String fullName, String email, String avatar) {
             this.id = id;
             this.fullName = fullName;
             this.email = email;
+            this.avatar = avatar;
         }
 
         // Getters and Setters
@@ -119,6 +121,14 @@ public class ReviewResponseDto {
 
         public void setEmail(String email) {
             this.email = email;
+        }
+
+        public String getAvatar() {
+            return avatar;
+        }
+
+        public void setAvatar(String avatar) {
+            this.avatar = avatar;
         }
     }
 
