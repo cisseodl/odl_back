@@ -239,9 +239,8 @@ public class CoursesController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
-        // Si aucun statut n'est spécifié, filtrer par défaut sur PUBLIE pour le frontend apprenant
-        CourseStatus finalStatus = status != null ? status : com.odc.aws_learning.app.constante.CourseStatus.PUBLIE;
-        List<CourseDto> courses = courseService.getAllCourses(category, level, language, bestseller, finalStatus, page, size, sortBy, sortDir);
+        // status null ou vide = tous les cours (ex. admin "Tous"); sinon filtre par liste de statuts
+        List<CourseDto> courses = courseService.getAllCourses(category, level, language, bestseller, status, page, size, sortBy, sortDir);
         return CResponse.success(courses, "Liste des cours récupérée avec succès");
     }
 
