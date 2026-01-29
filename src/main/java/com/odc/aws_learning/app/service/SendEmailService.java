@@ -16,13 +16,30 @@ public class SendEmailService {
     @Autowired(required = false)
     public SendEmailService(JavaMailSender javaMailSender) {
         this.javaMailSender = javaMailSender;
+        
+        // Log au démarrage pour diagnostiquer les problèmes
+        if (javaMailSender == null) {
+            System.err.println("❌❌❌ ATTENTION: JavaMailSender bean est NULL ❌❌❌");
+            System.err.println("Le service email ne fonctionnera PAS.");
+            System.err.println("Vérifiez que:");
+            System.err.println("  1. spring.mail.enabled=true dans application.properties");
+            System.err.println("  2. spring.mail.username est configuré");
+            System.err.println("  3. spring.mail.password est configuré");
+            System.err.println("  4. La classe MailConfig est bien chargée");
+        } else {
+            System.out.println("✅ SendEmailService initialisé avec JavaMailSender disponible");
+        }
     }
 
     /**
      * Vérifie si le service email est configuré et disponible
      */
     public boolean isEmailConfigured() {
-        return javaMailSender != null;
+        boolean configured = javaMailSender != null;
+        if (!configured) {
+            System.err.println("⚠️ isEmailConfigured() retourne FALSE - JavaMailSender est NULL");
+        }
+        return configured;
     }
 
     /**
@@ -30,27 +47,35 @@ public class SendEmailService {
      * Cette méthode peut être appelée directement ou depuis une méthode asynchrone
      */
     public void sendEmail(String email, String message, String subject) {
-        if (!isEmailConfigured()) {
-            System.err.println("❌ Email sender not configured. JavaMailSender bean not found.");
-            System.err.println("Vérifiez que spring.mail.enabled=true dans application.properties");
-            return;
+        // Vérification préalable stricte
+        if (javaMailSender == null) {
+            System.err.println("❌❌❌ ERREUR CRITIQUE: JavaMailSender est NULL");
+            System.err.println("❌ Impossible d'envoyer l'email à: " + email);
+            System.err.println("❌ Le bean JavaMailSender n'a pas été créé par Spring.");
+            System.err.println("❌ Vérifiez la configuration dans application.properties:");
+            System.err.println("   - spring.mail.enabled=true");
+            System.err.println("   - spring.mail.username=...");
+            System.err.println("   - spring.mail.password=...");
+            throw new IllegalStateException("JavaMailSender bean n'est pas disponible. Vérifiez la configuration email.");
         }
         
         if (!StringUtils.hasText(email)) {
             System.err.println("❌ Email destinataire vide ou null");
-            return;
+            throw new IllegalArgumentException("Email destinataire invalide");
         }
         
         if (!StringUtils.hasText(message)) {
             System.err.println("❌ Message email vide ou null");
-            return;
+            throw new IllegalArgumentException("Message email invalide");
         }
         
         try {
-            System.out.println("=== SendEmailService.sendEmail ===");
+            System.out.println("========================================");
+            System.out.println("=== ENVOI D'EMAIL (SendEmailService) ===");
             System.out.println("Destinataire: " + email);
-            System.out.println("Sujet: " + subject);
+            System.out.println("Sujet: " + (subject != null ? subject : "Orange Digital Learning"));
             System.out.println("Longueur du message: " + (message != null ? message.length() : 0) + " caractères");
+            System.out.println("From: " + FROM_EMAIL);
             
             MimeMessage msg = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
@@ -60,9 +85,12 @@ public class SendEmailService {
             helper.setSubject(subject != null ? subject : "Orange Digital Learning");
             helper.setText(message, true); // true = HTML content
             
-            System.out.println("Envoi de l'email en cours...");
+            System.out.println("Tentative d'envoi de l'email...");
+            long startTime = System.currentTimeMillis();
             javaMailSender.send(msg);
-            System.out.println("✅ Email envoyé avec succès à: " + email);
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("✅✅✅ Email envoyé avec succès à: " + email + " (durée: " + duration + "ms)");
+            System.out.println("========================================");
 
         } catch (javax.mail.AuthenticationFailedException e) {
             System.err.println("❌ ERREUR D'AUTHENTIFICATION EMAIL");

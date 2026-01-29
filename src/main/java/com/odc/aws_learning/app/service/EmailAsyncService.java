@@ -44,18 +44,56 @@ public class EmailAsyncService {
     public CompletableFuture<Void> sendEmailAsyncWithRetry(String email, String message, String subject, int maxRetries) {
         long delayMs = 1000; // 1 seconde initialement
         
+        // Vérification préalable
+        if (!sendEmailService.isEmailConfigured()) {
+            System.err.println("❌❌❌ ERREUR: Service email non configuré - Impossible d'envoyer l'email");
+            System.err.println("Destinataire: " + email);
+            return CompletableFuture.failedFuture(new IllegalStateException("Service email non configuré"));
+        }
+        
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
+                System.out.println("========================================");
                 System.out.println("=== TENTATIVE D'ENVOI D'EMAIL (ASYNC) ===");
                 System.out.println("Tentative " + attempt + "/" + maxRetries);
                 System.out.println("Destinataire: " + email);
+                System.out.println("Sujet: " + subject);
                 
                 sendEmailService.sendEmail(email, message, subject);
                 
-                System.out.println("✅ Email envoyé avec succès (tentative " + attempt + "/" + maxRetries + ")");
+                System.out.println("✅✅✅ Email envoyé avec succès (tentative " + attempt + "/" + maxRetries + ")");
+                System.out.println("========================================");
                 return CompletableFuture.completedFuture(null);
                 
+            } catch (IllegalStateException | IllegalArgumentException e) {
+                // Erreur de configuration ou paramètres invalides - ne pas réessayer
+                System.err.println("❌❌❌ ERREUR DE CONFIGURATION EMAIL - ARRÊT IMMÉDIAT");
+                System.err.println("Destinataire: " + email);
+                System.err.println("Erreur: " + e.getMessage());
+                e.printStackTrace(System.err);
+                return CompletableFuture.failedFuture(e);
+                
             } catch (Exception e) {
+                // Vérifier si c'est une erreur d'authentification encapsulée
+                Throwable cause = e.getCause();
+                if (cause instanceof javax.mail.AuthenticationFailedException) {
+                    System.err.println("❌❌❌ ERREUR D'AUTHENTIFICATION EMAIL - ARRÊT IMMÉDIAT");
+                    System.err.println("Destinataire: " + email);
+                    System.err.println("Vérifiez les identifiants SMTP dans application.properties");
+                    System.err.println("Erreur: " + cause.getMessage());
+                    cause.printStackTrace(System.err);
+                    return CompletableFuture.failedFuture(cause);
+                }
+                
+                // Vérifier si c'est directement une AuthenticationFailedException
+                if (e instanceof javax.mail.AuthenticationFailedException) {
+                    System.err.println("❌❌❌ ERREUR D'AUTHENTIFICATION EMAIL - ARRÊT IMMÉDIAT");
+                    System.err.println("Destinataire: " + email);
+                    System.err.println("Vérifiez les identifiants SMTP dans application.properties");
+                    System.err.println("Erreur: " + e.getMessage());
+                    e.printStackTrace(System.err);
+                    return CompletableFuture.failedFuture(e);
+                }
                 System.err.println("❌ ERREUR LORS DE L'ENVOI DE L'EMAIL (Tentative " + attempt + "/" + maxRetries + ")");
                 System.err.println("Destinataire: " + email);
                 System.err.println("Type d'erreur: " + e.getClass().getName());
@@ -73,7 +111,8 @@ public class EmailAsyncService {
                     }
                 } else {
                     // Dernière tentative échouée
-                    System.err.println("❌ ÉCHEC DÉFINITIF DE L'ENVOI DE L'EMAIL APRÈS " + maxRetries + " TENTATIVES");
+                    System.err.println("❌❌❌ ÉCHEC DÉFINITIF DE L'ENVOI DE L'EMAIL APRÈS " + maxRetries + " TENTATIVES");
+                    System.err.println("Destinataire: " + email);
                     e.printStackTrace(System.err);
                     return CompletableFuture.failedFuture(e);
                 }
