@@ -61,22 +61,44 @@ public class AwsLearningApplication implements CommandLineRunner {
 			logger.info("✅ Le service d'envoi d'emails est opérationnel");
 		}
 		logger.info("========================================");
-		
-		Optional<User> userOptional = userRepository.findByEmail("cisseodl@gmail.com");
-		if (userOptional.isEmpty()) {
-			User user = new User();
-			user.setFullName("CisseOdl");
-			user.setEmail("cisseodl@gmail.com");
-			user.setPhone("0000000000"); // Default phone number
-			user.setPassword(passwordEncoder.encode("cisse@2025"));
-			user.setActivate(true);
 
-			User savedUser = userRepository.save(user);
+		try {
+			logger.info("========================================");
+			logger.info("Vérification de l'utilisateur admin...");
+			logger.info("========================================");
 
-            Admin admin = new Admin(savedUser);
-            adminRepository.save(admin);
-            savedUser.setAdmin(admin);
-            userRepository.save(savedUser);
+			Optional<User> userOptional = userRepository.findByEmail("cisseodl@gmail.com");
+			if (userOptional.isEmpty()) {
+				logger.info("Utilisateur admin non trouvé. Création en cours...");
+
+				User user = new User();
+				user.setFullName("CisseOdl");
+				user.setEmail("cisseodl@gmail.com");
+				user.setPhone("0000000000"); // Default phone number
+				user.setPassword(passwordEncoder.encode("cisse@2025"));
+				user.setActivate(true);
+
+				User savedUser = userRepository.save(user);
+				logger.info("✅ Utilisateur créé avec ID: {}", savedUser.getId());
+
+				Admin admin = new Admin(savedUser);
+				Admin savedAdmin = adminRepository.save(admin);
+				logger.info("✅ Admin créé avec ID: {}", savedAdmin.getId());
+
+				savedUser.setAdmin(savedAdmin);
+				userRepository.save(savedUser);
+				logger.info("✅ Relation User-Admin configurée");
+
+				logger.info("========================================");
+				logger.info("✅ UTILISATEUR ADMIN CRÉÉ AVEC SUCCÈS");
+				logger.info("Email: cisseodl@gmail.com");
+				logger.info("Mot de passe: cisse@2025");
+				logger.info("========================================");
+			} else {
+				logger.info("✅ Utilisateur admin existe déjà: {}", userOptional.get().getEmail());
+			}
+		} catch (Exception e) {
+			logger.error("❌ ERREUR lors de la création de l'utilisateur admin: {}", e.getMessage(), e);
 		}
 	}
 }
