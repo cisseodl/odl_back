@@ -1,3 +1,5 @@
+package com.odc.aws_learning.app.controller;
+
 import com.odc.aws_learning.app.dto.TestimonialRequest;
 import com.odc.aws_learning.app.dto.TestimonialResponse;
 import com.odc.aws_learning.app.service.TestimonialService;
@@ -5,7 +7,7 @@ import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize; // Nouvelle importation
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
