@@ -14,6 +14,8 @@ public class CourseValidationRequest {
 
     public enum ValidationAction {
         APPROVE,
-        REJECT
+        REJECT,
+        /** Rétirer un cours publié (PUBLIE -> BROUILLON), sans suppression. */
+        WITHDRAW
     }
 }

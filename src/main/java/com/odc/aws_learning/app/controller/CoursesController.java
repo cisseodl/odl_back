@@ -67,6 +67,7 @@ public class CoursesController {
         if (currentUser == null) {
             return CResponse.error("Utilisateur non authentifié");
         }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (image != null && !image.isEmpty()) {
             try {
@@ -82,17 +83,23 @@ public class CoursesController {
             }
         }
 
-        // Si l'utilisateur est un instructeur, définir son ID.
+        // Si l'utilisateur est un instructeur, définir son ID (par rôle pour éviter LazyInitializationException).
         // Si c'est un admin, l'ID de l'instructeur doit être dans la requête.
-        if (currentUser.getInstructor() != null) {
+        boolean isInstructor = currentUser.getInstructor() != null
+                || (authentication != null && authentication.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_INSTRUCTOR".equals(a.getAuthority())));
+        boolean isAdmin = currentUser.getAdmin() != null
+                || (authentication != null && authentication.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority())));
+        if (isInstructor) {
             request.setInstructorId(currentUser.getId());
-        } else if (currentUser.getAdmin() != null) {
+        } else if (isAdmin) {
             if (request.getInstructorId() == null) {
                 return CResponse.error("L'ID de l'instructeur est requis pour les administrateurs.");
             }
-            // L'ID de l'instructeur est déjà dans la requête, on ne fait rien.
+            // L'ID de l'instructeur est déjà dans la requête.
         } else {
-             return CResponse.error("L'utilisateur n'est ni instructeur ni admin.");
+            return CResponse.error("L'utilisateur n'est ni instructeur ni admin.");
         }
         
         request.setCategoryId(catId);

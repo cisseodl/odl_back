@@ -604,6 +604,15 @@ public class CourseService {
                     throw new IllegalArgumentException("Le cours ne peut pas être rejeté dans son état actuel.");
                 }
                 break;
+            case WITHDRAW:
+                // Rétirer un cours publié : PUBLIE -> BROUILLON (non publié), sans suppression
+                if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.PUBLIE) {
+                    course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.BROUILLON);
+                    course.setRejectionReason(null);
+                } else {
+                    throw new IllegalArgumentException("Seul un cours publié peut être retiré.");
+                }
+                break;
         }
 
         Courses savedCourse = coursesRepository.save(course);
