@@ -58,7 +58,7 @@ public class ApprenantService {
     private final EmailAsyncService emailAsyncService;
     // private final PasswordEncoder passwordEncoder; // Removed
     
-    @Value("${app.frontend.url:https://admin.smart-odc.com}")
+    @Value("${app.frontend.apprenant.url:https://smart-odc.com}")
     private String frontendUrl;
 
     @Transactional
