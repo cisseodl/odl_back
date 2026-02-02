@@ -138,24 +138,9 @@ public class ModuleService {
                 return CResponse.error("Cours introuvable");
             }
 
-            // Vérifier si l'utilisateur est inscrit au cours (sauf pour ADMIN et INSTRUCTOR)
-            if (user != null) {
-                boolean isAdmin = user.getAdmin() != null;
-                boolean isInstructor = user.getInstructor() != null;
-                
-                // Les admins et instructeurs peuvent voir tous les modules sans inscription
-                if (!isAdmin && !isInstructor) {
-                    Optional<com.odc.aws_learning.app.entity.DetailsCourse> enrollment = detailsCourseRepo
-                            .findByCourseIdAndLearnerId(courseId, user.getId());
-                    
-                    if (enrollment.isEmpty() || !enrollment.get().isActivate()) {
-                        return CResponse.error("Vous devez vous inscrire à ce cours pour accéder aux modules et leçons");
-                    }
-                }
-            } else {
-                // Utilisateur non authentifié
-                return CResponse.error("Vous devez être authentifié et inscrit à ce cours pour accéder aux modules et leçons");
-            }
+            // Pour les utilisateurs non authentifiés, on permet la consultation publique des modules
+            // Le contenu complet des vidéos nécessitera une inscription (géré côté frontend)
+            // Note: Les vérifications d'inscription pour l'accès au contenu complet sont gérées ailleurs
 
             // Utiliser la méthode qui charge les leçons avec les modules
             List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);

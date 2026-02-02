@@ -1,8 +1,5 @@
 package com.odc.aws_learning.app.controller;
 
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.odc.aws_learning.app.service.ModuleService;
 import com.odc.aws_learning.app.wrapper.ModuleAndCoursePayload;
 import com.odc.aws_learning.auth.base.response.CResponse;
@@ -65,7 +62,8 @@ public class ModuleController {
     }
 
     @GetMapping("/course/{courseId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
+    // Endpoint public : permet la consultation des modules sans authentification
+    // Les modules et leçons sont visibles pour tous, mais certaines actions nécessitent l'authentification
     public CResponse<?> getModulesByCourse(@PathVariable Long courseId) {
         User currentUser = getCurrentUser();
         return moduleService.getModulesByCourse(courseId, currentUser);

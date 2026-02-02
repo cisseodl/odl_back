@@ -50,7 +50,8 @@ public class SecurityConfiguration {
                                 "/auth/signin", // Autoriser la connexion sans authentification
                                 "/auth/check-availability", // Autoriser la vérification de disponibilité
                                 "/courses/read", // Endpoint public pour lire la liste des cours (sans modules/leçons)
-                                // "/courses/read/**" retiré : l'accès aux détails d'un cours (avec modules/leçons) nécessite une authentification
+                                "/courses/read/**", // Endpoint public pour lire les détails d'un cours (avec modules/leçons) - consultation publique autorisée
+                                "/modules/course/**", // Endpoint public pour lire les modules d'un cours - consultation publique autorisée
                                 "/api/categories/read", // Endpoint public pour lire les catégories
                                 "/api/categories/read/**", // Endpoint public pour lire une catégorie par ID
                                 "/cohorte/read", // Endpoint public pour lire les cohortes
