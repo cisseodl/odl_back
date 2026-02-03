@@ -237,6 +237,7 @@ public class CourseService {
             List<Courses> coursesList;
             
             // Filtre par statut : liste optionnelle (Tous / Publié / Non publié)
+            // Par défaut (listing public apprenant sans param) : uniquement les cours PUBLIE
             if (statusList != null && !statusList.isEmpty()) {
                 if (statusList.size() == 1) {
                     coursesList = this.coursesRepository.findByStatusWithRelations(statusList.get(0));
@@ -256,7 +257,8 @@ public class CourseService {
             } else if (bestseller != null) {
                 coursesList = this.coursesRepository.findByBestsellerWithRelations(bestseller);
             } else {
-                coursesList = this.coursesRepository.findAllWithRelations();
+                // Listing public (Explorer les cours) : par défaut uniquement les cours publiés
+                coursesList = this.coursesRepository.findByStatusWithRelations(CourseStatus.PUBLIE);
             }
             
             // Appliquer la pagination manuellement après avoir récupéré les données avec les relations

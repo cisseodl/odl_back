@@ -321,14 +321,26 @@ public class CoursesController {
     }
 
     /**
-     * Récupère l'utilisateur actuellement authentifié
+     * Récupère l'utilisateur actuellement authentifié.
+     * Supporte UserDetails et String (email) comme principal (JWT).
+     * Sans cela, les apprenants connectés via JWT ont currentUser=null et ne voient pas les modules des cours.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
-            return userOptional.orElse(null);
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        String email = null;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            email = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else if (authentication.getPrincipal() instanceof String) {
+            String principal = (String) authentication.getPrincipal();
+            if (!"anonymousUser".equals(principal)) {
+                email = principal;
+            }
+        }
+        if (email != null && !email.isEmpty()) {
+            return userRepository.findByEmailWithInstructor(email).orElse(null);
         }
         return null;
     }
