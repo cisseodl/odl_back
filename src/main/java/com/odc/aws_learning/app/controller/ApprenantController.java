@@ -60,7 +60,7 @@ public class ApprenantController {
     }
 
     /**
-     * Récupérer tous les apprenants
+     * Récupérer tous les apprenants (ADMIN et APPRENANT uniquement).
      */
     @GetMapping(
             value = "/get-all",
@@ -69,6 +69,19 @@ public class ApprenantController {
     @PreAuthorize("hasAnyRole('ADMIN', 'APPRENANT')")
     public CResponse<?> getAll() {
         return apprenantService.getAllApprenants();
+    }
+
+    /**
+     * Récupérer les apprenants inscrits aux cours de l'instructeur connecté.
+     * INSTRUCTOR : uniquement les apprenants de ses cours ; ADMIN : tous les apprenants.
+     */
+    @GetMapping(
+            value = "/by-instructor",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> getByInstructor(Principal principal) {
+        return apprenantService.getApprenantsByInstructorCourses(principal.getName());
     }
 
     /**

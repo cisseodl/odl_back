@@ -25,6 +25,10 @@ public interface DetailsCourseRepo extends JpaRepository<DetailsCourse, Long> {
     @Query("SELECT COUNT(DISTINCT dc.learner) FROM DetailsCourse dc WHERE dc.course.instructor.id = :instructorId")
     Long countDistinctLearnersByInstructorCourses(@Param("instructorId") Long instructorId);
 
+    /** IDs des utilisateurs (learners) inscrits à au moins un cours de l'instructeur. */
+    @Query("SELECT DISTINCT dc.learner.id FROM DetailsCourse dc WHERE dc.course.instructor.id = :instructorId")
+    List<Long> findDistinctLearnerIdsByInstructorId(@Param("instructorId") Long instructorId);
+
     @Query("SELECT new com.odc.aws_learning.app.dto.UserCourseCompletionStats(dc.learner.id, COUNT(dc.id)) FROM DetailsCourse dc WHERE dc.completed = true GROUP BY dc.learner.id")
     List<UserCourseCompletionStats> findUserCourseCompletionStats();
 

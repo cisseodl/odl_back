@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.odc.aws_learning.app.service.SendEmailService;
 import com.odc.aws_learning.app.service.EmailAsyncService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -223,6 +224,48 @@ public class ApprenantService {
                     .collect(Collectors.toList());
             
             return CResponse.success(apprenantDtos, "Liste des apprenants.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des apprenants: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère les apprenants inscrits aux cours de l'instructeur connecté.
+     * Réservé aux rôles INSTRUCTOR et ADMIN (ADMIN reçoit tous les apprenants pour compatibilité).
+     */
+    @Transactional(readOnly = true)
+    public CResponse<?> getApprenantsByInstructorCourses(String currentUserEmail) {
+        try {
+            Optional<User> userOpt = userRepository.findByEmailWithInstructor(currentUserEmail);
+            if (userOpt.isEmpty()) {
+                return CResponse.error("Utilisateur non trouvé.");
+            }
+            User user = userOpt.get();
+            // ADMIN peut appeler cet endpoint : on retourne tous les apprenants (comme get-all)
+            if (user.getAdmin() != null && user.getInstructor() == null) {
+                return getAllApprenants();
+            }
+            if (user.getInstructor() == null) {
+                return CResponse.error("Accès refusé : réservé aux instructeurs.");
+            }
+            Long instructorId = user.getInstructor().getId();
+            List<Long> learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorId(instructorId);
+            if (learnerIds == null || learnerIds.isEmpty()) {
+                return CResponse.success(Collections.emptyList(), "Aucun apprenant inscrit à vos cours.");
+            }
+            List<Apprenant> apprenants = apprenantRepository.findByUser_IdInWithUserAndCohorte(learnerIds);
+            List<ApprenantWithUserDto> dtos = apprenants.stream()
+                    .map(a -> {
+                        try {
+                            return ApprenantWithUserDto.fromApprenant(a);
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    })
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+            return CResponse.success(dtos, "Apprenants inscrits à vos cours.");
         } catch (Exception e) {
             e.printStackTrace();
             return CResponse.error("Erreur lors de la récupération des apprenants: " + e.getMessage());
