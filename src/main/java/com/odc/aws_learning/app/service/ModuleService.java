@@ -24,6 +24,8 @@ import java.util.Optional;
 import org.hibernate.Hibernate;
 import org.hibernate.proxy.HibernateProxy;
 import com.odc.aws_learning.app.entity.Categorie; // Import for Categorie
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class ModuleService {
@@ -139,18 +141,60 @@ public class ModuleService {
             }
 
             // VÉRIFICATION STRICTE D'INSCRIPTION
-            // Si l'utilisateur est authentifié, il DOIT être inscrit pour voir les modules
-            if (user != null) {
+            // IMPORTANT : Si l'utilisateur est authentifié (même si getCurrentUser() retourne null),
+            // il DOIT être inscrit pour voir les modules
+            // Vérifier l'authentification via SecurityContextHolder directement
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            log.info("=== VÉRIFICATION INSCRIPTION pour cours {} ===", courseId);
+            log.info("Authentication: {}", authentication != null ? "présent" : "null");
+            if (authentication != null) {
+                log.info("Authentication.isAuthenticated(): {}", authentication.isAuthenticated());
+                log.info("Authentication.principal type: {}", authentication.getPrincipal() != null ? authentication.getPrincipal().getClass().getName() : "null");
+                if (authentication.getPrincipal() instanceof String) {
+                    log.info("Authentication.principal value: {}", authentication.getPrincipal());
+                }
+            }
+            log.info("User from getCurrentUser(): {}", user != null ? "présent (ID: " + user.getId() + ")" : "null");
+            
+            boolean isAuthenticated = authentication != null && 
+                                    authentication.isAuthenticated() && 
+                                    !(authentication.getPrincipal() instanceof String && 
+                                      "anonymousUser".equals(authentication.getPrincipal()));
+            
+            log.info("isAuthenticated calculé: {}", isAuthenticated);
+            
+            if (isAuthenticated) {
+                // L'utilisateur est authentifié (via token JWT)
+                log.info("Utilisateur authentifié détecté pour le cours {}", courseId);
+                
+                // Si getCurrentUser() retourne null, c'est un problème, mais on doit quand même vérifier l'inscription
+                if (user == null) {
+                    log.error("❌ ERREUR: Utilisateur authentifié mais getCurrentUser() retourne null pour le cours {}", courseId);
+                    // Si l'utilisateur est authentifié mais qu'on ne peut pas le récupérer, 
+                    // on ne peut pas vérifier l'inscription → retourner une erreur
+                    return CResponse.error("Erreur d'authentification. Veuillez vous reconnecter.");
+                }
+                
+                log.info("Vérification de l'inscription pour User ID: {} et Course ID: {}", user.getId(), courseId);
+                
                 // Vérifier si l'utilisateur est inscrit à ce cours
                 Optional<com.odc.aws_learning.app.entity.DetailsCourse> enrollment = 
                     detailsCourseRepo.findByCourseIdAndLearnerId(courseId, user.getId());
                 
-                if (enrollment.isEmpty() || !enrollment.get().isActivate()) {
-                    // L'utilisateur n'est pas inscrit ou l'inscription est désactivée
-                    log.warn("Tentative d'accès aux modules du cours {} par un utilisateur non inscrit (User ID: {})", 
-                            courseId, user.getId());
+                if (enrollment.isEmpty()) {
+                    log.warn("❌ INSCRIPTION: Aucune inscription trouvée pour User ID: {} et Course ID: {}", user.getId(), courseId);
                     return CResponse.error("Vous devez vous inscrire à ce cours pour accéder aux modules");
                 }
+                
+                if (!enrollment.get().isActivate()) {
+                    log.warn("❌ INSCRIPTION: Inscription désactivée pour User ID: {} et Course ID: {}", user.getId(), courseId);
+                    return CResponse.error("Vous devez vous inscrire à ce cours pour accéder aux modules");
+                }
+                
+                log.info("✅ INSCRIPTION: Utilisateur inscrit et actif pour User ID: {} et Course ID: {}", user.getId(), courseId);
+            } else {
+                log.info("Utilisateur NON authentifié - consultation publique autorisée pour le cours {}", courseId);
             }
             // Si l'utilisateur n'est pas authentifié, permettre la consultation publique
             // (pour la page /courses/id qui affiche les détails du cours)
