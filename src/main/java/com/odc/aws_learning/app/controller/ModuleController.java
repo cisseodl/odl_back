@@ -29,14 +29,33 @@ public class ModuleController {
     
     /**
      * Récupère l'utilisateur actuellement authentifié
+     * Supporte à la fois UserDetails et String (email) comme principal (pour JWT)
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            // Charger le User avec la relation instructor pour que getModulesByCourse reconnaisse les instructeurs
-            Optional<User> userOptional = userRepository.findByEmailWithInstructor(userDetails.getUsername());
-            return userOptional.orElse(null);
+        if (authentication != null && authentication.isAuthenticated()) {
+            String email = null;
+            
+            // Si le principal est un UserDetails, récupérer l'email
+            if (authentication.getPrincipal() instanceof UserDetails) {
+                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                email = userDetails.getUsername();
+            }
+            // Si le principal est une String (cas JWT), utiliser directement
+            else if (authentication.getPrincipal() instanceof String) {
+                String principal = (String) authentication.getPrincipal();
+                // Vérifier que ce n'est pas "anonymousUser"
+                if (!"anonymousUser".equals(principal)) {
+                    email = principal;
+                }
+            }
+            
+            // Si on a un email, charger l'utilisateur
+            if (email != null && !email.isEmpty()) {
+                // Charger le User avec la relation instructor pour que getModulesByCourse reconnaisse les instructeurs
+                Optional<User> userOptional = userRepository.findByEmailWithInstructor(email);
+                return userOptional.orElse(null);
+            }
         }
         return null;
     }

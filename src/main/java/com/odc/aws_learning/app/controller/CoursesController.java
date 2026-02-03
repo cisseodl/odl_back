@@ -278,6 +278,35 @@ public class CoursesController {
     }
 
     /**
+     * Récupérer les attentes d'inscription d'un utilisateur pour un cours
+     * GET /courses/enrollment-expectations/{courseId}/user/{userId}
+     * Accessible aux admins, instructeurs et à l'utilisateur lui-même
+     */
+    @GetMapping("/enrollment-expectations/{courseId}/user/{userId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
+    public ResponseEntity<CResponse<?>> getEnrollmentExpectations(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.ok(CResponse.error("Utilisateur non authentifié"));
+        }
+        
+        // Vérifier que l'utilisateur peut accéder à ces attentes
+        // (soit c'est lui-même, soit c'est un admin/instructeur)
+        boolean isAdmin = currentUser.getAdmin() != null;
+        boolean isInstructor = currentUser.getInstructor() != null;
+        boolean isOwnData = currentUser.getId().equals(userId);
+        
+        if (!isOwnData && !isAdmin && !isInstructor) {
+            return ResponseEntity.ok(CResponse.error("Vous n'êtes pas autorisé à accéder à ces attentes"));
+        }
+        
+        CResponse<?> response = courseService.getEnrollmentExpectations(userId, courseId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Désinscrire un utilisateur d'un cours.
      * DELETE /courses/unenroll/{courseId}/user/{userId}
      * Accessible aux admins et instructeurs

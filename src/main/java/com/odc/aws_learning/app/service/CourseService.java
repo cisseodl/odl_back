@@ -775,6 +775,62 @@ public class CourseService {
     }
 
     /**
+     * Récupérer les attentes d'inscription d'un utilisateur pour un cours
+     * @param userId ID de l'utilisateur
+     * @param courseId ID du cours
+     * @return CResponse contenant les attentes ou une erreur
+     */
+    @Transactional(readOnly = true)
+    public CResponse<?> getEnrollmentExpectations(Long userId, Long courseId) {
+        try {
+            // Vérifier que le cours existe
+            Optional<Courses> courseOptional = coursesRepository.findById(courseId);
+            if (courseOptional.isEmpty()) {
+                return CResponse.error("Cours non trouvé avec l'ID: " + courseId);
+            }
+
+            // Vérifier que l'utilisateur existe
+            Optional<User> userOptional = userRepository.findById(userId);
+            if (userOptional.isEmpty()) {
+                return CResponse.error("Utilisateur non trouvé avec l'ID: " + userId);
+            }
+
+            // Récupérer l'inscription
+            Optional<DetailsCourse> enrollmentOptional = detailsCourseRepo.findByCourseIdAndLearnerId(courseId, userId);
+            if (enrollmentOptional.isEmpty()) {
+                return CResponse.error("L'utilisateur n'est pas inscrit à ce cours");
+            }
+
+            DetailsCourse enrollment = enrollmentOptional.get();
+
+            // Récupérer les attentes
+            Optional<com.odc.aws_learning.app.entity.CourseEnrollmentExpectations> expectationsOptional = 
+                courseEnrollmentExpectationsRepository.findByDetailsCourseId(enrollment.getId());
+
+            if (expectationsOptional.isEmpty()) {
+                return CResponse.error("Aucune attente trouvée pour cette inscription");
+            }
+
+            com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectations = expectationsOptional.get();
+            
+            // Créer un DTO pour la réponse
+            java.util.Map<String, Object> responseData = new java.util.HashMap<>();
+            responseData.put("id", expectations.getId());
+            responseData.put("expectations", expectations.getExpectations());
+            responseData.put("courseId", courseId);
+            responseData.put("userId", userId);
+            responseData.put("enrollmentId", enrollment.getId());
+            responseData.put("createdAt", expectations.getCreatedAt());
+            responseData.put("lastModifiedAt", expectations.getLastModifiedAt());
+
+            return CResponse.success(responseData, "Attentes d'inscription récupérées avec succès");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des attentes: " + e.getMessage());
+        }
+    }
+
+    /**
      * Désinscrire un utilisateur d'un cours
      */
     @Transactional
