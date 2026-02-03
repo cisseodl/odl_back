@@ -54,6 +54,8 @@ public class ApprenantService {
     private final CourseSatisfactionRepository courseSatisfactionRepository;
     private final NotificationRepository notificationRepository;
     private final com.odc.aws_learning.app.repository.CourseFeedbackRepository courseFeedbackRepository;
+    private final com.odc.aws_learning.app.repository.ActivityLogRepository activityLogRepository;
+    private final com.odc.aws_learning.app.repository.TestimonialRepository testimonialRepository;
     private final SendEmailService sendEmailService;
     private final EmailAsyncService emailAsyncService;
     // private final PasswordEncoder passwordEncoder; // Removed
@@ -550,6 +552,38 @@ public class ApprenantService {
                 System.err.println("Erreur lors de la suppression des Notification pour l'utilisateur " + user.getId() + ": " + e.getMessage());
                 e.printStackTrace();
                 throw new RuntimeException("Erreur lors de la suppression des Notification: " + e.getMessage(), e);
+            }
+            
+            // Supprimer les ActivityLog
+            try {
+                System.out.println("Suppression des ActivityLog...");
+                // La méthode findByUserIdOrderByCreatedAtDesc retourne une List (avec Pageable pour la pagination)
+                org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE);
+                List<com.odc.aws_learning.app.entity.ActivityLog> activityLogs = activityLogRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+                System.out.println("Nombre de ActivityLog trouvés: " + activityLogs.size());
+                if (!activityLogs.isEmpty()) {
+                    activityLogRepository.deleteAll(activityLogs);
+                    System.out.println("ActivityLog supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des ActivityLog pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des ActivityLog: " + e.getMessage(), e);
+            }
+            
+            // Supprimer les Testimonial
+            try {
+                System.out.println("Suppression des Testimonial...");
+                List<com.odc.aws_learning.app.entity.Testimonial> testimonials = testimonialRepository.findByUserId(user.getId());
+                System.out.println("Nombre de Testimonial trouvés: " + testimonials.size());
+                if (!testimonials.isEmpty()) {
+                    testimonialRepository.deleteAll(testimonials);
+                    System.out.println("Testimonial supprimés avec succès");
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la suppression des Testimonial pour l'utilisateur " + user.getId() + ": " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Erreur lors de la suppression des Testimonial: " + e.getMessage(), e);
             }
             
             // Supprimer d'abord l'Apprenant avant l'utilisateur pour éviter les problèmes de contrainte
