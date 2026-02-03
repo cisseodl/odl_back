@@ -14,6 +14,7 @@ import com.odc.aws_learning.auth.entities.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -46,6 +47,7 @@ public class ModuleService {
         this.detailsCourseRepo = detailsCourseRepo;
     }
 
+    @Transactional
     public CResponse<?> saveModule(ModuleAndCoursePayload moduleAndCoursePayload, MultipartFile pdfFile) {
         try {
             Optional<Courses> coursesOptional = coursesRepository.findById(moduleAndCoursePayload.getCourseId());

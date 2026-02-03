@@ -15,6 +15,7 @@ public interface ModuleRepository extends JpaRepository<Module, Long> {
     List<Module> findAllByActivateAndCourseId(boolean activate, Long course_id);
     List<Module> findByCourseId(Long courseId);
     
-    @Query("SELECT DISTINCT m FROM Module m LEFT JOIN FETCH m.lessons l WHERE m.course.id = :courseId AND m.activate = true AND (l.activate = true OR l.activate IS NULL)")
+    /** Charge les modules actifs du cours avec leurs leçons (sans filtrer sur l.activate pour éviter de perdre des modules). */
+    @Query("SELECT DISTINCT m FROM Module m LEFT JOIN FETCH m.lessons WHERE m.course.id = :courseId AND m.activate = true")
     List<Module> findAllByActivateAndCourseIdWithLessons(@Param("courseId") Long courseId);
 }
