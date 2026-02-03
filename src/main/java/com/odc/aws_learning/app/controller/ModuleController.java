@@ -34,7 +34,8 @@ public class ModuleController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
+            // Charger le User avec la relation instructor pour que getModulesByCourse reconnaisse les instructeurs
+            Optional<User> userOptional = userRepository.findByEmailWithInstructor(userDetails.getUsername());
             return userOptional.orElse(null);
         }
         return null;
