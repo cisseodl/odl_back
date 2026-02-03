@@ -10,6 +10,7 @@ import org.mapstruct.Named;
 public interface LessonMapper {
 
     @Mapping(target = "duration", source = "duration", qualifiedByName = "formatDuration")
+    @Mapping(target = "contentUrl", source = "contentUrl")
     LessonDto toDto(Lesson lesson);
 
     @Named("formatDuration")
