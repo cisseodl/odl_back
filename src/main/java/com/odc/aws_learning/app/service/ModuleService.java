@@ -173,14 +173,20 @@ public class ModuleService {
                 // Si getCurrentUser() retourne null, c'est un problème, mais on doit quand même vérifier l'inscription
                 if (user == null) {
                     log.error("❌ ERREUR: Utilisateur authentifié mais getCurrentUser() retourne null pour le cours {}", courseId);
-                    // Si l'utilisateur est authentifié mais qu'on ne peut pas le récupérer, 
-                    // on ne peut pas vérifier l'inscription → retourner une erreur
                     return CResponse.error("Erreur d'authentification. Veuillez vous reconnecter.");
                 }
                 
-                log.info("Vérification de l'inscription pour User ID: {} et Course ID: {}", user.getId(), courseId);
+                // Les admins et instructeurs voient les modules sans inscription (ex. instructeur = propriétaire du cours)
+                boolean isAdmin = user.getAdmin() != null;
+                boolean isInstructor = user.getInstructor() != null;
+                if (isAdmin || isInstructor) {
+                    log.info("Admin ou instructeur (User ID: {}) - accès aux modules sans inscription pour le cours {}", user.getId(), courseId);
+                    List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
+                    log.info("Modules récupérés pour le cours {}: {}", courseId, modules.size());
+                    return CResponse.success(modules, "Modules");
+                }
                 
-                // Vérifier si l'utilisateur est inscrit à ce cours
+                log.info("Vérification de l'inscription pour User ID: {} et Course ID: {}", user.getId(), courseId);
                 Optional<com.odc.aws_learning.app.entity.DetailsCourse> enrollment = 
                     detailsCourseRepo.findByCourseIdAndLearnerId(courseId, user.getId());
                 
