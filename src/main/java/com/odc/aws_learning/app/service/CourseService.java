@@ -261,6 +261,10 @@ public class CourseService {
                 coursesList = this.coursesRepository.findByStatusWithRelations(CourseStatus.PUBLIE);
             }
             
+            // Pour le listing public sans filtre, retourner plus de cours (éviter de limiter à 10)
+            int effectiveSize = (statusList == null || statusList.isEmpty()) && category == null && level == null
+                    ? Math.max(size, 100) : size;
+            
             // Appliquer la pagination manuellement après avoir récupéré les données avec les relations
             Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() :
                     Sort.by(sortBy).descending();
@@ -279,12 +283,12 @@ public class CourseService {
                     .collect(Collectors.toList());
             
             // Appliquer la pagination
-            int start = page * size;
-            int end = Math.min(start + size, sortedList.size());
+            int start = page * effectiveSize;
+            int end = Math.min(start + effectiveSize, sortedList.size());
             List<Courses> paginatedList = start < sortedList.size() ? 
                     sortedList.subList(start, end) : new ArrayList<>();
             
-            // Mapper les cours en DTOs
+            // Mapper les cours en DTOs (résilient : ne pas perdre un cours si le mapping échoue)
             // La durée est maintenant calculée à partir du champ duration du cours (en secondes)
             return paginatedList.stream()
                     .map(course -> {
@@ -304,8 +308,8 @@ public class CourseService {
                             } catch (Exception e2) {
                                 System.err.println("Critical error: Cannot create DTO for course " + (course != null ? course.getId() : "null") + ": " + e2.getMessage());
                                 e2.printStackTrace();
-                                // Retourner null et filtrer plus tard
-                                return null;
+                                // Ne pas perdre le cours : retourner un DTO minimal (sans curriculum)
+                                return buildMinimalCourseDto(course);
                             }
                         }
                     })
@@ -316,6 +320,24 @@ public class CourseService {
             e.printStackTrace();
             throw new RuntimeException("Erreur lors de la récupération des cours: " + e.getMessage(), e);
         }
+    }
+    
+    /** DTO minimal pour ne pas perdre un cours en liste quand le mapping complet échoue. */
+    private CourseDto buildMinimalCourseDto(Courses course) {
+        if (course == null) return null;
+        CourseDto dto = new CourseDto();
+        dto.setId(course.getId());
+        dto.setTitle(course.getTitle() != null ? course.getTitle() : "");
+        dto.setSubtitle(course.getSubtitle());
+        dto.setDescription(course.getDescription());
+        dto.setImageUrl(course.getImagePath());
+        dto.setCategory(course.getCategorie() != null && course.getCategorie().getTitle() != null
+                ? course.getCategorie().getTitle() : "Non catégorisé");
+        dto.setLevel(course.getLevel());
+        dto.setStatus(course.getStatus());
+        dto.setCurriculum(new ArrayList<>());
+        dto.setEnrolledCount(0);
+        return dto;
     }
     
     // Helper method pour obtenir la valeur d'un champ pour le tri
