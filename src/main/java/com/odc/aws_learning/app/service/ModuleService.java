@@ -202,32 +202,15 @@ public class ModuleService {
                 
                 log.info("✅ INSCRIPTION: Utilisateur inscrit et actif pour User ID: {} et Course ID: {}", user.getId(), courseId);
             } else {
-                log.info("Utilisateur NON authentifié - consultation publique autorisée pour le cours {}", courseId);
+                // Utilisateur NON authentifié : ne pas renvoyer les modules (éviter d'afficher "Continuer le cours")
+                log.info("Utilisateur NON authentifié - accès aux modules refusé pour le cours {}", courseId);
+                return CResponse.error("Vous devez vous connecter et vous inscrire à ce cours pour accéder au contenu");
             }
-            // Si l'utilisateur n'est pas authentifié, permettre la consultation publique
-            // (pour la page /courses/id qui affiche les détails du cours)
 
-            // Utiliser la méthode qui charge les leçons avec les modules
+            // Utiliser la méthode qui charge les leçons avec les modules (authentifié + inscrit ou admin/instructeur)
             List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
             
-            // DEBUG: Log pour vérifier le contentUrl des leçons
-            // Ces logs s'affichent dans la console du serveur backend (pas dans le navigateur)
-            log.info("=== DEBUG: Modules récupérés pour le cours {} ===", courseId);
-            log.info("Nombre de modules: {}", modules.size());
-            for (Module module : modules) {
-                log.info("Module: {} (ID: {})", module.getTitle(), module.getId());
-                if (module.getLessons() != null) {
-                    log.info("  Nombre de leçons: {}", module.getLessons().size());
-                    for (Lesson lesson : module.getLessons()) {
-                        String contentUrl = lesson.getContentUrl() != null ? lesson.getContentUrl() : "NULL";
-                        log.info("  Leçon: {} (ID: {}, Type: {}, contentUrl: {})", 
-                                lesson.getTitle(), lesson.getId(), lesson.getType(), contentUrl);
-                    }
-                } else {
-                    log.info("  Aucune leçon dans ce module");
-                }
-            }
-            log.info("=== FIN DEBUG ===");
+            log.info("Modules récupérés pour le cours {}: {}", courseId, modules.size());
             
             return CResponse.success(modules, "Modules");
         } catch (Exception e) {
