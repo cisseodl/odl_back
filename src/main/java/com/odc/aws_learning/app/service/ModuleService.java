@@ -142,9 +142,9 @@ public class ModuleService {
                 return CResponse.error("Cours introuvable");
             }
 
-            // VÉRIFICATION STRICTE D'INSCRIPTION
-            // IMPORTANT : Si l'utilisateur est authentifié (même si getCurrentUser() retourne null),
-            // il DOIT être inscrit pour voir les modules
+            // Règles d'accès aux modules :
+            // - Authentification = se connecter pour utiliser l'appli (tous les rôles).
+            // - Inscription au cours = uniquement pour les APPRENANTS ; admin et instructeur voient les modules sans s'inscrire au cours.
             // Vérifier l'authentification via SecurityContextHolder directement
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             
@@ -202,9 +202,9 @@ public class ModuleService {
                 
                 log.info("✅ INSCRIPTION: Utilisateur inscrit et actif pour User ID: {} et Course ID: {}", user.getId(), courseId);
             } else {
-                // Utilisateur NON authentifié : ne pas renvoyer les modules (éviter d'afficher "Continuer le cours")
+                // Utilisateur NON authentifié : refus (l'inscription au cours ne concerne que les apprenants, après connexion)
                 log.info("Utilisateur NON authentifié - accès aux modules refusé pour le cours {}", courseId);
-                return CResponse.error("Vous devez vous connecter et vous inscrire à ce cours pour accéder au contenu");
+                return CResponse.error("Vous devez vous connecter pour accéder au contenu");
             }
 
             // Utiliser la méthode qui charge les leçons avec les modules (authentifié + inscrit ou admin/instructeur)
