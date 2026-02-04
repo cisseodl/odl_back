@@ -163,8 +163,34 @@ public class CourseService {
                     course.setModules(new ArrayList<>());
                 }
             } else {
-                // Ne pas charger les modules si l'utilisateur n'est pas inscrit
-                course.setModules(new ArrayList<>());
+                // Aperçu du contenu pour les non-inscrits : charger modules/leçons (titres uniquement, sans contentUrl)
+                try {
+                    List<Module> previewModules = moduleRepository.findAllByActivateAndCourseIdWithLessons(id);
+                    if (previewModules != null && !previewModules.isEmpty()) {
+                        previewModules.sort((m1, m2) -> {
+                            if (m1 == null || m2 == null) return 0;
+                            Integer o1 = m1.getModuleOrder() != null ? m1.getModuleOrder() : Integer.MAX_VALUE;
+                            Integer o2 = m2.getModuleOrder() != null ? m2.getModuleOrder() : Integer.MAX_VALUE;
+                            return o1.compareTo(o2);
+                        });
+                        previewModules.forEach(m -> {
+                            if (m != null && m.getLessons() != null) {
+                                m.getLessons().sort((l1, l2) -> {
+                                    if (l1 == null || l2 == null) return 0;
+                                    Integer o1 = l1.getLessonOrder() != null ? l1.getLessonOrder() : Integer.MAX_VALUE;
+                                    Integer o2 = l2.getLessonOrder() != null ? l2.getLessonOrder() : Integer.MAX_VALUE;
+                                    return o1.compareTo(o2);
+                                });
+                            }
+                        });
+                        course.setModules(previewModules);
+                    } else {
+                        course.setModules(new ArrayList<>());
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error loading preview modules for course " + id + ": " + e.getMessage());
+                    course.setModules(new ArrayList<>());
+                }
             }
 
             CourseDto courseDto = null;
@@ -174,6 +200,17 @@ public class CourseService {
                 System.err.println("Error mapping course to DTO for id " + id + ": " + e.getMessage());
                 e.printStackTrace();
                 throw new RuntimeException("Erreur lors du mapping du cours: " + e.getMessage(), e);
+            }
+
+            // Pour les non-inscrits : retirer les contentUrl (aperçu du contenu sans accès aux fichiers)
+            if (!canAccessModules && courseDto != null && courseDto.getCurriculum() != null) {
+                courseDto.getCurriculum().forEach(moduleDto -> {
+                    if (moduleDto != null && moduleDto.getLessons() != null) {
+                        moduleDto.getLessons().forEach(lessonDto -> {
+                            if (lessonDto != null) lessonDto.setContentUrl(null);
+                        });
+                    }
+                });
             }
             
             try {
