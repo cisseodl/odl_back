@@ -84,10 +84,24 @@ public class ModuleController {
     @GetMapping("/course/{courseId}")
     // Endpoint public : permet la consultation des modules sans authentification
     // Les modules et leçons sont visibles pour tous, mais certaines actions nécessitent l'authentification
-    public CResponse<?> getModulesByCourse(@PathVariable Long courseId) {
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.http.HttpStatus;
+    
+    // ...
+    
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<CResponse<?>> getModulesByCourse(@PathVariable Long courseId) {
         User currentUser = getCurrentUser();
-        return moduleService.getModulesByCourse(courseId, currentUser);
+        CResponse<?> response = moduleService.getModulesByCourse(courseId, currentUser);
+    
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response); // Retourne 200 OK avec la réponse du service
+        } else {
+            // Le message d'erreur du service indique un problème (par exemple, non inscrit)
+            // On retourne un statut 403 Forbidden (Accès Refusé)
+            // Le corps contiendra le CResponse avec le message d'erreur
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response); 
+        }
     }
-
 
 }
