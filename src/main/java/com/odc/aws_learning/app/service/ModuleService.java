@@ -190,29 +190,23 @@ public class ModuleService {
                 Optional<com.odc.aws_learning.app.entity.DetailsCourse> enrollment = 
                     detailsCourseRepo.findByCourseIdAndLearnerId(courseId, user.getId());
                 
-                if (enrollment.isEmpty()) {
-                    log.warn("❌ INSCRIPTION: Aucune inscription trouvée pour User ID: {} et Course ID: {}", user.getId(), courseId);
-                    return CResponse.error("Vous devez vous inscrire à ce cours pour accéder aux modules");
-                }
-                
-                if (!enrollment.get().isActivate()) {
-                    log.warn("❌ INSCRIPTION: Inscription désactivée pour User ID: {} et Course ID: {}", user.getId(), courseId);
-                    return CResponse.error("Vous devez vous inscrire à ce cours pour accéder aux modules");
+                if (enrollment.isEmpty() || !enrollment.get().isActivate()) {
+                    log.warn("❌ INSCRIPTION: Accès refusé pour User ID: {} au Course ID: {}. Inscription absente ou inactive.", user.getId(), courseId);
+                    return CResponse.error("Vous devez vous inscrire à ce cours pour accéder à son contenu."); // Message plus précis
                 }
                 
                 log.info("✅ INSCRIPTION: Utilisateur inscrit et actif pour User ID: {} et Course ID: {}", user.getId(), courseId);
-            } else {
-                // Utilisateur NON authentifié : refus (l'inscription au cours ne concerne que les apprenants, après connexion)
-                log.info("Utilisateur NON authentifié - accès aux modules refusé pour le cours {}", courseId);
-                return CResponse.error("Vous devez vous connecter pour accéder au contenu");
-            }
+                
+                // Si l'utilisateur est authentifié, inscrit, ou admin/instructeur, on peut récupérer les modules
+                List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
+                log.info("Modules récupérés pour le cours {}: {}", courseId, modules.size());
+                return CResponse.success(modules, "Modules");
 
-            // Utiliser la méthode qui charge les leçons avec les modules (authentifié + inscrit ou admin/instructeur)
-            List<Module> modules = moduleRepository.findAllByActivateAndCourseIdWithLessons(courseId);
-            
-            log.info("Modules récupérés pour le cours {}: {}", courseId, modules.size());
-            
-            return CResponse.success(modules, "Modules");
+            } else {
+                // Utilisateur NON authentifié : accès refusé
+                log.info("Utilisateur NON authentifié - accès aux modules refusé pour le cours {}", courseId);
+                return CResponse.error("Vous devez vous connecter pour accéder au contenu."); // Message pour non-authentifié
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return CResponse.error("Erreur de récupération: " + e.getMessage());
