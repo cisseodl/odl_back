@@ -11,6 +11,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 import java.util.Optional;
 
@@ -81,13 +83,9 @@ public class ModuleController {
         }
     }
 
-    @GetMapping("/course/{courseId}")
     // Endpoint public : permet la consultation des modules sans authentification
     // Les modules et leçons sont visibles pour tous, mais certaines actions nécessitent l'authentification
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.http.HttpStatus;
-    
-    // ...
+
     
     @GetMapping("/course/{courseId}")
     public ResponseEntity<CResponse<?>> getModulesByCourse(@PathVariable Long courseId) {
