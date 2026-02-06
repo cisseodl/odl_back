@@ -74,7 +74,7 @@ public class ReviewService {
         if (courseOptional.isEmpty()) {
             return CResponse.error("Course not found");
         }
-        List<Review> reviews = reviewRepository.findByCourseIdAndActivateIsTrue(courseId);
+        List<Review> reviews = reviewRepository.findByCourseIdAndActivateIsTrueWithUserAndCourse(courseId);
         List<ReviewResponseDto> reviewDtos = reviews.stream()
                                                     .map(this::mapToReviewResponseDto)
                                                     .collect(Collectors.toList());

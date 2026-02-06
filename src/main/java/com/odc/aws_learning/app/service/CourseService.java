@@ -90,9 +90,10 @@ public class CourseService {
     @Transactional(readOnly = true)
     public CourseDto getCourseById(Long id, User user) {
         try {
-            // Charger le cours avec ses relations de base (instructor, categorie)
-            Courses course = coursesRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Course not found with id: " + id));
+            // Charger le cours avec instructeur et catégorie (évite instructeur/avis/contenu manquants)
+            Courses course = coursesRepository.findByIdWithRelations(id)
+                    .orElseGet(() -> coursesRepository.findById(id)
+                            .orElseThrow(() -> new RuntimeException("Course not found with id: " + id)));
 
             // Vérifier si l'utilisateur est inscrit au cours (sauf pour ADMIN et INSTRUCTOR)
             boolean canAccessModules = false;

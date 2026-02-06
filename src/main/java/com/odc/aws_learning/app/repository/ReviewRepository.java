@@ -16,6 +16,9 @@ import java.util.Optional;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByCourseId(Long courseId);
     List<Review> findByCourseIdAndActivateIsTrue(Long courseId);
+
+    @Query("SELECT r FROM Review r LEFT JOIN FETCH r.user LEFT JOIN FETCH r.course WHERE r.course.id = :courseId AND r.activate = true")
+    List<Review> findByCourseIdAndActivateIsTrueWithUserAndCourse(@Param("courseId") Long courseId);
     List<Review> findByUserId(Long userId);
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.course.instructor.id = :instructorId")
