@@ -184,8 +184,22 @@ public class CoursesController {
 
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<?> deleteCourse(@PathVariable Long id) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        Optional<Courses> courseOpt = coursesRepository.findById(id);
+        if (courseOpt.isEmpty()) {
+            return CResponse.error("Cours non trouvé");
+        }
+        Courses course = courseOpt.get();
+        boolean isAdmin = currentUser.getAdmin() != null;
+        boolean isOwner = course.getInstructor() != null && course.getInstructor().getId().equals(currentUser.getId());
+        if (!isAdmin && !isOwner) {
+            return CResponse.error("Vous ne pouvez supprimer que vos propres cours.");
+        }
         courseService.deleteCourse(id);
         return CResponse.success("Le cours a été supprimé avec succès.");
     }

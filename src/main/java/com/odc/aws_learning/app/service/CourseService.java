@@ -797,7 +797,7 @@ public class CourseService {
             // Vérifier le nombre de cours en cours
             long activeCourses = detailsCourseRepo.countByLearnerIdAndCourseStatut(user.getId(), com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
             if (activeCourses >= 3) {
-                return CResponse.error("Vous ne pouvez pas être inscrit à plus de 3 cours simultanément.");
+                return CResponse.error("Vous devez terminer l'un de vos cours en cours avant de vous inscrire à un autre.");
             }
 
             // Vérifier que le cours existe
