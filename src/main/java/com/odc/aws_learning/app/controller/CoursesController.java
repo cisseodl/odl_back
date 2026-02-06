@@ -156,15 +156,15 @@ public class CoursesController {
 
 
        @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-       @PreAuthorize("hasRole('INSTRUCTOR')")
+       @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
        public CResponse<CourseDto> updateCourse(@PathVariable Long id,
                                                   @RequestParam("courses") String coursestring,
                                                   @RequestParam(value = "image", required = false) MultipartFile image) {
            try {
+               User currentUser = getCurrentUser();
                CourseUpdateRequest request = objectMapper.readValue(coursestring, CourseUpdateRequest.class);
                if (image != null && !image.isEmpty()) {
                    try {
-                       // Utiliser le stockage local (Elastic Beanstalk)
                        String localFolderPath = uploadDir + "/courses";
                        String savedFileName = uploadFileService.uploadFile(image, localFolderPath);
                        String imageUrl = serverBaseUrl + "/awsodclearning/api/files/courses/" + savedFileName;
@@ -172,10 +172,9 @@ public class CoursesController {
                        request.setImagePath(imageUrl);
                    } catch (IOException ioException) {
                        log.error("Erreur lors de la sauvegarde locale de l'image du cours: {}", ioException.getMessage(), ioException);
-                       // Continuer sans mettre à jour l'image si l'upload échoue
                    }
                }
-               CourseDto updatedCourse = courseService.updateCourse(id, request);
+               CourseDto updatedCourse = courseService.updateCourse(id, request, currentUser);
                return CResponse.success(updatedCourse, "Le cours a été mis à jour avec succès.");
            } catch (IOException e) {
                System.out.println(e);
@@ -214,9 +213,9 @@ public class CoursesController {
             if (isInstructor && !isOwner) {
                 return CResponse.error("Vous n'êtes pas autorisé à modifier ce cours.");
             }
-            
-            // Passer l'information si c'est un instructeur propriétaire pour permettre la validation directe
-            CourseDto updatedCourse = courseService.validateCourse(id, request, isInstructor && isOwner);
+            // Seul l'instructeur propriétaire peut publier (passer en PUBLIE) ; l'admin ne peut pas publier
+            boolean canPublish = isInstructor && isOwner;
+            CourseDto updatedCourse = courseService.validateCourse(id, request, canPublish);
             return CResponse.success(updatedCourse, "Le statut du cours a été mis à jour.");
         } catch (IllegalArgumentException e) {
             return CResponse.error(e.getMessage());

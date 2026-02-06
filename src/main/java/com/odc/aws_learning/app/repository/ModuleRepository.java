@@ -18,4 +18,8 @@ public interface ModuleRepository extends JpaRepository<Module, Long> {
     /** Charge les modules actifs du cours avec leurs leçons (sans filtrer sur l.activate pour éviter de perdre des modules). */
     @Query("SELECT DISTINCT m FROM Module m LEFT JOIN FETCH m.lessons WHERE m.course.id = :courseId AND m.activate = true")
     List<Module> findAllByActivateAndCourseIdWithLessons(@Param("courseId") Long courseId);
+
+    /** Charge tous les modules du cours avec leurs leçons (fallback si aucun module actif, pour afficher le contenu existant). */
+    @Query("SELECT DISTINCT m FROM Module m LEFT JOIN FETCH m.lessons WHERE m.course.id = :courseId")
+    List<Module> findAllByCourseIdWithLessons(@Param("courseId") Long courseId);
 }

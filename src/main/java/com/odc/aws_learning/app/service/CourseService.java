@@ -529,7 +529,7 @@ public class CourseService {
         }
     }
 
-    public CourseDto updateCourse(Long id, CourseUpdateRequest request) {
+    public CourseDto updateCourse(Long id, CourseUpdateRequest request, User currentUser) {
         Courses existingCourse = coursesRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Course not found with id: " + id));
 
@@ -539,13 +539,21 @@ public class CourseService {
         existingCourse.setImagePath(request.getImagePath());
         existingCourse.setLevel(request.getLevel());
         existingCourse.setLanguage(request.getLanguage());
-                existingCourse.setObjectives(request.getObjectives());
+        existingCourse.setObjectives(request.getObjectives());
         existingCourse.setFeatures(request.getFeatures());
         existingCourse.setBestseller(request.getBestseller());
-        existingCourse.setLastModifiedAt(LocalDateTime.now()); // Set modification date
+        existingCourse.setLastModifiedAt(LocalDateTime.now());
 
+        // Seul le formateur (instructeur) propriétaire du cours peut le publier ; l'admin peut modifier le reste mais pas passer en PUBLIE
+        boolean isAdmin = currentUser != null && currentUser.getAdmin() != null;
+        boolean isInstructorOwner = existingCourse.getInstructor() != null && currentUser != null
+                && existingCourse.getInstructor().getId().equals(currentUser.getId());
         if (request.getStatus() != null) {
-            existingCourse.setStatus(request.getStatus());
+            if (request.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.PUBLIE && isAdmin && !isInstructorOwner) {
+                // Ne pas appliquer la publication si l'appelant est admin (seul le formateur publie)
+            } else {
+                existingCourse.setStatus(request.getStatus());
+            }
         }
 
         User instructor = userRepository.findById(request.getInstructorId())
@@ -647,7 +655,10 @@ public class CourseService {
                     }
                     course.setRejectionReason(null);
                 } else if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW) {
-                    // Seul l'admin peut approuver un cours en révision
+                    // Seul l'instructeur propriétaire peut publier (passer en PUBLIE)
+                    if (!isInstructorOwner) {
+                        throw new IllegalArgumentException("Seul le formateur (instructeur) assigné au cours peut le publier.");
+                    }
                     course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.PUBLIE);
                     course.setRejectionReason(null);
                 } else {
