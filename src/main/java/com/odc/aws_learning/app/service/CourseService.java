@@ -758,6 +758,14 @@ public class CourseService {
                         e.printStackTrace();
                     }
                 }
+            } else {
+                // Cours sans instructeur assigné : envoyer un DTO par défaut pour que le front affiche toujours une ligne
+                com.odc.aws_learning.app.dto.InstructorDto defaultInstructor = new com.odc.aws_learning.app.dto.InstructorDto();
+                defaultInstructor.setId(null);
+                defaultInstructor.setName("Instructeur non assigné");
+                defaultInstructor.setTitle("Formateur");
+                defaultInstructor.setAvatar(null);
+                dto.setInstructor(defaultInstructor);
             }
         } catch (Exception e) {
             // Catch-all pour éviter que toute exception dans cette méthode ne bloque la requête
