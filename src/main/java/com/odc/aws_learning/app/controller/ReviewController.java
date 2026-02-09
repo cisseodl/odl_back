@@ -17,12 +17,29 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/reviews")
+@RequestMapping("/api/reviews")
 @RequiredArgsConstructor
 @CrossOrigin(origins = {"https://smart-odc.com", "https://*.smart-odc.com", "https://api.smart-odc.com"}, maxAge = 3600)
 public class ReviewController {
 
     private final ReviewService reviewService;
+
+    /**
+     * Récupère tous les avis (pour l'administration).
+     * Accessible aux administrateurs uniquement.
+     * @return Une liste de ReviewResponseDto.
+     */
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CResponse<List<ReviewResponseDto>>> getAllReviews() {
+        try {
+            CResponse<List<ReviewResponseDto>> response = reviewService.getAllReviews();
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération de tous les avis: {}", e.getMessage(), e);
+            return ResponseEntity.ok(CResponse.error("Erreur lors de la récupération des avis: " + e.getMessage()));
+        }
+    }
 
     /**
      * Récupère tous les avis pour un cours donné.

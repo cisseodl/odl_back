@@ -19,6 +19,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT r FROM Review r LEFT JOIN FETCH r.user LEFT JOIN FETCH r.course WHERE r.course.id = :courseId AND r.activate = true")
     List<Review> findByCourseIdAndActivateIsTrueWithUserAndCourse(@Param("courseId") Long courseId);
+    
+    @Query("SELECT DISTINCT r FROM Review r LEFT JOIN FETCH r.user LEFT JOIN FETCH r.course")
+    List<Review> findAllWithUserAndCourse();
+    
     List<Review> findByUserId(Long userId);
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.course.instructor.id = :instructorId")

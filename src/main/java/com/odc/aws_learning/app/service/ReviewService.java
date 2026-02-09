@@ -82,7 +82,7 @@ public class ReviewService {
     }
 
     public CResponse<List<ReviewResponseDto>> getAllReviews() { // Changed return type
-        List<Review> reviews = reviewRepository.findAll();
+        List<Review> reviews = reviewRepository.findAllWithUserAndCourse();
         List<ReviewResponseDto> reviewDtos = reviews.stream()
                                                     .map(this::mapToReviewResponseDto)
                                                     .collect(Collectors.toList());
