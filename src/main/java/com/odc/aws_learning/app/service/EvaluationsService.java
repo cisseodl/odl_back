@@ -65,25 +65,18 @@ public class EvaluationsService {
     }
 
     /**
-     * Récupère l'examen d'un cours (premier examen de type QUIZ trouvé)
-     * Vérifie que le cours est complété avant de permettre l'accès
+     * Récupère l'examen de fin de cours (certification).
+     * Uniquement les évaluations de type QUIZ sans leçon associée (examen global du cours).
+     * Les TD (type TP, liés à une leçon) ne sont pas des examens de certification.
      */
     @Transactional(readOnly = true)
     public CResponse<?> getCourseExam(Long courseId, User user) {
         try {
-            // Vérifier que l'apprenant est inscrit au cours
-            // TODO: Ajouter vérification d'inscription si nécessaire
-            
-            // Récupérer l'examen du cours (premier examen de type QUIZ trouvé)
-            List<Evaluations> exams = evaluationsRepository.findByCourseId(courseId);
-            Optional<Evaluations> exam = exams.stream()
-                    .filter(e -> e.getType() == Evaluations.EvaluationType.QUIZ)
-                    .findFirst();
-            if (exam.isEmpty()) {
+            List<Evaluations> exams = evaluationsRepository.findCourseExamsByCourseId(courseId);
+            if (exams == null || exams.isEmpty()) {
                 return CResponse.error("Aucun examen disponible pour ce cours");
             }
-
-            return CResponse.success(exam.get(), "Examen récupéré avec succès");
+            return CResponse.success(exams.get(0), "Examen récupéré avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération de l'examen: " + e.getMessage());
         }

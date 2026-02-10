@@ -28,10 +28,21 @@ import java.util.ArrayList; // Added for default list initialization
 @Table(name = "evaluations")
 // @Data // Removed
 
+/**
+ * Évaluations : une même table pour deux usages distincts :
+ * <ul>
+ *   <li><b>TD (Travaux Dirigés)</b> : type = TP, lesson non null. Associé à une <b>leçon</b>.
+ *       Créé dans le dashboard instructeur "TDs". Affiché dans la section Activités de la leçon côté apprenant.</li>
+ *   <li><b>Examen de fin de cours</b> : type = QUIZ, lesson = null. Associé au <b>cours</b> uniquement.
+ *       Créé dans "Évaluations". Passé quand l'apprenant a terminé le cours ; score ≥ 70 % → certification.</li>
+ * </ul>
+ */
 public class Evaluations extends BaseEntity {
     public enum EvaluationType {
-        QUIZ,  // Évaluation avec questions/réponses automatiques
-        TP     // Travaux pratiques corrigés par l'instructeur
+        /** Examen de fin de cours (questions/réponses, certification). lesson = null. */
+        QUIZ,
+        /** Travaux dirigés (TD), associés à une leçon. lesson requis. */
+        TP
     }
     
     private String title;
@@ -42,7 +53,7 @@ public class Evaluations extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private EvaluationType type = EvaluationType.QUIZ; // Par défaut QUIZ
+    private EvaluationType type = EvaluationType.QUIZ;
     
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
@@ -50,21 +61,22 @@ public class Evaluations extends BaseEntity {
     
     @ManyToOne
     @JoinColumn(name = "instructor_id", nullable = false)
-    private User instructor; // Instructeur qui crée l'évaluation
+    private User instructor;
     
     /**
-     * Leçon associée à cette évaluation
+     * Pour un TD (type TP) : leçon concernée (requise).
+     * Pour un examen (type QUIZ) : null (examen global du cours).
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_id", nullable = true)
-    @JsonIgnoreProperties({"module", "userProgresses"}) // Ignorer les références circulaires mais permettre la sérialisation
+    @JsonIgnoreProperties({"module", "userProgresses"})
     private Lesson lesson;
     
     @Column(nullable = true, length = 5000)
-    private String tpInstructions; // Instructions pour les TPs (optionnel)
+    private String tpInstructions; // TD uniquement
     
     @Column(nullable = true, length = 1000)
-    private String tpFileUrl; // Fichier TP à télécharger (optionnel)
+    private String tpFileUrl; // TD uniquement
 
     @OneToMany(mappedBy = "evaluations")
     // @JsonIgnoreProperties(value = {"evaluations"}, allowSetters = true) // Replaced by @JsonManagedReference
