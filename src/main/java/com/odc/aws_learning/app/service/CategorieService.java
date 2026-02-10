@@ -49,4 +49,11 @@ public class CategorieService {
         }
         return false;
     }
+    
+    /**
+     * Compte le nombre de cours associés à une catégorie
+     */
+    public long getCoursesCountByCategoryId(Long categoryId) {
+        return categorieRepository.countCoursesByCategoryId(categoryId);
+    }
 }

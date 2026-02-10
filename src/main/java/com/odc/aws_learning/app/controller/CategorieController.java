@@ -77,4 +77,14 @@ public class CategorieController {
             return ResponseEntity.notFound().build();
         }
     }
+    
+    /**
+     * Récupère le nombre de cours associés à une catégorie
+     * GET /api/categories/{categoryId}/courses/count
+     */
+    @GetMapping("/{categoryId}/courses/count")
+    public CResponse<Long> getCoursesCountByCategory(@PathVariable Long categoryId) {
+        long count = categorieService.getCoursesCountByCategoryId(categoryId);
+        return CResponse.success(count, "Nombre de cours récupéré avec succès");
+    }
 }

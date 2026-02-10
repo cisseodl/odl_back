@@ -2,8 +2,7 @@ package com.odc.aws_learning.app.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonManagedReference; // Added
-import com.fasterxml.jackson.annotation.JsonBackReference; // Added for Lesson
-// import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // Replaced
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // Added for Lesson serialization
 import com.odc.aws_learning.auth.base.entity.BaseEntity;
 // import lombok.Data; // Removed
 // import lombok.EqualsAndHashCode; // Removed
@@ -58,7 +57,7 @@ public class Evaluations extends BaseEntity {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_id", nullable = true)
-    @JsonBackReference
+    @JsonIgnoreProperties({"module", "userProgresses"}) // Ignorer les références circulaires mais permettre la sérialisation
     private Lesson lesson;
     
     @Column(nullable = true, length = 5000)
