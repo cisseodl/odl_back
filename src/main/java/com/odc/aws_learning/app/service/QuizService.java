@@ -93,7 +93,7 @@ public class QuizService {
      */
     public CResponse<List<QuizDTO>> getQuizzesByCourse(Long courseId) {
         try {
-            List<Quiz> quizzes = quizRepository.findByCourseIdAndActivateTrue(courseId);
+            List<Quiz> quizzes = quizRepository.findByCourseIdAndActivateTrueWithLesson(courseId);
             List<QuizDTO> quizDTOs = quizzes.stream().map(this::convertToDTO).collect(Collectors.toList());
             return CResponse.success(quizDTOs, "Quiz récupérés avec succès");
         } catch (Exception e) {
