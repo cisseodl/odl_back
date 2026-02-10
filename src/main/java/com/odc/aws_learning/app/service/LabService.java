@@ -50,11 +50,11 @@ public class LabService {
     
     /**
      * Récupère toutes les définitions de labs disponibles.
-     * @return Liste des labs disponibles
+     * @return Liste des labs disponibles avec leurs leçons, modules et cours chargés
      */
     public CResponse<List<LabDefinition>> getAllLabs() {
         try {
-            List<LabDefinition> labs = labDefinitionRepository.findAll();
+            List<LabDefinition> labs = labDefinitionRepository.findAllWithLessonModuleAndCourse();
             return CResponse.success(labs, "Liste des labs récupérée avec succès");
         } catch (Exception e) {
             log.error("Erreur lors de la récupération des labs: {}", e.getMessage(), e);

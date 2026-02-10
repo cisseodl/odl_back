@@ -57,7 +57,7 @@ public class EvaluationsService {
 
     public CResponse<?> getAll() {
         try {
-            List<Evaluations> evaluations = evaluationsRepository.findAll();
+            List<Evaluations> evaluations = evaluationsRepository.findAllWithLessonModuleAndCourse();
             return CResponse.success(evaluations, "Les evaluations");
         } catch (Exception e) {
             return CResponse.error("Erreur de récupération");
