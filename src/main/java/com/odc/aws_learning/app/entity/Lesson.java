@@ -6,7 +6,7 @@ import com.odc.aws_learning.auth.base.entity.BaseEntity;
 import javax.persistence.*;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonManagedReference; // Added
-import com.fasterxml.jackson.annotation.JsonBackReference; // Added
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // Added for Module
 import java.util.ArrayList; // Added for default list initialization
 import java.util.List;
 
@@ -27,7 +27,7 @@ public class Lesson extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "module_id", nullable = false)
-    @JsonBackReference // Added (corresponds to Module.lessons @JsonManagedReference)
+    @JsonIgnoreProperties({"lessons"}) // Permet la sérialisation du module sans boucle infinie
     private Module module;
 
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)

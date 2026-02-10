@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonManagedReference; // Added
-import com.fasterxml.jackson.annotation.JsonBackReference; // Added
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // Added for Courses
 
 
 @Entity
@@ -26,7 +26,7 @@ public class Module extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_id", nullable = false)
-    @JsonBackReference // Added (corresponds to Courses.modules @JsonManagedReference)
+    @JsonIgnoreProperties({"modules"}) // Permet la sérialisation du cours sans boucle infinie
     private Courses course;
 
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
