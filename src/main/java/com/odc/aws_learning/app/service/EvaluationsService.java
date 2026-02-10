@@ -216,8 +216,14 @@ public class EvaluationsService {
                 attempt.setStatus(EvaluationAttempt.AttemptStatus.PENDING);
                 // Le score reste null pour l'instant
             } else if (evaluation.getType() == Evaluations.EvaluationType.TP) {
-                // TP: en attente de correction par l'instructeur
-                attempt.setSubmittedFileUrl(request.getSubmittedFileUrl());
+                // TP: en attente de correction (fichier et/ou texte selon instructions de l'instructeur)
+                boolean hasFile = request.getSubmittedFileUrl() != null && !request.getSubmittedFileUrl().isBlank();
+                boolean hasText = request.getSubmittedText() != null && !request.getSubmittedText().isBlank();
+                if (!hasFile && !hasText) {
+                    return CResponse.error("Veuillez déposer un fichier ou saisir votre réponse en texte.");
+                }
+                if (hasFile) attempt.setSubmittedFileUrl(request.getSubmittedFileUrl());
+                if (hasText) attempt.setSubmittedText(request.getSubmittedText());
                 attempt.setStatus(EvaluationAttempt.AttemptStatus.PENDING);
             }
             

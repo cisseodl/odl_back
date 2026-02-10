@@ -37,6 +37,10 @@ public class EvaluationAttempt extends BaseEntity {
     
     @Column(nullable = true, length = 1000)
     private String submittedFileUrl; // URL du fichier soumis (pour les TPs)
+
+    @Lob
+    @Column(name = "submitted_text", nullable = true)
+    private String submittedText; // Réponse texte soumise (pour les TPs)
     
     @ManyToOne
     @JoinColumn(name = "corrected_by", nullable = true)
@@ -79,6 +83,10 @@ public class EvaluationAttempt extends BaseEntity {
     public String getSubmittedFileUrl() {
         return submittedFileUrl;
     }
+
+    public String getSubmittedText() {
+        return submittedText;
+    }
     
     public User getCorrectedBy() {
         return correctedBy;
@@ -119,6 +127,10 @@ public class EvaluationAttempt extends BaseEntity {
     
     public void setSubmittedFileUrl(String submittedFileUrl) {
         this.submittedFileUrl = submittedFileUrl;
+    }
+
+    public void setSubmittedText(String submittedText) {
+        this.submittedText = submittedText;
     }
     
     public void setCorrectedBy(User correctedBy) {

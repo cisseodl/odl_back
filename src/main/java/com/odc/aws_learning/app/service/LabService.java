@@ -415,6 +415,48 @@ public class LabService {
     }
     
     /**
+     * Soumet un rapport de lab sans exiger une session RUNNING (pour apprenants qui rendent fichier ou texte).
+     * Crée une session SUBMITTED ou met à jour la session existante pour ce user+lab.
+     */
+    @Transactional
+    public CResponse<LabSession> submitLabReport(Long labId, String reportUrl, User user) {
+        try {
+            Optional<LabDefinition> labOpt = labDefinitionRepository.findById(labId);
+            if (labOpt.isEmpty()) {
+                return CResponse.error("Lab non trouvé avec l'ID: " + labId);
+            }
+            LabDefinition labDefinition = labOpt.get();
+            List<LabSession> existing = labSessionRepository.findByUserIdAndLabDefinitionId(user.getId(), labId);
+            Optional<LabSession> submittedSession = existing.stream()
+                    .filter(s -> s.getStatus() == LabSessionStatus.SUBMITTED)
+                    .findFirst();
+            LabSession session;
+            if (submittedSession.isPresent()) {
+                session = submittedSession.get();
+                if (reportUrl != null && !reportUrl.isBlank()) {
+                    session.setReportUrl(reportUrl);
+                }
+                session = labSessionRepository.save(session);
+                return CResponse.success(session, "Rapport mis à jour avec succès");
+            }
+            session = new LabSession();
+            session.setUser(user);
+            session.setLabDefinition(labDefinition);
+            session.setStatus(LabSessionStatus.SUBMITTED);
+            session.setReportUrl(reportUrl);
+            LocalDateTime now = LocalDateTime.now();
+            session.setStartTime(now);
+            session.setEndTime(now);
+            session = labSessionRepository.save(session);
+            log.info("Rapport de lab soumis - Lab ID: {}, User: {}", labId, user.getEmail());
+            return CResponse.success(session, "Rapport de lab soumis avec succès");
+        } catch (Exception e) {
+            log.error("Erreur lors de la soumission du rapport de lab: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la soumission: " + e.getMessage());
+        }
+    }
+
+    /**
      * Récupère toutes les sessions d'un utilisateur.
      * @param userId ID de l'utilisateur
      * @return Liste des sessions de l'utilisateur

@@ -7,6 +7,7 @@ import java.util.Map;
 public class EvaluationSubmissionRequest {
     private Long evaluationId;
     private String submittedFileUrl; // Pour les TPs (optionnel)
+    private String submittedText;   // Pour les TPs : réponse texte (optionnel)
     private Map<Long, Long> answers; // Pour les QUIZ: questionId -> responseId
     private Map<Long, String> textAnswers; // Pour les QUIZ avec réponses libres: questionId -> réponse texte
 }

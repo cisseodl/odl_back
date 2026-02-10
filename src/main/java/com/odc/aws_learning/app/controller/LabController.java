@@ -182,6 +182,25 @@ public class LabController {
     }
     
     /**
+     * Soumet un rapport de lab sans session RUNNING (fichier ou texte selon instructions instructeur).
+     * POST /api/labs/submit-report/{labId}
+     * Body : { "reportUrl": "https://..." } (URL après upload du fichier ou d'un .txt généré depuis le texte)
+     */
+    @PostMapping("/submit-report/{labId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
+    public ResponseEntity<CResponse<LabSession>> submitLabReport(
+            @PathVariable Long labId,
+            @RequestBody(required = false) SubmitLabRequest request) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.ok(CResponse.error("Utilisateur non authentifié"));
+        }
+        String reportUrl = (request != null) ? request.getReportUrl() : null;
+        CResponse<LabSession> response = labService.submitLabReport(labId, reportUrl, currentUser);
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
      * Récupère toutes les sessions de l'utilisateur connecté.
      * GET /api/labs/my-sessions
      * Accessible à tous les utilisateurs authentifiés (USER, LEARNER, ADMIN, INSTRUCTOR)
