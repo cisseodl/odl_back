@@ -250,11 +250,18 @@ public class ApprenantService {
                 return CResponse.error("Accès refusé : réservé aux instructeurs.");
             }
             Long instructorId = user.getInstructor().getId();
+            System.out.println("[ApprenantService] Recherche des apprenants pour l'instructeur ID: " + instructorId);
             List<Long> learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorId(instructorId);
+            System.out.println("[ApprenantService] Nombre de learnerIds trouvés: " + (learnerIds != null ? learnerIds.size() : 0));
+            if (learnerIds != null && !learnerIds.isEmpty()) {
+                System.out.println("[ApprenantService] IDs des apprenants: " + learnerIds);
+            }
             if (learnerIds == null || learnerIds.isEmpty()) {
+                System.out.println("[ApprenantService] Aucun apprenant trouvé pour l'instructeur ID: " + instructorId);
                 return CResponse.success(Collections.emptyList(), "Aucun apprenant inscrit à vos cours.");
             }
             List<Apprenant> apprenants = apprenantRepository.findByUser_IdInWithUserAndCohorte(learnerIds);
+            System.out.println("[ApprenantService] Nombre d'apprenants récupérés depuis le repository: " + (apprenants != null ? apprenants.size() : 0));
             List<ApprenantWithUserDto> dtos = apprenants.stream()
                     .map(a -> {
                         try {
