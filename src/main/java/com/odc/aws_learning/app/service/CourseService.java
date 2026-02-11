@@ -787,6 +787,7 @@ public class CourseService {
     }
 
     // NOUVEAU: Inscrit un utilisateur à un cours avec attentes
+    @Transactional(noRollbackFor = {Exception.class})
     public CResponse<?> enrollUserInCourse(User user, Long courseId, String expectations) {
         try {
             // Vérifier que les attentes sont fournies
@@ -821,12 +822,20 @@ public class CourseService {
             detailsCourse.setCourse(course);
             detailsCourse.setLearner(user);
             detailsCourse.setActivate(true);
+            detailsCourse.setCourseStatut(com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
             detailsCourse = detailsCourseRepo.save(detailsCourse);
 
             // Enregistrer les attentes
-            com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectationsEntity = 
-                new com.odc.aws_learning.app.entity.CourseEnrollmentExpectations(detailsCourse, expectations);
-            courseEnrollmentExpectationsRepository.save(expectationsEntity);
+            try {
+                com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectationsEntity = 
+                    new com.odc.aws_learning.app.entity.CourseEnrollmentExpectations(detailsCourse, expectations);
+                courseEnrollmentExpectationsRepository.save(expectationsEntity);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de l'enregistrement des attentes: " + e.getMessage());
+                e.printStackTrace();
+                // Ne pas faire échouer l'inscription si l'enregistrement des attentes échoue
+                // L'inscription est déjà créée, on continue
+            }
 
             // Envoyer une notification au formateur du cours
             if (course.getInstructor() != null) {
@@ -851,6 +860,8 @@ public class CourseService {
 
             return CResponse.success(detailsCourse, "Inscription au cours réussie");
         } catch (Exception e) {
+            System.err.println("Erreur lors de l'inscription au cours: " + e.getMessage());
+            e.printStackTrace();
             return CResponse.error("Erreur lors de l'inscription: " + e.getMessage());
         }
     }
