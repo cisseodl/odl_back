@@ -836,20 +836,15 @@ public class CourseService {
             courseEnrollmentExpectationsRepository.save(expectationsEntity);
             courseEnrollmentExpectationsRepository.flush();
 
-            // Envoyer une notification au formateur du cours
+            // Retourner le succès AVANT d'envoyer la notification pour éviter que l'erreur de notification
+            // ne marque la transaction comme rollback-only
+            CResponse<?> successResponse = CResponse.success(detailsCourse, "Inscription au cours réussie");
+            
+            // Envoyer une notification au formateur du cours dans une transaction séparée (après le commit)
+            // Cela évite que l'erreur de notification ne fasse échouer l'inscription
             if (course.getInstructor() != null) {
                 try {
-                    String learnerName = user.getFullName() != null ? user.getFullName() : user.getEmail();
-                    String courseTitle = course.getTitle() != null ? course.getTitle() : "le cours";
-                    String notificationMessage = learnerName + " s'est inscrit à votre cours: " + courseTitle;
-                    String notificationLink = "/instructor/courses/" + course.getId();
-                    
-                    notificationService.createNotification(
-                        course.getInstructor().getId(),
-                        notificationMessage,
-                        "enrollment",
-                        notificationLink
-                    );
+                    sendNotificationAsync(course.getInstructor().getId(), user, course);
                 } catch (Exception e) {
                     // Ne pas faire échouer l'inscription si la notification échoue
                     System.err.println("Erreur lors de la création de la notification pour le formateur: " + e.getMessage());
@@ -857,11 +852,36 @@ public class CourseService {
                 }
             }
 
-            return CResponse.success(detailsCourse, "Inscription au cours réussie");
+            return successResponse;
         } catch (Exception e) {
             System.err.println("Erreur lors de l'inscription au cours: " + e.getMessage());
             e.printStackTrace();
             return CResponse.error("Erreur lors de l'inscription: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Envoyer une notification de manière asynchrone dans une transaction séparée
+     * pour éviter que l'erreur de notification ne fasse échouer l'inscription
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private void sendNotificationAsync(Long instructorId, User learner, Courses course) {
+        try {
+            String learnerName = learner.getFullName() != null ? learner.getFullName() : learner.getEmail();
+            String courseTitle = course.getTitle() != null ? course.getTitle() : "le cours";
+            String notificationMessage = learnerName + " s'est inscrit à votre cours: " + courseTitle;
+            String notificationLink = "/instructor/courses/" + course.getId();
+            
+            notificationService.createNotification(
+                instructorId,
+                notificationMessage,
+                "enrollment",
+                notificationLink
+            );
+        } catch (Exception e) {
+            // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
+            System.err.println("Erreur lors de l'envoi asynchrone de la notification: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
