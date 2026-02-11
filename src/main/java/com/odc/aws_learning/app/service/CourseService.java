@@ -787,7 +787,7 @@ public class CourseService {
     }
 
     // NOUVEAU: Inscrit un utilisateur à un cours avec attentes
-    @Transactional(noRollbackFor = {Exception.class})
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> enrollUserInCourse(User user, Long courseId, String expectations) {
         try {
             // Vérifier que les attentes sont fournies
@@ -823,19 +823,18 @@ public class CourseService {
             detailsCourse.setLearner(user);
             detailsCourse.setActivate(true);
             detailsCourse.setCourseStatut(com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
+            
+            // Sauvegarder l'inscription
             detailsCourse = detailsCourseRepo.save(detailsCourse);
+            
+            // S'assurer que l'inscription est bien flushée avant de créer les attentes
+            detailsCourseRepo.flush();
 
-            // Enregistrer les attentes
-            try {
-                com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectationsEntity = 
-                    new com.odc.aws_learning.app.entity.CourseEnrollmentExpectations(detailsCourse, expectations);
-                courseEnrollmentExpectationsRepository.save(expectationsEntity);
-            } catch (Exception e) {
-                System.err.println("Erreur lors de l'enregistrement des attentes: " + e.getMessage());
-                e.printStackTrace();
-                // Ne pas faire échouer l'inscription si l'enregistrement des attentes échoue
-                // L'inscription est déjà créée, on continue
-            }
+            // Enregistrer les attentes dans la même transaction
+            com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectationsEntity = 
+                new com.odc.aws_learning.app.entity.CourseEnrollmentExpectations(detailsCourse, expectations);
+            courseEnrollmentExpectationsRepository.save(expectationsEntity);
+            courseEnrollmentExpectationsRepository.flush();
 
             // Envoyer une notification au formateur du cours
             if (course.getInstructor() != null) {
