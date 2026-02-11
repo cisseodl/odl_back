@@ -41,21 +41,41 @@ public class AwsLearningApplication implements CommandLineRunner {
     }
 
     public static void main(String[] args) {
-		SpringApplication.run(AwsLearningApplication.class, args);
+		logger.info("========================================");
+		logger.info("=== DÉMARRAGE DE L'APPLICATION ===");
+		logger.info("========================================");
+		try {
+			SpringApplication app = new SpringApplication(AwsLearningApplication.class);
+			app.run(args);
+			logger.info("========================================");
+			logger.info("=== APPLICATION DÉMARRÉE AVEC SUCCÈS ===");
+			logger.info("========================================");
+		} catch (Exception e) {
+			logger.error("========================================");
+			logger.error("=== ERREUR LORS DU DÉMARRAGE ===");
+			logger.error("Type: {}", e.getClass().getName());
+			logger.error("Message: {}", e.getMessage());
+			logger.error("========================================", e);
+			throw e;
+		}
 	}
 
 	@Override
 	public void run(String... args) {
+		logger.info("========================================");
+		logger.info("=== EXÉCUTION DU CommandLineRunner ===");
+		logger.info("========================================");
+		
 		// Vérification du service email au démarrage
 		logger.info("========================================");
 		logger.info("=== VÉRIFICATION DU SERVICE EMAIL ===");
 		if (javaMailSender == null) {
-			logger.error("❌❌❌ ATTENTION: JavaMailSender bean est NULL");
-			logger.error("❌ Les emails ne pourront PAS être envoyés.");
-			logger.error("❌ Vérifiez la configuration dans application.properties:");
-			logger.error("   - spring.mail.enabled=true");
-			logger.error("   - spring.mail.username=...");
-			logger.error("   - spring.mail.password=...");
+			logger.warn("⚠️ ATTENTION: JavaMailSender bean est NULL");
+			logger.warn("⚠️ Les emails ne pourront PAS être envoyés.");
+			logger.warn("⚠️ Vérifiez la configuration dans application.properties:");
+			logger.warn("   - spring.mail.enabled=true");
+			logger.warn("   - spring.mail.username=...");
+			logger.warn("   - spring.mail.password=...");
 		} else {
 			logger.info("✅ JavaMailSender bean est disponible");
 			logger.info("✅ Le service d'envoi d'emails est opérationnel");
@@ -97,8 +117,19 @@ public class AwsLearningApplication implements CommandLineRunner {
 			} else {
 				logger.info("✅ Utilisateur admin existe déjà: {}", userOptional.get().getEmail());
 			}
+			
+			logger.info("========================================");
+			logger.info("=== CommandLineRunner TERMINÉ AVEC SUCCÈS ===");
+			logger.info("=== L'APPLICATION EST PRÊTE À RECEVOIR DES REQUÊTES ===");
+			logger.info("========================================");
 		} catch (Exception e) {
-			logger.error("❌ ERREUR lors de la création de l'utilisateur admin: {}", e.getMessage(), e);
+			logger.error("========================================");
+			logger.error("❌ ERREUR lors de la création de l'utilisateur admin");
+			logger.error("Type: {}", e.getClass().getName());
+			logger.error("Message: {}", e.getMessage());
+			logger.error("========================================", e);
+			// Ne pas relancer l'exception pour éviter de faire crasher l'application
+			// L'application peut continuer à fonctionner même si l'admin n'est pas créé
 		}
 	}
 }
