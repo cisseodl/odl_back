@@ -16,7 +16,6 @@ public class SendEmailService {
     private final JavaMailSender javaMailSender;
     private static final String FROM_EMAIL = "cisseodl@gmail.com";
     
-    @Autowired(required = false)
     public SendEmailService(JavaMailSender javaMailSender) {
         this.javaMailSender = javaMailSender;
         
