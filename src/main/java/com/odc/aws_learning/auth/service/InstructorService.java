@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.util.List;
 import java.util.Optional;
@@ -76,21 +77,13 @@ public class InstructorService {
             System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
         }
 
-        // Créer une notification pour l'admin
+        // Retourner le succès AVANT d'envoyer les notifications pour éviter que l'erreur de notification
+        // ne marque la transaction comme rollback-only
+        CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
+        
+        // Créer une notification pour l'admin dans une transaction séparée
         try {
-            // Récupérer tous les admins pour leur envoyer une notification
-            List<com.odc.aws_learning.auth.entities.Admin> admins = adminRepository.findAll();
-            for (com.odc.aws_learning.auth.entities.Admin admin : admins) {
-                User adminUser = admin.getUser();
-                if (adminUser != null && !adminUser.getId().equals(user.getId())) {
-                    notificationService.createNotification(
-                        adminUser.getId(),
-                        "Nouvel instructeur créé: " + (user.getFullName() != null ? user.getFullName() : user.getEmail()),
-                        "registration",
-                        "/admin/users/instructeurs"
-                    );
-                }
-            }
+            sendAdminNotificationsAsync(user);
         } catch (Exception e) {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
@@ -140,7 +133,7 @@ public class InstructorService {
             e.printStackTrace();
         }
 
-        return CResponse.success(savedInstructor, "Instructeur créé avec succès.");
+        return successResponse;
     }
 
     @Transactional
@@ -181,21 +174,13 @@ public class InstructorService {
             System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
         }
 
-        // Créer une notification pour l'admin
+        // Retourner le succès AVANT d'envoyer les notifications pour éviter que l'erreur de notification
+        // ne marque la transaction comme rollback-only
+        CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
+        
+        // Créer une notification pour l'admin dans une transaction séparée
         try {
-            // Récupérer tous les admins pour leur envoyer une notification
-            List<com.odc.aws_learning.auth.entities.Admin> admins = adminRepository.findAll();
-            for (com.odc.aws_learning.auth.entities.Admin admin : admins) {
-                User adminUser = admin.getUser();
-                if (adminUser != null && !adminUser.getId().equals(user.getId())) {
-                    notificationService.createNotification(
-                        adminUser.getId(),
-                        "Nouvel instructeur créé: " + (user.getFullName() != null ? user.getFullName() : user.getEmail()),
-                        "registration",
-                        "/admin/users/instructeurs"
-                    );
-                }
-            }
+            sendAdminNotificationsAsync(user);
         } catch (Exception e) {
             System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
         }
@@ -235,7 +220,34 @@ public class InstructorService {
             e.printStackTrace();
         }
 
-        return CResponse.success(savedInstructor, "Instructeur créé avec succès.");
+        return successResponse;
+    }
+
+    /**
+     * Envoyer des notifications aux admins dans une transaction séparée
+     * pour éviter que l'erreur de notification ne fasse échouer la création de l'instructeur
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private void sendAdminNotificationsAsync(User user) {
+        try {
+            // Récupérer tous les admins pour leur envoyer une notification
+            List<com.odc.aws_learning.auth.entities.Admin> admins = adminRepository.findAll();
+            for (com.odc.aws_learning.auth.entities.Admin admin : admins) {
+                User adminUser = admin.getUser();
+                if (adminUser != null && !adminUser.getId().equals(user.getId())) {
+                    notificationService.createNotification(
+                        adminUser.getId(),
+                        "Nouvel instructeur créé: " + (user.getFullName() != null ? user.getFullName() : user.getEmail()),
+                        "registration",
+                        "/admin/users/instructeurs"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
+            System.err.println("Erreur lors de l'envoi asynchrone des notifications aux admins: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public CResponse<?> getAllInstructors() {
