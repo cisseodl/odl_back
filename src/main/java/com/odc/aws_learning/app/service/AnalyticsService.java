@@ -347,4 +347,59 @@ public class AnalyticsService {
         }).collect(Collectors.toList());
         return CResponse.success(coursePerformance, "Course performance for instructor retrieved successfully.");
     }
+
+    /**
+     * Retrieves course performance data by month for an instructor.
+     * Returns ratings grouped by course and month.
+     * @param instructorId The ID of the instructor.
+     * @return CResponse containing course performance data by month.
+     */
+    public CResponse<?> getCoursePerformanceByMonthForInstructor(Long instructorId) {
+        try {
+            // Récupérer les cours de l'instructeur
+            List<Courses> instructorCourses = coursesRepository.findByInstructor_Id(instructorId);
+            
+            // Calculer les 12 derniers mois
+            java.time.LocalDate now = java.time.LocalDate.now();
+            List<Map<String, Object>> monthlyData = new java.util.ArrayList<>();
+            
+            // Pour chaque mois des 12 derniers mois
+            for (int i = 11; i >= 0; i--) {
+                java.time.LocalDate monthStart = now.minusMonths(i).withDayOfMonth(1);
+                java.time.LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+                java.time.LocalDateTime monthStartDateTime = monthStart.atStartOfDay();
+                java.time.LocalDateTime monthEndDateTime = monthEnd.atTime(23, 59, 59);
+                
+                Map<String, Object> monthData = new HashMap<>();
+                String monthLabel = monthStart.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy", java.util.Locale.FRENCH));
+                monthData.put("month", monthLabel);
+                monthData.put("monthKey", monthStart.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+                
+                // Pour chaque cours, calculer la note moyenne du mois
+                Map<String, Double> courseRatings = new HashMap<>();
+                for (Courses course : instructorCourses) {
+                    Double avgRating = reviewRepository.findAverageRatingByCourseIdAndCreatedAtBetween(
+                        course.getId(), 
+                        monthStartDateTime, 
+                        monthEndDateTime
+                    );
+                    if (avgRating != null && avgRating > 0) {
+                        courseRatings.put(course.getTitle(), Math.round(avgRating * 100.0) / 100.0);
+                    }
+                }
+                
+                // Ajouter les notes de chaque cours au mois
+                for (Courses course : instructorCourses) {
+                    monthData.put(course.getTitle(), courseRatings.getOrDefault(course.getTitle(), 0.0));
+                }
+                
+                monthlyData.add(monthData);
+            }
+            
+            return CResponse.success(monthlyData, "Course performance by month for instructor retrieved successfully.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération des performances par mois: " + e.getMessage());
+        }
+    }
 }

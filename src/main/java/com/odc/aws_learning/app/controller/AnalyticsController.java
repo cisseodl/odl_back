@@ -65,4 +65,11 @@ public class AnalyticsController {
             @RequestParam Long instructorId) {
         return analyticsService.getCoursePerformanceForInstructor(instructorId);
     }
+
+    @GetMapping("/instructor-dashboard-performance-by-month")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> getInstructorDashboardPerformanceByMonth(
+            @RequestParam Long instructorId) {
+        return analyticsService.getCoursePerformanceByMonthForInstructor(instructorId);
+    }
 }
