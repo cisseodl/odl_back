@@ -1,6 +1,8 @@
 package com.odc.aws_learning.app.exception;
 
 import com.odc.aws_learning.auth.base.response.CResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Gère les erreurs de validation (@Valid)
@@ -43,6 +47,8 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getKey() + ": " + e.getValue())
                 .collect(Collectors.joining(", "));
         
+        logger.warn("Erreur de validation: {}", errorMessage);
+        
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(CResponse.error(errorMessage));
@@ -59,6 +65,8 @@ public class GlobalExceptionHandler {
         String errorMessage = ex.getConstraintViolations().stream()
             .map(ConstraintViolation::getMessage)
             .collect(Collectors.joining(", "));
+        
+        logger.error("Violation de contrainte: {}", errorMessage, ex);
         
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
@@ -86,6 +94,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<CResponse<?>> handleRuntimeException(RuntimeException ex) {
+        logger.error("========================================");
+        logger.error("=== RUNTIME EXCEPTION CAPTURÉE ===");
+        logger.error("Type: {}", ex.getClass().getName());
+        logger.error("Message: {}", ex.getMessage());
+        logger.error("Cause: {}", (ex.getCause() != null ? ex.getCause().getMessage() : "N/A"));
+        logger.error("========================================", ex);
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(CResponse.error("Erreur serveur: " + ex.getMessage()));
@@ -99,6 +113,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CResponse<?>> handleGenericException(Exception ex) {
+        logger.error("========================================");
+        logger.error("=== EXCEPTION GÉNÉRIQUE CAPTURÉE ===");
+        logger.error("Type: {}", ex.getClass().getName());
+        logger.error("Message: {}", ex.getMessage());
+        logger.error("Cause: {}", (ex.getCause() != null ? ex.getCause().getMessage() : "N/A"));
+        logger.error("========================================", ex);
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(CResponse.error("Erreur inattendue: " + ex.getMessage()));
