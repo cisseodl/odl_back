@@ -2,7 +2,6 @@ package com.odc.aws_learning.app.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -35,13 +34,40 @@ public class SendEmailService {
 
     /**
      * Vérifie si le service email est configuré et disponible
+     * Vérifie que le bean existe ET qu'il est correctement configuré (pas un bean dummy)
      */
     public boolean isEmailConfigured() {
-        boolean configured = javaMailSender != null;
-        if (!configured) {
+        if (javaMailSender == null) {
             logger.warn("⚠️ isEmailConfigured() retourne FALSE - JavaMailSender est NULL");
+            return false;
         }
-        return configured;
+        
+        // Vérifier que ce n'est pas un bean "dummy" (configuration minimale)
+        if (javaMailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl) {
+            org.springframework.mail.javamail.JavaMailSenderImpl impl = 
+                (org.springframework.mail.javamail.JavaMailSenderImpl) javaMailSender;
+            
+            // Si le host est "localhost" et le username est vide, c'est un bean dummy
+            if ("localhost".equals(impl.getHost()) && 
+                (impl.getUsername() == null || impl.getUsername().trim().isEmpty())) {
+                logger.warn("⚠️ isEmailConfigured() retourne FALSE - Bean JavaMailSender en mode 'dummy' (email désactivé)");
+                return false;
+            }
+            
+            // Vérifier que les credentials sont présents
+            if (impl.getUsername() == null || impl.getUsername().trim().isEmpty()) {
+                logger.warn("⚠️ isEmailConfigured() retourne FALSE - Username email vide");
+                return false;
+            }
+            
+            if (impl.getPassword() == null || impl.getPassword().trim().isEmpty()) {
+                logger.warn("⚠️ isEmailConfigured() retourne FALSE - Password email vide");
+                return false;
+            }
+        }
+        
+        logger.debug("✅ isEmailConfigured() retourne TRUE - Email correctement configuré");
+        return true;
     }
 
     /**
@@ -59,6 +85,18 @@ public class SendEmailService {
             logger.error("   - spring.mail.username=...");
             logger.error("   - spring.mail.password=...");
             throw new IllegalStateException("JavaMailSender bean n'est pas disponible. Vérifiez la configuration email.");
+        }
+        
+        // Vérifier que l'email est réellement configuré (pas un bean dummy)
+        if (!isEmailConfigured()) {
+            logger.error("❌❌❌ ERREUR CRITIQUE: Email non configuré correctement");
+            logger.error("❌ Impossible d'envoyer l'email à: {}", email);
+            logger.error("❌ Le bean JavaMailSender existe mais n'est pas correctement configuré.");
+            logger.error("❌ Vérifiez la configuration dans application.properties:");
+            logger.error("   - spring.mail.enabled=true (doit être 'true')");
+            logger.error("   - spring.mail.username=... (doit être défini)");
+            logger.error("   - spring.mail.password=... (doit être défini)");
+            throw new IllegalStateException("Email non configuré correctement. Vérifiez spring.mail.enabled=true et les credentials.");
         }
         
         if (!StringUtils.hasText(email)) {
