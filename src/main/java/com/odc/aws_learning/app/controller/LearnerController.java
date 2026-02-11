@@ -300,10 +300,10 @@ public class LearnerController {
                 if (enrollment.getCourse() == null) continue;
                 
                 Long courseId = enrollment.getCourse().getId();
-                List<Quiz> courseQuizzes = quizRepository.findByCourseId(courseId);
+                List<Quiz> courseQuizzes = quizRepository.findPlayableByCourseId(courseId);
                 
                 for (Quiz quiz : courseQuizzes) {
-                    if (quiz == null || !quiz.isActivate()) continue;
+                    if (quiz == null) continue;
                     
                     // Vérifier si l'utilisateur a déjà réussi ce quiz
                     Optional<com.odc.aws_learning.app.entity.UserQuizAttempt> bestAttempt = 
@@ -423,10 +423,10 @@ public class LearnerController {
                     nextSteps.add(step);
                 }
                 
-                // Vérifier les quiz non complétés
-                List<Quiz> courseQuizzes = quizRepository.findByCourseId(courseId);
+                // Vérifier les quiz non complétés (uniquement les quiz « jouables » : avec au moins une question ayant des réponses)
+                List<Quiz> courseQuizzes = quizRepository.findPlayableByCourseId(courseId);
                 for (Quiz quiz : courseQuizzes) {
-                    if (quiz == null || !quiz.isActivate()) continue;
+                    if (quiz == null) continue;
                     
                     Optional<com.odc.aws_learning.app.entity.UserQuizAttempt> bestAttempt = 
                         userQuizAttemptRepository.findFirstByUserIdAndQuizIdOrderByScoreDesc(

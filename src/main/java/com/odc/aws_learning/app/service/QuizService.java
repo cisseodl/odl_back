@@ -89,11 +89,11 @@ public class QuizService {
     }
     
     /**
-     * Récupère tous les quiz d'un cours
+     * Récupère tous les quiz d'un cours (uniquement les quiz « jouables » : avec au moins une question ayant des réponses).
      */
     public CResponse<List<QuizDTO>> getQuizzesByCourse(Long courseId) {
         try {
-            List<Quiz> quizzes = quizRepository.findByCourseIdAndActivateTrueWithLesson(courseId);
+            List<Quiz> quizzes = quizRepository.findPlayableByCourseIdWithLesson(courseId);
             List<QuizDTO> quizDTOs = quizzes.stream().map(this::convertToDTO).collect(Collectors.toList());
             return CResponse.success(quizDTOs, "Quiz récupérés avec succès");
         } catch (Exception e) {
@@ -101,13 +101,30 @@ public class QuizService {
         }
     }
 
+    @Transactional(readOnly = true)
     public CResponse<QuizDTO> getQuizById(Long quizId) {
         try {
-            Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+            Optional<Quiz> quizOptional = quizRepository.findByIdWithQuestionsAndReponses(quizId);
             if (quizOptional.isEmpty()) {
                 return CResponse.error("Quiz non trouvé avec l'ID: " + quizId);
             }
-            return CResponse.success(convertToDTO(quizOptional.get()), "Quiz récupéré avec succès");
+            QuizDTO dto = convertToDTO(quizOptional.get());
+            // Exclure les questions QCM sans réponses (quiz incomplet)
+            if (dto.getQuestions() != null) {
+                List<QuizDTO.QuestionDTO> valid = dto.getQuestions().stream()
+                    .filter(q -> {
+                        if (q.getType() == com.odc.aws_learning.app.entity.QuizQuestion.QuestionType.QCM) {
+                            return q.getReponses() != null && !q.getReponses().isEmpty();
+                        }
+                        return true; // TEXTE toujours inclus
+                    })
+                    .collect(Collectors.toList());
+                dto.setQuestions(valid);
+            }
+            if (dto.getQuestions() == null || dto.getQuestions().isEmpty()) {
+                return CResponse.error("Ce quiz n'a pas de questions valides (aucune réponse configurée pour les questions à choix multiples).");
+            }
+            return CResponse.success(dto, "Quiz récupéré avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération du quiz: " + e.getMessage());
         }
