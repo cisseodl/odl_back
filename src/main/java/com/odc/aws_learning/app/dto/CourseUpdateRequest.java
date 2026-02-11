@@ -1,5 +1,6 @@
 package com.odc.aws_learning.app.dto;
 
+import com.odc.aws_learning.app.constante.CertificationMode;
 import com.odc.aws_learning.app.constante.CourseLevel;
 
 import javax.validation.constraints.NotBlank;
@@ -34,6 +35,7 @@ public class CourseUpdateRequest {
     private Boolean bestseller;
     private List<ModuleUpdateRequest> modules;
     private com.odc.aws_learning.app.constante.CourseStatus status;
+    private CertificationMode certificationMode;
 
     public CourseUpdateRequest() {
     }
@@ -61,6 +63,14 @@ public class CourseUpdateRequest {
 
     public void setStatus(com.odc.aws_learning.app.constante.CourseStatus status) {
         this.status = status;
+    }
+
+    public CertificationMode getCertificationMode() {
+        return certificationMode;
+    }
+
+    public void setCertificationMode(CertificationMode certificationMode) {
+        this.certificationMode = certificationMode;
     }
 
     public List<ModuleUpdateRequest> getModules() {

@@ -29,8 +29,10 @@ import com.odc.aws_learning.app.repository.ReviewRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.app.repository.CertificateRepository; // Added
 import com.odc.aws_learning.app.repository.CourseEnrollmentExpectationsRepository;
+import com.odc.aws_learning.app.service.CertificateService;
 import com.odc.aws_learning.app.service.NotificationService;
 import com.odc.aws_learning.app.service.SendEmailService;
+import com.odc.aws_learning.app.constante.CertificationMode;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -68,11 +70,12 @@ public class CourseService {
     private final ModuleRepository moduleRepository;
     private final LessonRepository lessonRepository;
     private final CertificateRepository certificateRepository; // Injected
+    private final CertificateService certificateService;
     private final CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository;
     private final NotificationService notificationService;
     private final SendEmailService sendEmailService;
 
-    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, SendEmailService sendEmailService) {
+    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CertificateService certificateService, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, SendEmailService sendEmailService) {
         this.coursesRepository = coursesRepository;
         this.courseMapper = courseMapper;
         this.instructorMapper = instructorMapper;
@@ -86,6 +89,7 @@ public class CourseService {
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
         this.certificateRepository = certificateRepository;
+        this.certificateService = certificateService;
         this.courseEnrollmentExpectationsRepository = courseEnrollmentExpectationsRepository;
         this.notificationService = notificationService;
         this.sendEmailService = sendEmailService;
@@ -559,6 +563,9 @@ public class CourseService {
                 existingCourse.setStatus(request.getStatus());
             }
         }
+        if (request.getCertificationMode() != null) {
+            existingCourse.setCertificationMode(request.getCertificationMode());
+        }
 
         User instructor = userRepository.findById(request.getInstructorId())
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
@@ -1018,6 +1025,55 @@ public class CourseService {
             return CResponse.success(null, "Désinscription du cours réussie");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la désinscription: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Attribue le certificat à un apprenant après validation des labs par l'instructeur (mode BY_LABS).
+     * L'instructeur du cours (ou un admin) peut appeler cette méthode. Génère le certificat et envoie l'email de félicitations.
+     */
+    @Transactional
+    public CResponse<?> approveCertificateByLabs(Long courseId, Long learnerId, User instructorOrAdmin) {
+        try {
+            Optional<Courses> courseOpt = coursesRepository.findById(courseId);
+            if (courseOpt.isEmpty()) {
+                return CResponse.error("Cours non trouvé");
+            }
+            Courses course = courseOpt.get();
+            boolean isAdmin = instructorOrAdmin.getAdmin() != null;
+            boolean isInstructorOfCourse = course.getInstructor() != null && course.getInstructor().getId().equals(instructorOrAdmin.getId());
+            if (!isAdmin && !isInstructorOfCourse) {
+                return CResponse.error("Vous n'êtes pas autorisé à attribuer le certificat pour ce cours");
+            }
+            Optional<User> learnerOpt = userRepository.findById(learnerId);
+            if (learnerOpt.isEmpty()) {
+                return CResponse.error("Apprenant non trouvé");
+            }
+            User learner = learnerOpt.get();
+            Optional<DetailsCourse> enrollmentOpt = detailsCourseRepo.findByCourseIdAndLearnerId(courseId, learnerId);
+            if (enrollmentOpt.isEmpty()) {
+                return CResponse.error("L'apprenant n'est pas inscrit à ce cours");
+            }
+            if (certificateRepository.existsByUser_IdAndCourse_Id(learnerId, courseId)) {
+                return CResponse.error("Cet apprenant possède déjà un certificat pour ce cours");
+            }
+            CResponse<com.odc.aws_learning.app.entity.Certificate> certResponse = certificateService.generateCertificateForLabsCompletion(learner, course);
+            if (certResponse.isFailed()) {
+                return CResponse.error(certResponse.getMessage());
+            }
+            try {
+                sendEmailService.sendCertificateCongratulationsByLabs(
+                    learner.getEmail(),
+                    learner.getFullName() != null ? learner.getFullName() : learner.getEmail(),
+                    course.getTitle()
+                );
+            } catch (Exception e) {
+                // Ne pas faire échouer la requête si l'email échoue
+                org.slf4j.LoggerFactory.getLogger(CourseService.class).warn("Envoi email félicitations certificat échoué: {}", e.getMessage());
+            }
+            return CResponse.success(certResponse.getData(), "Certificat attribué avec succès. Un email de félicitations a été envoyé à l'apprenant.");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de l'attribution du certificat: " + e.getMessage());
         }
     }
 }

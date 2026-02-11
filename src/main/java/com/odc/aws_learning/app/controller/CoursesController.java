@@ -334,6 +334,24 @@ public class CoursesController {
     }
 
     /**
+     * Attribuer le certificat à un apprenant après validation des labs (mode certification BY_LABS).
+     * POST /courses/{courseId}/learners/{learnerId}/approve-certificate
+     * Accessible aux instructeurs du cours et aux admins.
+     */
+    @PostMapping("/{courseId}/learners/{learnerId}/approve-certificate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public ResponseEntity<CResponse<?>> approveCertificateByLabs(
+            @PathVariable Long courseId,
+            @PathVariable Long learnerId) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.ok(CResponse.error("Utilisateur non authentifié"));
+        }
+        CResponse<?> response = courseService.approveCertificateByLabs(courseId, learnerId, currentUser);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Récupère l'utilisateur actuellement authentifié.
      * Supporte UserDetails et String (email) comme principal (JWT).
      * Sans cela, les apprenants connectés via JWT ont currentUser=null et ne voient pas les modules des cours.

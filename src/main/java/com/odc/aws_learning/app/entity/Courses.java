@@ -1,5 +1,6 @@
 package com.odc.aws_learning.app.entity;
 
+import com.odc.aws_learning.app.constante.CertificationMode;
 import com.odc.aws_learning.app.constante.CourseLevel;
 import com.odc.aws_learning.auth.base.entity.BaseEntity;
 import com.odc.aws_learning.auth.entities.User;
@@ -82,6 +83,11 @@ public class Courses extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private CourseStatus status = CourseStatus.BROUILLON;
+
+    /** Mode de certification : examen (70 %) ou validation des labs par l'instructeur. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "certification_mode")
+    private CertificationMode certificationMode = CertificationMode.BY_EXAM;
 
     @Lob
     private String rejectionReason;
@@ -181,6 +187,10 @@ public class Courses extends BaseEntity {
         return status;
     }
 
+    public CertificationMode getCertificationMode() {
+        return certificationMode != null ? certificationMode : CertificationMode.BY_EXAM;
+    }
+
     public String getRejectionReason() {
         return rejectionReason;
     }
@@ -254,6 +264,10 @@ public class Courses extends BaseEntity {
         this.status = status;
     }
 
+    public void setCertificationMode(CertificationMode certificationMode) {
+        this.certificationMode = certificationMode;
+    }
+
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
     }
@@ -279,12 +293,13 @@ public class Courses extends BaseEntity {
                Objects.equals(quizzes, courses.quizzes) && // Added
                Objects.equals(reviews, courses.reviews) && // Added
                status == courses.status &&
+               certificationMode == courses.certificationMode &&
                Objects.equals(rejectionReason, courses.rejectionReason);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), title, subtitle, description, imagePath, duration, level, language, bestseller, categorie, instructor, modules, detailsCourses, quizzes, reviews, status, rejectionReason); // Added
+        return Objects.hash(super.hashCode(), title, subtitle, description, imagePath, duration, level, language, bestseller, categorie, instructor, modules, detailsCourses, quizzes, reviews, status, certificationMode, rejectionReason);
     }
 
     @Override
@@ -307,6 +322,7 @@ public class Courses extends BaseEntity {
                ", quizzes=" + (quizzes != null ? quizzes.size() : "null") +
                ", reviews=" + (reviews != null ? reviews.size() : "null") +
                ", status=" + status +
+               ", certificationMode=" + certificationMode +
                ", rejectionReason='" + rejectionReason + '\'' +
                ", id=" + id +
                '}';

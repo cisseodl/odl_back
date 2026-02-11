@@ -24,4 +24,6 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     
     @Query("SELECT COUNT(c) FROM Certificate c WHERE c.course.instructor.id = :instructorId")
     long countByCourse_Instructor_Id(@Param("instructorId") Long instructorId);
+
+    boolean existsByUser_IdAndCourse_Id(Long userId, Long courseId);
 }

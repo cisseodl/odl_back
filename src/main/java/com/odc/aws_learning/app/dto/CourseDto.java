@@ -1,5 +1,6 @@
 package com.odc.aws_learning.app.dto;
 
+import com.odc.aws_learning.app.constante.CertificationMode;
 import com.odc.aws_learning.app.constante.CourseLevel;
 
 import java.util.List;
@@ -26,12 +27,13 @@ public class CourseDto {
     private List<ModuleDto> curriculum;
     private long enrolledCount;
     private com.odc.aws_learning.app.constante.CourseStatus status;
+    private CertificationMode certificationMode;
     private String rejectionReason;
 
     public CourseDto() {
     }
 
-    public CourseDto(Long id, String title, String subtitle, String description, String imageUrl, InstructorDto instructor, String category, CourseLevel level, double rating, int reviewCount, String duration, String language, String lastUpdated, boolean bestseller, Set<String> objectives, Set<String> features, List<ModuleDto> curriculum, long enrolledCount, com.odc.aws_learning.app.constante.CourseStatus status, String rejectionReason) {
+    public CourseDto(Long id, String title, String subtitle, String description, String imageUrl, InstructorDto instructor, String category, CourseLevel level, double rating, int reviewCount, String duration, String language, String lastUpdated, boolean bestseller, Set<String> objectives, Set<String> features, List<ModuleDto> curriculum, long enrolledCount, com.odc.aws_learning.app.constante.CourseStatus status, CertificationMode certificationMode, String rejectionReason) {
         this.id = id;
         this.title = title;
         this.subtitle = subtitle;
@@ -51,6 +53,7 @@ public class CourseDto {
         this.curriculum = curriculum;
         this.enrolledCount = enrolledCount;
         this.status = status;
+        this.certificationMode = certificationMode;
         this.rejectionReason = rejectionReason;
     }
 
@@ -68,6 +71,14 @@ public class CourseDto {
 
     public void setStatus(com.odc.aws_learning.app.constante.CourseStatus status) {
         this.status = status;
+    }
+
+    public CertificationMode getCertificationMode() {
+        return certificationMode;
+    }
+
+    public void setCertificationMode(CertificationMode certificationMode) {
+        this.certificationMode = certificationMode;
     }
 
     public Long getId() {
@@ -238,6 +249,7 @@ public class CourseDto {
         private List<ModuleDto> curriculum;
         private long enrolledCount;
         private com.odc.aws_learning.app.constante.CourseStatus status;
+        private CertificationMode certificationMode;
         private String rejectionReason;
 
         CourseDtoBuilder() {
@@ -338,17 +350,22 @@ public class CourseDto {
             return this;
         }
 
+        public CourseDtoBuilder certificationMode(CertificationMode certificationMode) {
+            this.certificationMode = certificationMode;
+            return this;
+        }
+
         public CourseDtoBuilder rejectionReason(String rejectionReason) {
             this.rejectionReason = rejectionReason;
             return this;
         }
 
         public CourseDto build() {
-            return new CourseDto(id, title, subtitle, description, imageUrl, instructor, category, level, rating, reviewCount, duration, language, lastUpdated, bestseller, objectives, features, curriculum, enrolledCount, status, rejectionReason);
+            return new CourseDto(id, title, subtitle, description, imageUrl, instructor, category, level, rating, reviewCount, duration, language, lastUpdated, bestseller, objectives, features, curriculum, enrolledCount, status, certificationMode, rejectionReason);
         }
 
         public String toString() {
-            return "CourseDto.CourseDtoBuilder(id=" + this.id + ", title=" + this.title + ", subtitle=" + this.subtitle + ", description=" + this.description + ", imageUrl=" + this.imageUrl + ", instructor=" + this.instructor + ", category=" + this.category + ", level=" + this.level + ", rating=" + this.rating + ", reviewCount=" + this.reviewCount + ", duration=" + this.duration + ", language=" + this.language + ", lastUpdated=" + this.lastUpdated + ", bestseller=" + this.bestseller + ", objectives=" + this.objectives + ", features=" + this.features + ", curriculum=" + this.curriculum + ", enrolledCount=" + this.enrolledCount + ", status=" + this.status + ", rejectionReason=" + this.rejectionReason + ")";
+            return "CourseDto.CourseDtoBuilder(id=" + this.id + ", title=" + this.title + ", subtitle=" + this.subtitle + ", description=" + this.description + ", imageUrl=" + this.imageUrl + ", instructor=" + this.instructor + ", category=" + this.category + ", level=" + this.level + ", rating=" + this.rating + ", reviewCount=" + this.reviewCount + ", duration=" + this.duration + ", language=" + this.language + ", lastUpdated=" + this.lastUpdated + ", bestseller=" + this.bestseller + ", objectives=" + this.objectives + ", features=" + this.features + ", curriculum=" + this.curriculum + ", enrolledCount=" + this.enrolledCount + ", status=" + this.status + ", certificationMode=" + this.certificationMode + ", rejectionReason=" + this.rejectionReason + ")";
         }
     }
 }

@@ -311,6 +311,28 @@ public class SendEmailService {
                 "<p style=\"font-size: 12px; color: #999; margin-top: 30px;\">L'équipe Orange Digital Learning</p>\n" +
                 "</div>";
     }
+
+    /**
+     * Envoie un email de félicitations à l'apprenant pour l'obtention du certificat (validation des labs par l'instructeur).
+     */
+    public void sendCertificateCongratulationsByLabs(String email, String fullName, String courseTitle) {
+        String subject = "Félicitations ! Vous avez obtenu votre certificat - " + courseTitle;
+        String message = mailTemplateCertificateCongratulationsByLabs(fullName, courseTitle);
+        sendEmail(email, message, subject);
+    }
+
+    public String mailTemplateCertificateCongratulationsByLabs(String fullName, String courseTitle) {
+        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 20px; text-align: center; font-family: Arial, sans-serif;\">\n" +
+                "  <h1 style=\"color: #FF6600; margin-bottom: 20px;\">Félicitations !</h1>\n" +
+                " <img style=\"height: 100px; margin-bottom: 20px;\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"Orange Digital Learning\">" +
+                "  <div style=\"border-bottom: 1px grey solid; margin: 20px 0;\"></div>\n" +
+                "<p style=\"font-size: 16px; margin: 20px 0;\">Bonjour <strong>" + (fullName != null ? fullName : "Apprenant") + "</strong>,</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Vous avez correctement réalisé tous les labs du cours <strong>" + (courseTitle != null ? courseTitle : "cours") + "</strong>.</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Votre instructeur a validé votre travail. Vous méritez votre certificat !</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0; color: #2e6c80;\"><strong>Votre certificat est disponible dans votre espace profil (onglet Certificats).</strong></p>\n" +
+                "<br><p style=\"font-size: 12px; color: #999; margin-top: 30px;\">L'équipe Orange Digital Learning</p>\n" +
+                "</div>";
+    }
 }
 
 
