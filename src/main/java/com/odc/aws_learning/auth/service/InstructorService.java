@@ -41,50 +41,55 @@ public class InstructorService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> createInstructorAuthenticated(String userEmail, String biography, String specialization) {
-        Optional<User> userOptional = userRepository.findByEmail(userEmail);
-        if (userOptional.isEmpty()) {
-            return CResponse.error("Utilisateur non trouvé avec l'email: " + userEmail);
-        }
-        User user = userOptional.get();
+        try {
+            Optional<User> userOptional = userRepository.findByEmail(userEmail);
+            if (userOptional.isEmpty()) {
+                return CResponse.error("Utilisateur non trouvé avec l'email: " + userEmail);
+            }
+            User user = userOptional.get();
 
-        if (instructorRepository.findByUserId(user.getId()).isPresent()) {
-            return CResponse.error("Cet utilisateur est déjà un instructeur.");
-        }
+            if (instructorRepository.findByUserId(user.getId()).isPresent()) {
+                return CResponse.error("Cet utilisateur est déjà un instructeur.");
+            }
 
-        // Vérifier si l'utilisateur a déjà un mot de passe, sinon lui attribuer le mot de passe par défaut
-        String plainPassword = null;
-        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
-            String defaultPassword = "formateur@odl";
-            plainPassword = defaultPassword;
-            user.setPassword(passwordEncoder.encode(defaultPassword));
+            // Vérifier si l'utilisateur a déjà un mot de passe, sinon lui attribuer le mot de passe par défaut
+            String plainPassword = null;
+            if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+                String defaultPassword = "formateur@odl";
+                plainPassword = defaultPassword;
+                user.setPassword(passwordEncoder.encode(defaultPassword));
+                userRepository.save(user);
+                userRepository.flush(); // S'assurer que le mot de passe est bien persisté
+            }
+
+            Instructor instructor = new Instructor(user);
+            instructor.setBiography(biography);
+            instructor.setSpecialization(specialization);
+            Instructor savedInstructor = instructorRepository.save(instructor);
+            instructorRepository.flush(); // S'assurer que l'instructeur est bien persisté
+            
+            // Link instructor to user for bidirectional consistency
+            user.setInstructor(savedInstructor);
             userRepository.save(user);
-        }
+            userRepository.flush(); // S'assurer que la liaison est bien persistée
 
-        Instructor instructor = new Instructor(user);
-        instructor.setBiography(biography);
-        instructor.setSpecialization(specialization);
-        Instructor savedInstructor = instructorRepository.save(instructor);
-        // Link instructor to user for bidirectional consistency
-        user.setInstructor(savedInstructor);
-        userRepository.save(user);
+            // Retourner le succès AVANT d'envoyer les notifications et logs pour éviter que l'erreur
+            // ne marque la transaction comme rollback-only
+            CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
 
-        // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
-        try {
-            logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
-        }
-
-        // Retourner le succès AVANT d'envoyer les notifications pour éviter que l'erreur de notification
-        // ne marque la transaction comme rollback-only
-        CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
-        
-        // Créer une notification pour l'admin dans une transaction séparée
-        try {
-            sendAdminNotificationsAsync(user);
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
-        }
+            // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
+            try {
+                logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
+            }
+            
+            // Créer une notification pour l'admin dans une transaction séparée
+            try {
+                sendAdminNotificationsAsync(user);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
+            }
 
         // Envoyer un email de bienvenue au formateur de manière asynchrone
         try {
@@ -125,61 +130,71 @@ public class InstructorService {
                         System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
                     }
                 });
-        } catch (Exception e) {
-            // Ne pas faire échouer la création si l'email échoue
-            System.err.println("❌ Erreur lors de la préparation de l'envoi de l'email au formateur: " + e.getMessage());
-            e.printStackTrace();
-        }
+            } catch (Exception e) {
+                // Ne pas faire échouer la création si l'email échoue
+                System.err.println("❌ Erreur lors de la préparation de l'envoi de l'email au formateur: " + e.getMessage());
+                e.printStackTrace();
+            }
 
-        return successResponse;
+            return successResponse;
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création de l'instructeur: " + e.getMessage());
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la création de l'instructeur: " + e.getMessage());
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> createInstructorForUser(Long userId, String biography, String specialization, String password) {
-        Optional<User> userOptional = userRepository.findById(userId);
-        if (userOptional.isEmpty()) {
-            return CResponse.error("Utilisateur non trouvé avec l'ID: " + userId);
-        }
-        User user = userOptional.get();
-
-        if (instructorRepository.findByUserId(user.getId()).isPresent()) {
-            return CResponse.error("Cet utilisateur est déjà un instructeur.");
-        }
-
-        // Mot de passe par défaut si aucun n'est fourni
-        String defaultPassword = "formateur@odl";
-        String passwordToUse = (password != null && !password.trim().isEmpty()) ? password : defaultPassword;
-        String plainPassword = passwordToUse; // Garder le mot de passe en clair pour l'email
-        
-        // Crypter et sauvegarder le mot de passe dans le User
-        user.setPassword(passwordEncoder.encode(passwordToUse));
-        userRepository.save(user);
-
-        Instructor instructor = new Instructor(user);
-        instructor.setBiography(biography);
-        instructor.setSpecialization(specialization);
-        Instructor savedInstructor = instructorRepository.save(instructor);
-        // Link instructor to user for bidirectional consistency
-        user.setInstructor(savedInstructor);
-        userRepository.save(user);
-
-        // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
         try {
-            logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
-        }
+            Optional<User> userOptional = userRepository.findById(userId);
+            if (userOptional.isEmpty()) {
+                return CResponse.error("Utilisateur non trouvé avec l'ID: " + userId);
+            }
+            User user = userOptional.get();
 
-        // Retourner le succès AVANT d'envoyer les notifications pour éviter que l'erreur de notification
-        // ne marque la transaction comme rollback-only
-        CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
-        
-        // Créer une notification pour l'admin dans une transaction séparée
-        try {
-            sendAdminNotificationsAsync(user);
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
-        }
+            if (instructorRepository.findByUserId(user.getId()).isPresent()) {
+                return CResponse.error("Cet utilisateur est déjà un instructeur.");
+            }
+
+            // Mot de passe par défaut si aucun n'est fourni
+            String defaultPassword = "formateur@odl";
+            String passwordToUse = (password != null && !password.trim().isEmpty()) ? password : defaultPassword;
+            String plainPassword = passwordToUse; // Garder le mot de passe en clair pour l'email
+            
+            // Crypter et sauvegarder le mot de passe dans le User
+            user.setPassword(passwordEncoder.encode(passwordToUse));
+            userRepository.save(user);
+            userRepository.flush(); // S'assurer que le mot de passe est bien persisté
+
+            Instructor instructor = new Instructor(user);
+            instructor.setBiography(biography);
+            instructor.setSpecialization(specialization);
+            Instructor savedInstructor = instructorRepository.save(instructor);
+            instructorRepository.flush(); // S'assurer que l'instructeur est bien persisté
+            
+            // Link instructor to user for bidirectional consistency
+            user.setInstructor(savedInstructor);
+            userRepository.save(user);
+            userRepository.flush(); // S'assurer que la liaison est bien persistée
+
+            // Retourner le succès AVANT d'envoyer les notifications et logs pour éviter que l'erreur
+            // ne marque la transaction comme rollback-only
+            CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
+
+            // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
+            try {
+                logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
+            }
+            
+            // Créer une notification pour l'admin dans une transaction séparée
+            try {
+                sendAdminNotificationsAsync(user);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
+            }
 
         // Envoyer un email de bienvenue au formateur de manière asynchrone
         try {
@@ -210,13 +225,18 @@ public class InstructorService {
                         System.out.println("✅ Email de bienvenue envoyé avec succès au formateur: " + user.getEmail());
                     }
                 });
-        } catch (Exception e) {
-            // Ne pas faire échouer la création si l'email échoue
-            System.err.println("❌ Erreur lors de la préparation de l'envoi de l'email au formateur: " + e.getMessage());
-            e.printStackTrace();
-        }
+            } catch (Exception e) {
+                // Ne pas faire échouer la création si l'email échoue
+                System.err.println("❌ Erreur lors de la préparation de l'envoi de l'email au formateur: " + e.getMessage());
+                e.printStackTrace();
+            }
 
-        return successResponse;
+            return successResponse;
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la création de l'instructeur: " + e.getMessage());
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la création de l'instructeur: " + e.getMessage());
+        }
     }
 
     /**
