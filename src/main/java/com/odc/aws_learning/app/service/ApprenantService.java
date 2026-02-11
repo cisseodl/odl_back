@@ -251,8 +251,25 @@ public class ApprenantService {
             }
             Long instructorId = user.getInstructor().getId();
             System.out.println("[ApprenantService] Recherche des apprenants pour l'instructeur ID: " + instructorId);
-            List<Long> learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorId(instructorId);
-            System.out.println("[ApprenantService] Nombre de learnerIds trouvés: " + (learnerIds != null ? learnerIds.size() : 0));
+            
+            // Essayer d'abord avec la requête native directe (plus simple et fiable)
+            List<Long> learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorIdDirect(instructorId);
+            System.out.println("[ApprenantService] Nombre de learnerIds trouvés (requête native directe): " + (learnerIds != null ? learnerIds.size() : 0));
+            
+            // Si la requête native directe ne retourne rien, essayer la requête native avec JOIN instructor
+            if (learnerIds == null || learnerIds.isEmpty()) {
+                System.out.println("[ApprenantService] La requête native directe n'a rien retourné, essai avec la requête native JOIN instructor...");
+                learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorIdNative(instructorId);
+                System.out.println("[ApprenantService] Nombre de learnerIds trouvés (requête native JOIN): " + (learnerIds != null ? learnerIds.size() : 0));
+            }
+            
+            // Si les requêtes natives ne retournent rien, essayer la requête JPQL
+            if (learnerIds == null || learnerIds.isEmpty()) {
+                System.out.println("[ApprenantService] Les requêtes natives n'ont rien retourné, essai avec la requête JPQL...");
+                learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorId(instructorId);
+                System.out.println("[ApprenantService] Nombre de learnerIds trouvés (requête JPQL): " + (learnerIds != null ? learnerIds.size() : 0));
+            }
+            
             if (learnerIds != null && !learnerIds.isEmpty()) {
                 System.out.println("[ApprenantService] IDs des apprenants: " + learnerIds);
             }

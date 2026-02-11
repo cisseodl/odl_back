@@ -31,6 +31,21 @@ public interface DetailsCourseRepo extends JpaRepository<DetailsCourse, Long> {
            "JOIN c.instructor i " +
            "WHERE i.id = :instructorId")
     List<Long> findDistinctLearnerIdsByInstructorId(@Param("instructorId") Long instructorId);
+    
+    /** Version alternative avec requête native pour plus de fiabilité */
+    @Query(value = "SELECT DISTINCT dc.learner_id FROM details_course dc " +
+           "INNER JOIN courses c ON dc.course_id = c.id " +
+           "INNER JOIN instructor i ON c.instructor_id = i.id " +
+           "WHERE i.id = :instructorId AND dc.learner_id IS NOT NULL", 
+           nativeQuery = true)
+    List<Long> findDistinctLearnerIdsByInstructorIdNative(@Param("instructorId") Long instructorId);
+    
+    /** Version avec User au lieu d'Instructor (si instructor_id pointe vers user.id) */
+    @Query(value = "SELECT DISTINCT dc.learner_id FROM details_course dc " +
+           "INNER JOIN courses c ON dc.course_id = c.id " +
+           "WHERE c.instructor_id = :instructorId AND dc.learner_id IS NOT NULL", 
+           nativeQuery = true)
+    List<Long> findDistinctLearnerIdsByInstructorIdDirect(@Param("instructorId") Long instructorId);
 
     @Query("SELECT new com.odc.aws_learning.app.dto.UserCourseCompletionStats(dc.learner.id, COUNT(dc.id)) FROM DetailsCourse dc WHERE dc.completed = true GROUP BY dc.learner.id")
     List<UserCourseCompletionStats> findUserCourseCompletionStats();
