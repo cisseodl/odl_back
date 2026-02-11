@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +74,15 @@ public class EvaluationsService {
     public CResponse<?> getCourseExam(Long courseId, User user) {
         try {
             List<Evaluations> exams = evaluationsRepository.findCourseExamsByCourseId(courseId);
+            // Fallback : si aucune évaluation QUIZ sans leçon, prendre le premier QUIZ du cours (ex. créé avec leçon par erreur)
+            if (exams == null || exams.isEmpty()) {
+                List<Evaluations> byCourse = evaluationsRepository.findByCourseId(courseId);
+                if (byCourse != null) {
+                    exams = byCourse.stream()
+                            .filter(e -> e.getType() == Evaluations.EvaluationType.QUIZ)
+                            .collect(Collectors.toList());
+                }
+            }
             if (exams == null || exams.isEmpty()) {
                 return CResponse.error("Aucun examen disponible pour ce cours");
             }
@@ -128,8 +138,10 @@ public class EvaluationsService {
             evaluation.setInstructor(instructor);
             evaluation.setStatus("ACTIVE");
             
-            // Associer la leçon si lessonId est fourni
-            if (request.getLessonId() != null) {
+            // QUIZ = évaluation de fin de cours (certification) : pas de leçon. TP = TD lié à une leçon.
+            if (request.getType() == Evaluations.EvaluationType.QUIZ) {
+                evaluation.setLesson(null); // Garantir qu'un QUIZ est toujours "examen de fin de cours"
+            } else if (request.getType() == Evaluations.EvaluationType.TP && request.getLessonId() != null) {
                 Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
                 if (lessonOptional.isPresent()) {
                     evaluation.setLesson(lessonOptional.get());
