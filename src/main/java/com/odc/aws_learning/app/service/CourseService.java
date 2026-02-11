@@ -790,34 +790,46 @@ public class CourseService {
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> enrollUserInCourse(User user, Long courseId, String expectations) {
         try {
+            System.out.println("=== DÉBUT INSCRIPTION AU COURS ===");
+            System.out.println("User ID: " + user.getId());
+            System.out.println("Course ID: " + courseId);
+            System.out.println("Expectations: " + (expectations != null ? expectations.substring(0, Math.min(50, expectations.length())) : "null"));
+            
             // Vérifier que les attentes sont fournies
             if (expectations == null || expectations.trim().isEmpty()) {
+                System.err.println("❌ Les attentes sont vides");
                 return CResponse.error("Les attentes sont obligatoires pour s'inscrire au cours");
             }
 
             // Vérifier le nombre de cours en cours
             long activeCourses = detailsCourseRepo.countByLearnerIdAndCourseStatut(user.getId(), com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
+            System.out.println("Nombre de cours actifs: " + activeCourses);
             if (activeCourses >= 3) {
+                System.err.println("❌ Trop de cours actifs: " + activeCourses);
                 return CResponse.error("Vous devez terminer l'un de vos cours en cours avant de vous inscrire à un autre.");
             }
 
             // Vérifier que le cours existe
             Optional<Courses> courseOptional = coursesRepository.findById(courseId);
             if (courseOptional.isEmpty()) {
+                System.err.println("❌ Cours non trouvé: " + courseId);
                 return CResponse.error("Cours non trouvé avec l'ID: " + courseId);
             }
 
             Courses course = courseOptional.get();
+            System.out.println("✅ Cours trouvé: " + course.getTitle());
 
             // Vérifier si l'utilisateur est déjà inscrit
             Optional<com.odc.aws_learning.app.entity.DetailsCourse> existingEnrollment = detailsCourseRepo
                     .findByCourseIdAndLearnerId(courseId, user.getId());
 
             if (existingEnrollment.isPresent()) {
+                System.err.println("❌ Utilisateur déjà inscrit");
                 return CResponse.error("Vous êtes déjà inscrit à ce cours");
             }
 
             // Créer l'inscription
+            System.out.println("Création de DetailsCourse...");
             com.odc.aws_learning.app.entity.DetailsCourse detailsCourse = new com.odc.aws_learning.app.entity.DetailsCourse();
             detailsCourse.setCourse(course);
             detailsCourse.setLearner(user);
@@ -825,36 +837,62 @@ public class CourseService {
             detailsCourse.setCourseStatut(com.odc.aws_learning.app.constante.Enumeration.COURSE_STATUT.Learning);
             
             // Sauvegarder l'inscription
+            System.out.println("Sauvegarde de DetailsCourse...");
             detailsCourse = detailsCourseRepo.save(detailsCourse);
+            System.out.println("DetailsCourse sauvegardé avec ID: " + detailsCourse.getId());
             
             // S'assurer que l'inscription est bien flushée avant de créer les attentes
             detailsCourseRepo.flush();
+            System.out.println("✅ DetailsCourse flushé, ID: " + detailsCourse.getId());
+            
+            // Vérifier que l'ID est bien généré
+            if (detailsCourse.getId() == null) {
+                System.err.println("❌ ERREUR CRITIQUE: DetailsCourse ID est null après flush!");
+                throw new RuntimeException("L'ID de DetailsCourse n'a pas été généré après la sauvegarde");
+            }
 
             // Enregistrer les attentes dans la même transaction
+            System.out.println("Création de CourseEnrollmentExpectations...");
             com.odc.aws_learning.app.entity.CourseEnrollmentExpectations expectationsEntity = 
                 new com.odc.aws_learning.app.entity.CourseEnrollmentExpectations(detailsCourse, expectations);
-            courseEnrollmentExpectationsRepository.save(expectationsEntity);
+            System.out.println("Sauvegarde de CourseEnrollmentExpectations avec detailsCourseId: " + detailsCourse.getId());
+            expectationsEntity = courseEnrollmentExpectationsRepository.save(expectationsEntity);
             courseEnrollmentExpectationsRepository.flush();
+            System.out.println("✅ CourseEnrollmentExpectations sauvegardé avec ID: " + expectationsEntity.getId());
 
             // Retourner le succès AVANT d'envoyer la notification pour éviter que l'erreur de notification
             // ne marque la transaction comme rollback-only
             CResponse<?> successResponse = CResponse.success(detailsCourse, "Inscription au cours réussie");
+            System.out.println("✅ Réponse de succès créée");
             
+            System.out.println("=== FIN INSCRIPTION AU COURS (SUCCÈS) ===");
+            
+            // IMPORTANT: Retourner la réponse AVANT d'envoyer la notification
+            // Cela garantit que la transaction principale est commitée avant l'envoi de la notification
             // Envoyer une notification au formateur du cours dans une transaction séparée (après le commit)
             // Cela évite que l'erreur de notification ne fasse échouer l'inscription
             if (course.getInstructor() != null) {
+                System.out.println("Envoi de notification asynchrone au formateur ID: " + course.getInstructor().getId());
+                // Appeler de manière asynchrone pour ne pas bloquer la transaction
+                // Utiliser un try-catch séparé pour isoler complètement l'erreur
                 try {
                     sendNotificationAsync(course.getInstructor().getId(), user, course);
-                } catch (Exception e) {
+                } catch (Exception notificationError) {
                     // Ne pas faire échouer l'inscription si la notification échoue
-                    System.err.println("Erreur lors de la création de la notification pour le formateur: " + e.getMessage());
-                    e.printStackTrace();
+                    // Cette erreur ne doit PAS affecter la transaction principale
+                    System.err.println("⚠️ Erreur lors de la création de la notification pour le formateur (non bloquante): " + notificationError.getMessage());
+                    notificationError.printStackTrace();
                 }
+            } else {
+                System.out.println("⚠️ Aucun formateur associé au cours");
             }
-
+            
             return successResponse;
         } catch (Exception e) {
-            System.err.println("Erreur lors de l'inscription au cours: " + e.getMessage());
+            System.err.println("❌❌❌ ERREUR LORS DE L'INSCRIPTION AU COURS ❌❌❌");
+            System.err.println("Type d'erreur: " + e.getClass().getName());
+            System.err.println("Message: " + e.getMessage());
+            System.err.println("Cause: " + (e.getCause() != null ? e.getCause().getMessage() : "N/A"));
             e.printStackTrace();
             return CResponse.error("Erreur lors de l'inscription: " + e.getMessage());
         }
@@ -864,24 +902,36 @@ public class CourseService {
      * Envoyer une notification de manière asynchrone dans une transaction séparée
      * pour éviter que l'erreur de notification ne fasse échouer l'inscription
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = {Exception.class})
     private void sendNotificationAsync(Long instructorId, User learner, Courses course) {
         try {
+            System.out.println("[sendNotificationAsync] Début de l'envoi de notification pour instructeur ID: " + instructorId);
             String learnerName = learner.getFullName() != null ? learner.getFullName() : learner.getEmail();
             String courseTitle = course.getTitle() != null ? course.getTitle() : "le cours";
             String notificationMessage = learnerName + " s'est inscrit à votre cours: " + courseTitle;
             String notificationLink = "/instructor/courses/" + course.getId();
             
-            notificationService.createNotification(
+            System.out.println("[sendNotificationAsync] Création de la notification...");
+            CResponse<?> notificationResponse = notificationService.createNotification(
                 instructorId,
                 notificationMessage,
                 "enrollment",
                 notificationLink
             );
+            
+            if (notificationResponse != null && notificationResponse.isSuccess()) {
+                System.out.println("[sendNotificationAsync] ✅ Notification créée avec succès");
+            } else {
+                System.err.println("[sendNotificationAsync] ⚠️ Notification créée mais réponse indique un échec: " + 
+                    (notificationResponse != null ? notificationResponse.getMessage() : "null"));
+            }
         } catch (Exception e) {
             // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
-            System.err.println("Erreur lors de l'envoi asynchrone de la notification: " + e.getMessage());
+            // L'annotation noRollbackFor garantit que cette exception ne marquera pas la transaction comme rollback-only
+            System.err.println("[sendNotificationAsync] ❌ Erreur lors de la création de la notification pour le formateur (asynchrone): " + e.getMessage());
+            System.err.println("[sendNotificationAsync] Type d'erreur: " + e.getClass().getName());
             e.printStackTrace();
+            // Ne pas re-lancer l'exception pour éviter qu'elle affecte la transaction principale
         }
     }
 
