@@ -39,7 +39,7 @@ public class InstructorService {
     @Value("${app.dashboard.url:https://admin.smart-odc.com}")
     private String dashboardUrl;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> createInstructorAuthenticated(String userEmail, String biography, String specialization) {
         Optional<User> userOptional = userRepository.findByEmail(userEmail);
         if (userOptional.isEmpty()) {
@@ -68,11 +68,9 @@ public class InstructorService {
         user.setInstructor(savedInstructor);
         userRepository.save(user);
 
-        // Créer un log d'activité
+        // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
         try {
-            auditService.logActivity(user.getId(), "create", "instructor", 
-                "{\"instructorId\":" + savedInstructor.getId() + ",\"userName\":\"" + 
-                (user.getFullName() != null ? user.getFullName() : user.getEmail()) + "\"}");
+            logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
         } catch (Exception e) {
             System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
         }
@@ -136,7 +134,7 @@ public class InstructorService {
         return successResponse;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> createInstructorForUser(Long userId, String biography, String specialization, String password) {
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isEmpty()) {
@@ -165,11 +163,9 @@ public class InstructorService {
         user.setInstructor(savedInstructor);
         userRepository.save(user);
 
-        // Créer un log d'activité
+        // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
         try {
-            auditService.logActivity(user.getId(), "create", "instructor", 
-                "{\"instructorId\":" + savedInstructor.getId() + ",\"userName\":\"" + 
-                (user.getFullName() != null ? user.getFullName() : user.getEmail()) + "\"}");
+            logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
         } catch (Exception e) {
             System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
         }
@@ -246,6 +242,23 @@ public class InstructorService {
         } catch (Exception e) {
             // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
             System.err.println("Erreur lors de l'envoi asynchrone des notifications aux admins: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Créer un log d'activité dans une transaction séparée
+     * pour éviter que l'erreur de log ne fasse échouer la création de l'instructeur
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private void logActivityAsync(Long userId, Long instructorId, String fullName, String email) {
+        try {
+            auditService.logActivity(userId, "create", "instructor", 
+                "{\"instructorId\":" + instructorId + ",\"userName\":\"" + 
+                (fullName != null ? fullName : email) + "\"}");
+        } catch (Exception e) {
+            // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
+            System.err.println("Erreur lors de l'enregistrement asynchrone du log d'activité: " + e.getMessage());
             e.printStackTrace();
         }
     }
