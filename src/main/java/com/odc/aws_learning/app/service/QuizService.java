@@ -29,11 +29,34 @@ public class QuizService {
     private final LessonRepository lessonRepository;
     
     /**
+     * Vérifie qu'un quiz est « jouable » : chaque question QCM doit avoir au moins une réponse.
+     * Utilisé à la création et à la mise à jour pour éviter d'exposer des quiz incomplets aux apprenants.
+     */
+    private String validateQuizPlayable(QuizDTO quizDTO) {
+        if (quizDTO.getQuestions() == null || quizDTO.getQuestions().isEmpty()) {
+            return "Le quiz doit contenir au moins une question.";
+        }
+        for (int i = 0; i < quizDTO.getQuestions().size(); i++) {
+            QuizDTO.QuestionDTO q = quizDTO.getQuestions().get(i);
+            if (q.getType() == QuizQuestion.QuestionType.QCM) {
+                if (q.getReponses() == null || q.getReponses().isEmpty()) {
+                    return "Chaque question à choix multiples (QCM) doit avoir au moins une réponse. Question " + (i + 1) + " : \"" + (q.getContent() != null ? q.getContent() : "") + "\".";
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Crée un quiz complet avec ses questions et réponses
      */
     @Transactional
     public CResponse<QuizDTO> createQuiz(QuizDTO quizDTO) {
         try {
+            String validationError = validateQuizPlayable(quizDTO);
+            if (validationError != null) {
+                return CResponse.error(validationError);
+            }
             Optional<Courses> courseOptional = coursesRepository.findById(quizDTO.getCourseId());
             if (courseOptional.isEmpty()) {
                 return CResponse.error("Cours non trouvé avec l'ID: " + quizDTO.getCourseId());
@@ -297,6 +320,10 @@ public class QuizService {
     @Transactional
     public CResponse<QuizDTO> updateQuiz(Long quizId, QuizDTO quizDTO) {
         try {
+            String validationError = validateQuizPlayable(quizDTO);
+            if (validationError != null) {
+                return CResponse.error(validationError);
+            }
             Optional<Quiz> quizOptional = quizRepository.findById(quizId);
             if (quizOptional.isEmpty()) {
                 return CResponse.error("Quiz non trouvé avec l'ID: " + quizId);

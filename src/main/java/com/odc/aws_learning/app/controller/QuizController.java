@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -78,8 +79,12 @@ public class QuizController {
 
     @GetMapping("/{quizId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
-    public CResponse<QuizDTO> getQuizById(@PathVariable Long quizId) {
-        return quizService.getQuizById(quizId);
+    public ResponseEntity<CResponse<QuizDTO>> getQuizById(@PathVariable Long quizId) {
+        CResponse<QuizDTO> response = quizService.getQuizById(quizId);
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.status(404).body(response);
     }
     
     /**
