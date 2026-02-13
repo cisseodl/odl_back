@@ -17,6 +17,12 @@ public interface EvaluationsRepository extends JpaRepository<Evaluations, Long> 
      */
     @Query("SELECT e FROM Evaluations e WHERE e.course.id = :courseId AND e.type = 'QUIZ' AND e.lesson IS NULL")
     List<Evaluations> findCourseExamsByCourseId(@Param("courseId") Long courseId);
+
+    /**
+     * Tous les QUIZ du cours (avec ou sans leçon) — pour fallback si aucun "examen sans leçon".
+     */
+    @Query("SELECT e FROM Evaluations e WHERE e.course.id = :courseId AND e.type = 'QUIZ'")
+    List<Evaluations> findQuizByCourseId(@Param("courseId") Long courseId);
     
     /**
      * Récupère toutes les évaluations avec leurs leçons, modules et cours chargés

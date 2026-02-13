@@ -74,13 +74,11 @@ public class EvaluationsService {
     public CResponse<?> getCourseExam(Long courseId, User user) {
         try {
             List<Evaluations> exams = evaluationsRepository.findCourseExamsByCourseId(courseId);
-            // Fallback : si aucune évaluation QUIZ sans leçon, prendre le premier QUIZ du cours (ex. créé avec leçon par erreur)
+            // Fallback : si aucune évaluation QUIZ sans leçon, prendre le premier QUIZ du cours (requête explicite)
             if (exams == null || exams.isEmpty()) {
-                List<Evaluations> byCourse = evaluationsRepository.findByCourseId(courseId);
-                if (byCourse != null) {
-                    exams = byCourse.stream()
-                            .filter(e -> e.getType() == Evaluations.EvaluationType.QUIZ)
-                            .collect(Collectors.toList());
+                exams = evaluationsRepository.findQuizByCourseId(courseId);
+                if (exams == null) {
+                    exams = java.util.Collections.emptyList();
                 }
             }
             if (exams == null || exams.isEmpty()) {
