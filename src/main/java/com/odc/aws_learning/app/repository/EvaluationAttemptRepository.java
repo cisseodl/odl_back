@@ -31,4 +31,7 @@ public interface EvaluationAttemptRepository extends JpaRepository<EvaluationAtt
     
     @Query("SELECT ea FROM EvaluationAttempt ea WHERE ea.evaluation.instructor.id = :instructorId AND ea.status = 'PENDING'")
     List<EvaluationAttempt> findPendingAttemptsByInstructor(@Param("instructorId") Long instructorId);
+    
+    @Query("SELECT ea FROM EvaluationAttempt ea WHERE ea.evaluation.instructor.id = :instructorId AND ea.status IN ('PASSED', 'FAILED', 'CORRECTED') AND ea.correctedBy IS NOT NULL ORDER BY ea.correctedAt DESC")
+    List<EvaluationAttempt> findCorrectedAttemptsByInstructor(@Param("instructorId") Long instructorId);
 }

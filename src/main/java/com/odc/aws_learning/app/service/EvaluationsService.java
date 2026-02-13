@@ -390,6 +390,18 @@ public class EvaluationsService {
             return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
         }
     }
+    
+    /**
+     * Récupérer les évaluations corrigées par un instructeur
+     */
+    public CResponse<?> getCorrectedEvaluationsForInstructor(Long instructorId) {
+        try {
+            List<EvaluationAttempt> corrected = evaluationAttemptRepository.findCorrectedAttemptsByInstructor(instructorId);
+            return CResponse.success(corrected, "Évaluations corrigées récupérées avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
+        }
+    }
 
     /**
      * Soumettre la satisfaction de l'apprenant après avoir soumis l'examen

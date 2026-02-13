@@ -142,6 +142,15 @@ public class EvaluationsController {
     public CResponse<?> getPendingEvaluations(@PathVariable Long instructorId) {
         return evaluationsService.getPendingEvaluationsForInstructor(instructorId);
     }
+    
+    /**
+     * Récupérer les évaluations corrigées par un instructeur
+     */
+    @GetMapping("/instructor/{instructorId}/corrected")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> getCorrectedEvaluations(@PathVariable Long instructorId) {
+        return evaluationsService.getCorrectedEvaluationsForInstructor(instructorId);
+    }
 
     /**
      * Soumettre la satisfaction de l'apprenant après avoir soumis l'examen
