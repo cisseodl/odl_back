@@ -86,7 +86,12 @@ public class EvaluationsService {
             if (exams == null || exams.isEmpty()) {
                 return CResponse.error("Aucun examen disponible pour ce cours");
             }
-            return CResponse.success(exams.get(0), "Examen récupéré avec succès");
+            Evaluations exam = exams.get(0);
+            // Forcer le chargement des relations (éviter LazyInitializationException à la sérialisation JSON)
+            if (exam.getQuestions() != null) {
+                exam.getQuestions().size();
+            }
+            return CResponse.success(exam, "Examen récupéré avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération de l'examen: " + e.getMessage());
         }
