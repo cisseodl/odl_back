@@ -83,17 +83,20 @@ public class EvaluationsController {
     }
 
     /**
-     * Récupère l'examen d'un cours pour l'apprenant authentifié
-     * GET /api/evaluations/course/{courseId}
+     * Récupère l'examen d'un cours pour l'apprenant authentifié.
+     * GET /api/evaluations/course/{courseId} ou /api/evaluations/course/{courseId}?examId=123
+     * Si examId est fourni, retourne cette évaluation (si elle appartient au cours et est un QUIZ).
      */
     @GetMapping("/course/{courseId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT')")
-    public CResponse<?> getCourseExam(@PathVariable Long courseId) {
+    public CResponse<?> getCourseExam(
+            @PathVariable Long courseId,
+            @RequestParam(required = false) Long examId) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             return CResponse.error("Utilisateur non authentifié");
         }
-        return evaluationsService.getCourseExam(courseId, currentUser);
+        return evaluationsService.getCourseExam(courseId, currentUser, examId);
     }
     
     /**

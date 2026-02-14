@@ -92,14 +92,30 @@ public class EvaluationsService {
 
     /**
      * Récupère l'examen de fin de cours (certification).
-     * Uniquement les évaluations de type QUIZ sans leçon associée (examen global du cours).
-     * Les TD (type TP, liés à une leçon) ne sont pas des examens de certification.
+     * Si examId est fourni, retourne cette évaluation si elle appartient au cours et est un QUIZ.
+     * Sinon : premier QUIZ sans leçon, puis fallback sur le premier QUIZ du cours.
      */
     @Transactional(readOnly = true)
-    public CResponse<?> getCourseExam(Long courseId, User user) {
+    public CResponse<?> getCourseExam(Long courseId, User user, Long examId) {
         try {
+            if (examId != null) {
+                Optional<Evaluations> evalOpt = evaluationsRepository.findById(examId);
+                if (evalOpt.isPresent()) {
+                    Evaluations exam = evalOpt.get();
+                    if (exam.getCourse() != null && exam.getCourse().getId().equals(courseId)
+                            && "QUIZ".equals(exam.getType())) {
+                        if (exam.getQuestions() != null) {
+                            for (Questions q : exam.getQuestions()) {
+                                if (q.getReponses() != null) {
+                                    q.getReponses().size();
+                                }
+                            }
+                        }
+                        return CResponse.success(exam, "Examen récupéré avec succès");
+                    }
+                }
+            }
             List<Evaluations> exams = evaluationsRepository.findCourseExamsByCourseId(courseId);
-            // Fallback : si aucune évaluation QUIZ sans leçon, prendre le premier QUIZ du cours (requête explicite)
             if (exams == null || exams.isEmpty()) {
                 exams = evaluationsRepository.findQuizByCourseId(courseId);
                 if (exams == null) {
@@ -110,7 +126,6 @@ public class EvaluationsService {
                 return CResponse.error("Aucun examen disponible pour ce cours");
             }
             Evaluations exam = exams.get(0);
-            // Forcer le chargement des relations (éviter LazyInitializationException à la sérialisation JSON)
             if (exam.getQuestions() != null) {
                 for (Questions q : exam.getQuestions()) {
                     if (q.getReponses() != null) {
