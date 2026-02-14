@@ -12,6 +12,15 @@ public interface EvaluationsRepository extends JpaRepository<Evaluations, Long> 
     List<Evaluations> findByCourseId(@Param("courseId") Long courseId);
 
     /**
+     * Charge une évaluation par id avec questions et réponses (évite lazy à la sérialisation).
+     */
+    @Query("SELECT DISTINCT e FROM Evaluations e " +
+           "LEFT JOIN FETCH e.questions q " +
+           "LEFT JOIN FETCH q.reponses " +
+           "WHERE e.id = :id")
+    java.util.Optional<Evaluations> findByIdWithQuestionsAndReponses(@Param("id") Long id);
+
+    /**
      * Examen de fin de cours : évaluation de type QUIZ sans leçon associée (certification).
      * À ne pas confondre avec les TD (type TP, associés à une leçon).
      */

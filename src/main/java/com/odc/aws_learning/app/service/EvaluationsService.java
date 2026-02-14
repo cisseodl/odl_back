@@ -99,18 +99,11 @@ public class EvaluationsService {
     public CResponse<?> getCourseExam(Long courseId, User user, Long examId) {
         try {
             if (examId != null) {
-                Optional<Evaluations> evalOpt = evaluationsRepository.findById(examId);
+                Optional<Evaluations> evalOpt = evaluationsRepository.findByIdWithQuestionsAndReponses(examId);
                 if (evalOpt.isPresent()) {
                     Evaluations exam = evalOpt.get();
                     if (exam.getCourse() != null && exam.getCourse().getId().equals(courseId)
                             && "QUIZ".equals(exam.getType())) {
-                        if (exam.getQuestions() != null) {
-                            for (Questions q : exam.getQuestions()) {
-                                if (q.getReponses() != null) {
-                                    q.getReponses().size();
-                                }
-                            }
-                        }
                         return CResponse.success(exam, "Examen récupéré avec succès");
                     }
                 }
