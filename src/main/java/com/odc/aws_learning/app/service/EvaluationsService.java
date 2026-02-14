@@ -87,7 +87,11 @@ public class EvaluationsService {
             Evaluations exam = exams.get(0);
             // Forcer le chargement des relations (éviter LazyInitializationException à la sérialisation JSON)
             if (exam.getQuestions() != null) {
-                exam.getQuestions().size();
+                for (Questions q : exam.getQuestions()) {
+                    if (q.getReponses() != null) {
+                        q.getReponses().size();
+                    }
+                }
             }
             return CResponse.success(exam, "Examen récupéré avec succès");
         } catch (Exception e) {
