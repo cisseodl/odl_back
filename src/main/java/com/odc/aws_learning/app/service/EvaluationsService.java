@@ -99,11 +99,19 @@ public class EvaluationsService {
     public CResponse<?> getCourseExam(Long courseId, User user, Long examId) {
         try {
             if (examId != null) {
-                Optional<Evaluations> evalOpt = evaluationsRepository.findByIdWithQuestionsAndReponses(examId);
+                Optional<Evaluations> evalOpt = evaluationsRepository.findByIdWithQuestions(examId);
                 if (evalOpt.isPresent()) {
                     Evaluations exam = evalOpt.get();
                     if (exam.getCourse() != null && exam.getCourse().getId().equals(courseId)
                             && "QUIZ".equals(exam.getType())) {
+                        // Initialiser les réponses (un seul JOIN FETCH en requête pour éviter MultipleBagFetchException)
+                        if (exam.getQuestions() != null) {
+                            for (Questions q : exam.getQuestions()) {
+                                if (q.getReponses() != null) {
+                                    q.getReponses().size();
+                                }
+                            }
+                        }
                         return CResponse.success(exam, "Examen récupéré avec succès");
                     }
                 }

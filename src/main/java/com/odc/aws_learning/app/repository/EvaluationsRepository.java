@@ -12,13 +12,11 @@ public interface EvaluationsRepository extends JpaRepository<Evaluations, Long> 
     List<Evaluations> findByCourseId(@Param("courseId") Long courseId);
 
     /**
-     * Charge une évaluation par id avec questions et réponses (évite lazy à la sérialisation).
+     * Charge une évaluation par id avec questions (un seul JOIN FETCH pour éviter MultipleBagFetchException).
+     * Les réponses sont initialisées dans le service par accès .getReponses().size().
      */
-    @Query("SELECT DISTINCT e FROM Evaluations e " +
-           "LEFT JOIN FETCH e.questions q " +
-           "LEFT JOIN FETCH q.reponses " +
-           "WHERE e.id = :id")
-    java.util.Optional<Evaluations> findByIdWithQuestionsAndReponses(@Param("id") Long id);
+    @Query("SELECT DISTINCT e FROM Evaluations e LEFT JOIN FETCH e.questions WHERE e.id = :id")
+    java.util.Optional<Evaluations> findByIdWithQuestions(@Param("id") Long id);
 
     /**
      * Examen de fin de cours : évaluation de type QUIZ sans leçon associée (certification).
