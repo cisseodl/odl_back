@@ -73,6 +73,16 @@ public class EvaluationsController {
     }
 
     /**
+     * Récupère une évaluation par id avec questions et réponses (dashboard instructeur).
+     * GET /api/evaluations/{id}
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> getEvaluationWithQuestions(@PathVariable Long id) {
+        return evaluationsService.getEvaluationWithQuestions(id);
+    }
+
+    /**
      * Récupère l'examen d'un cours pour l'apprenant authentifié
      * GET /api/evaluations/course/{courseId}
      */

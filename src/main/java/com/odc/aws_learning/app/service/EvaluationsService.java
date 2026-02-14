@@ -66,6 +66,31 @@ public class EvaluationsService {
     }
 
     /**
+     * Récupère une évaluation par id avec ses questions et réponses (pour le dashboard instructeur).
+     */
+    @Transactional(readOnly = true)
+    public CResponse<?> getEvaluationWithQuestions(Long id) {
+        try {
+            Optional<Evaluations> evalOpt = evaluationsRepository.findById(id);
+            if (evalOpt.isEmpty()) {
+                return CResponse.error("Évaluation introuvable");
+            }
+            Evaluations evaluation = evalOpt.get();
+            // Forcer le chargement des questions et réponses (éviter LazyInitializationException)
+            if (evaluation.getQuestions() != null) {
+                for (Questions q : evaluation.getQuestions()) {
+                    if (q.getReponses() != null) {
+                        q.getReponses().size();
+                    }
+                }
+            }
+            return CResponse.success(evaluation, "Évaluation récupérée avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
+        }
+    }
+
+    /**
      * Récupère l'examen de fin de cours (certification).
      * Uniquement les évaluations de type QUIZ sans leçon associée (examen global du cours).
      * Les TD (type TP, liés à une leçon) ne sont pas des examens de certification.
