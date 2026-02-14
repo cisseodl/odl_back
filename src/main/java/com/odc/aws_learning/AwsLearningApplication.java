@@ -87,15 +87,18 @@ public class AwsLearningApplication implements CommandLineRunner {
 			logger.info("Vérification de l'utilisateur admin...");
 			logger.info("========================================");
 
-			Optional<User> userOptional = userRepository.findByEmail("cisseodl@gmail.com");
+			final String adminEmail = "cisseodl@gmail.com";
+			final String adminPassword = "cisse@2025";
+
+			Optional<User> userOptional = userRepository.findByEmail(adminEmail);
 			if (userOptional.isEmpty()) {
 				logger.info("Utilisateur admin non trouvé. Création en cours...");
 
 				User user = new User();
 				user.setFullName("CisseOdl");
-				user.setEmail("cisseodl@gmail.com");
+				user.setEmail(adminEmail);
 				user.setPhone("0000000000"); // Default phone number
-				user.setPassword(passwordEncoder.encode("cisse@2025"));
+				user.setPassword(passwordEncoder.encode(adminPassword));
 				user.setActivate(true);
 
 				User savedUser = userRepository.save(user);
@@ -111,11 +114,17 @@ public class AwsLearningApplication implements CommandLineRunner {
 
 				logger.info("========================================");
 				logger.info("✅ UTILISATEUR ADMIN CRÉÉ AVEC SUCCÈS");
-				logger.info("Email: cisseodl@gmail.com");
-				logger.info("Mot de passe: cisse@2025");
+				logger.info("Email: {}", adminEmail);
+				logger.info("Mot de passe: {}", adminPassword);
 				logger.info("========================================");
 			} else {
-				logger.info("✅ Utilisateur admin existe déjà: {}", userOptional.get().getEmail());
+				User existingUser = userOptional.get();
+				logger.info("Utilisateur admin existe déjà: {}", existingUser.getEmail());
+				// Réinitialiser le mot de passe au démarrage pour que les identifiants prédéfinis fonctionnent toujours
+				// (évite "Email ou mot de passe incorrect" si le user a été créé par SQL ou si le hash a changé)
+				existingUser.setPassword(passwordEncoder.encode(adminPassword));
+				userRepository.save(existingUser);
+				logger.info("✅ Mot de passe admin réinitialisé (Email: {} / Mot de passe: {})", adminEmail, adminPassword);
 			}
 			
 			logger.info("========================================");
