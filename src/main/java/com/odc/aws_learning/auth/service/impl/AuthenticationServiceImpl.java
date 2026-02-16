@@ -131,8 +131,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public CResponse<JwtAuthenticationResponse> signin(SigninRequest request) {
         try {
-            // Vérifier d'abord si l'utilisateur existe
-            Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+            // Charger l'utilisateur avec admin/instructor/apprenant pour getAuthorities() et sérialisation JSON
+            Optional<User> userOptional = userRepository.findByEmailWithRoles(request.getEmail());
             if (userOptional.isEmpty()) {
                 System.err.println("DEBUG - Tentative de connexion avec email inexistant: " + request.getEmail());
                 return CResponse.error("Email ou mot de passe incorrect.");

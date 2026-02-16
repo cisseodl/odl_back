@@ -15,6 +15,13 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
+    /** Charge le user avec admin, instructor, apprenant pour signin (getAuthorities + sérialisation JSON). */
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.admin " +
+           "LEFT JOIN FETCH u.instructor " +
+           "LEFT JOIN FETCH u.apprenant WHERE u.email = :email")
+    Optional<User> findByEmailWithRoles(@Param("email") String email);
+
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.instructor WHERE u.email = :email")
     Optional<User> findByEmailWithInstructor(@Param("email") String email);
     Page<User> findAllByActivateAndAdmin(boolean activate, boolean admin, Pageable pageable);
