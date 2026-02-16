@@ -157,15 +157,14 @@ public class InstructorService {
                 return CResponse.error("Cet utilisateur est déjà un instructeur.");
             }
 
-            // Mot de passe par défaut si aucun n'est fourni
-            String defaultPassword = "formateur@odl";
-            String passwordToUse = (password != null && !password.trim().isEmpty()) ? password : defaultPassword;
-            String plainPassword = passwordToUse; // Garder le mot de passe en clair pour l'email
-            
-            // Crypter et sauvegarder le mot de passe dans le User
-            user.setPassword(passwordEncoder.encode(passwordToUse));
-            userRepository.save(user);
-            userRepository.flush(); // S'assurer que le mot de passe est bien persisté
+            // Ne mettre à jour le mot de passe que si l'admin en fournit un (sinon garder celui défini à la création du user)
+            String plainPassword = null;
+            if (password != null && !password.trim().isEmpty()) {
+                plainPassword = password.trim();
+                user.setPassword(passwordEncoder.encode(plainPassword));
+                userRepository.save(user);
+                userRepository.flush();
+            }
 
             Instructor instructor = new Instructor(user);
             instructor.setBiography(biography);
@@ -202,13 +201,9 @@ public class InstructorService {
                 ? user.getFullName()
                 : user.getEmail();
             
-            // Toujours envoyer le mot de passe dans l'email (en clair pour que le formateur puisse se connecter)
-            String emailMessage = sendEmailService.mailTemplateInstructorCreated(
-                fullName,
-                user.getEmail(),
-                plainPassword, // Mot de passe en clair pour l'email
-                dashboardUrl // Lien du dashboard
-            );
+            String emailMessage = (plainPassword != null)
+                ? sendEmailService.mailTemplateInstructorCreated(fullName, user.getEmail(), plainPassword, dashboardUrl)
+                : sendEmailService.mailTemplateInstructorCreatedWithoutPassword(fullName, user.getEmail(), dashboardUrl);
             String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
             
             System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
