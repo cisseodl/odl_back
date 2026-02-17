@@ -237,7 +237,8 @@ public class ApprenantService {
     @Transactional(readOnly = true, noRollbackFor = {Exception.class})
     public CResponse<?> getApprenantsByInstructorCourses(String currentUserEmail) {
         try {
-            Optional<User> userOpt = userRepository.findByEmailWithInstructor(currentUserEmail);
+            // Charger admin + instructor pour reconnaître correctement un ADMIN (sinon getAdmin() est lazy et null)
+            Optional<User> userOpt = userRepository.findByEmailWithRoles(currentUserEmail);
             if (userOpt.isEmpty()) {
                 return CResponse.error("Utilisateur non trouvé.");
             }

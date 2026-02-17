@@ -157,14 +157,14 @@ public class InstructorService {
                 return CResponse.error("Cet utilisateur est déjà un instructeur.");
             }
 
-            // Ne mettre à jour le mot de passe que si l'admin en fournit un (sinon garder celui défini à la création du user)
-            String plainPassword = null;
-            if (password != null && !password.trim().isEmpty()) {
-                plainPassword = password.trim();
-                user.setPassword(passwordEncoder.encode(plainPassword));
-                userRepository.save(user);
-                userRepository.flush();
-            }
+            // Logique métier : seul l'admin crée les instructeurs. Mot de passe par défaut formateur@odl,
+            // envoyé par email ; l'instructeur se connecte avec puis le change.
+            String defaultPassword = "formateur@odl";
+            String passwordToUse = (password != null && !password.trim().isEmpty()) ? password.trim() : defaultPassword;
+            String plainPassword = passwordToUse;
+            user.setPassword(passwordEncoder.encode(passwordToUse));
+            userRepository.save(user);
+            userRepository.flush();
 
             Instructor instructor = new Instructor(user);
             instructor.setBiography(biography);
@@ -201,9 +201,8 @@ public class InstructorService {
                 ? user.getFullName()
                 : user.getEmail();
             
-            String emailMessage = (plainPassword != null)
-                ? sendEmailService.mailTemplateInstructorCreated(fullName, user.getEmail(), plainPassword, dashboardUrl)
-                : sendEmailService.mailTemplateInstructorCreatedWithoutPassword(fullName, user.getEmail(), dashboardUrl);
+            String emailMessage = sendEmailService.mailTemplateInstructorCreated(
+                fullName, user.getEmail(), plainPassword, dashboardUrl);
             String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
             
             System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
