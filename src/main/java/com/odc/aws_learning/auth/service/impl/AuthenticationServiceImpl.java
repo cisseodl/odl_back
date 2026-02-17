@@ -33,6 +33,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
+    private final ApprenantRepository apprenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -75,24 +76,36 @@ public class AuthenticationServiceImpl implements AuthenticationService {
            }
 
            User savedUser = userRepository.save(user);
-           // Flush pour s'assurer que l'utilisateur est bien sauvegardé avant de continuer
            userRepository.flush();
-           
-           // Recharger l'utilisateur depuis la base pour s'assurer qu'il a toutes les données
-           savedUser = userRepository.findById(savedUser.getId())
+
+           // Créer le profil Apprenant pour que l'inscrit ait le rôle APPRENANT et apparaisse dans la liste (admin + dash apprenant)
+           Apprenant apprenant = new Apprenant(savedUser);
+           apprenant.setEmail(savedUser.getEmail());
+           apprenant.setActivate(true);
+           if (savedUser.getFullName() != null && !savedUser.getFullName().trim().isEmpty()) {
+               String[] parts = savedUser.getFullName().trim().split("\\s+", 2);
+               apprenant.setPrenom(parts[0]);
+               apprenant.setNom(parts.length > 1 ? parts[1] : "");
+           }
+           Apprenant savedApprenant = apprenantRepository.save(apprenant);
+           apprenantRepository.flush();
+           savedUser.setApprenant(savedApprenant);
+           userRepository.save(savedUser);
+           userRepository.flush();
+
+           // Recharger avec rôles pour que le token contienne ROLE_APPRENANT
+           savedUser = userRepository.findByEmailWithRoles(savedUser.getEmail())
                    .orElseThrow(() -> new RuntimeException("Erreur lors de la sauvegarde de l'utilisateur"));
-           
-           // Log pour déboguer - vérifier que les données sont bien sauvegardées
+
            System.out.println("User saved with ID: " + savedUser.getId());
            System.out.println("User fullName: " + savedUser.getFullName());
            System.out.println("User email: " + savedUser.getEmail());
            System.out.println("User phone: " + savedUser.getPhone());
-           
-           // Vérifier que fullName n'est pas null avant de continuer
+
            if (savedUser.getFullName() == null || savedUser.getFullName().trim().isEmpty()) {
-               System.err.println("WARNING: User saved but fullName is null or empty! User ID: " + savedUser.getId());
+               System.err.println("WARNING: User fullName is null or empty! User ID: " + savedUser.getId());
            }
-           
+
            var jwt = jwtService.generateToken(savedUser);
            JwtAuthenticationResponse authenticationResponse = new JwtAuthenticationResponse(jwt, savedUser);
            
