@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,9 @@ public class NotificationService {
             return CResponse.error("Utilisateur non trouvé avec l'ID: " + userId);
         }
         Notification notification = new Notification(userOptional.get(), message, type, link);
+        // S'assurer que isRead et isArchived sont initialisés (déjà fait dans le constructeur, mais pour être sûr)
+        notification.setRead(false);
+        notification.setArchived(false);
         Notification savedNotification = notificationRepository.save(notification);
         return CResponse.success(savedNotification, "Notification créée avec succès.");
     }

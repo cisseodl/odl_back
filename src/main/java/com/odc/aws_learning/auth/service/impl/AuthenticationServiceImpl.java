@@ -58,9 +58,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                return CResponse.error("L'email est requis.");
            }
-           if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-               return CResponse.error("Le mot de passe est requis.");
-           }
+           // Le mot de passe est maintenant optionnel (pour permettre la création par admin sans mot de passe)
+           // Si un mot de passe est fourni, on l'encode et on le sauvegarde
+           // Sinon, on laisse le mot de passe null (il sera géré lors de la promotion en formateur/apprenant)
            
            user.setFullName(request.getFullName().trim());
            user.setEmail(request.getEmail().trim());
@@ -70,7 +70,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
            }
            // user.setAdmin(true); // Removed as role is determined by linked entity
            user.setActivate(true); // User is active by default upon signup
-           user.setPassword(passwordEncoder.encode(request.getPassword()));
+           // Encoder le mot de passe seulement s'il est fourni
+           if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+               user.setPassword(passwordEncoder.encode(request.getPassword()));
+           } else {
+               // Laisser le mot de passe null - il sera géré lors de la promotion en formateur/apprenant
+               user.setPassword(null);
+           }
            if (avatar != null) {
                user.setAvatar(uploadFileService.uploadFile(avatar, UploadLink.DOWNLOAD_LINK + "/avatar"));
            }

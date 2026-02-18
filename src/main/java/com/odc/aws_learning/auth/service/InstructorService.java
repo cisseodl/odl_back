@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +25,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InstructorService {
+
+    private static final Logger logger = LoggerFactory.getLogger(InstructorService.class);
 
     private final InstructorRepository instructorRepository;
     private final UserRepository userRepository; // To manage User entity
@@ -42,53 +46,73 @@ public class InstructorService {
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {RuntimeException.class})
     public CResponse<?> createInstructorAuthenticated(String userEmail, String biography, String specialization) {
         try {
+            logger.info("=== DÉBUT CRÉATION INSTRUCTEUR ===");
+            logger.info("User Email: {}", userEmail);
+            logger.info("Biography: {}", (biography != null ? biography.substring(0, Math.min(50, biography.length())) : "null"));
+            logger.info("Specialization: {}", specialization);
+            
             Optional<User> userOptional = userRepository.findByEmail(userEmail);
             if (userOptional.isEmpty()) {
+                logger.error("❌ Utilisateur non trouvé avec l'email: {}", userEmail);
                 return CResponse.error("Utilisateur non trouvé avec l'email: " + userEmail);
             }
             User user = userOptional.get();
+            logger.info("✅ Utilisateur trouvé avec ID: {}", user.getId());
 
             if (instructorRepository.findByUserId(user.getId()).isPresent()) {
+                logger.error("❌ Cet utilisateur est déjà un instructeur");
                 return CResponse.error("Cet utilisateur est déjà un instructeur.");
             }
 
             // Vérifier si l'utilisateur a déjà un mot de passe, sinon lui attribuer le mot de passe par défaut
             String plainPassword = null;
             if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+                logger.info("Mot de passe manquant, attribution du mot de passe par défaut");
                 String defaultPassword = "formateur@odl";
                 plainPassword = defaultPassword;
                 user.setPassword(passwordEncoder.encode(defaultPassword));
                 userRepository.save(user);
                 userRepository.flush(); // S'assurer que le mot de passe est bien persisté
+                logger.info("✅ Mot de passe par défaut sauvegardé");
+            } else {
+                logger.info("✅ L'utilisateur a déjà un mot de passe");
             }
 
+            logger.info("Création de l'instructeur...");
             Instructor instructor = new Instructor(user);
             instructor.setBiography(biography);
             instructor.setSpecialization(specialization);
             Instructor savedInstructor = instructorRepository.save(instructor);
             instructorRepository.flush(); // S'assurer que l'instructeur est bien persisté
+            logger.info("✅ Instructeur sauvegardé avec ID: {}", savedInstructor.getId());
             
             // Link instructor to user for bidirectional consistency
+            logger.info("Liaison de l'instructeur à l'utilisateur...");
             user.setInstructor(savedInstructor);
             userRepository.save(user);
             userRepository.flush(); // S'assurer que la liaison est bien persistée
+            logger.info("✅ Liaison User-Instructor configurée");
 
             // Retourner le succès AVANT d'envoyer les notifications et logs pour éviter que l'erreur
             // ne marque la transaction comme rollback-only
             CResponse<?> successResponse = CResponse.success(savedInstructor, "Instructeur créé avec succès.");
+            logger.info("✅ Réponse de succès créée");
+            logger.info("=== FIN CRÉATION INSTRUCTEUR (SUCCÈS) ===");
 
             // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
             try {
+                logger.info("Envoi du log d'activité de manière asynchrone...");
                 logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
             } catch (Exception e) {
-                System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
+                logger.warn("⚠️ Erreur lors de la création du log d'activité (non bloquante): {}", e.getMessage(), e);
             }
             
             // Créer une notification pour l'admin dans une transaction séparée
             try {
+                logger.info("Envoi des notifications aux admins de manière asynchrone...");
                 sendAdminNotificationsAsync(user);
             } catch (Exception e) {
-                System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
+                logger.warn("⚠️ Erreur lors de la création de la notification (non bloquante): {}", e.getMessage(), e);
             }
 
         // Envoyer un email de bienvenue au formateur de manière asynchrone

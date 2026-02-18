@@ -313,6 +313,40 @@ public class SendEmailService {
     }
 
     /**
+     * Template d'email pour apprenant créé par un admin avec mot de passe par défaut
+     */
+    public String mailTemplateApprenantCreatedWithPassword(String fullName, String email, String password, String siteUrl) {
+        return "<div style=\"border: 1px grey solid; border-radius: 10px; padding: 30px; text-align: center; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
+                "  <h1 style=\"color: #FF6600; margin-bottom: 20px; font-size: 24px;\">Bienvenue sur Orange Digital Learning</h1>\n" +
+                " <img style=\"height: 100px; margin-bottom: 20px;\" class=\"welcomeImg\" src=\"https://firebasestorage.googleapis.com/v0/b/odclearning-9bd7a.appspot.com/o/ODLLOGO.png?alt=media&token=1956b05e-3f2d-4885-9a11-df035976b31b\" alt=\"Orange Digital Learning Logo\">" +
+                "  <div style=\"border-bottom: 1px grey solid; margin: 20px 0;\">\n" +
+                "    \n" +
+                "  </div>\n" +
+                "\n" +
+                "<p style=\"font-size: 16px; margin: 20px 0;\">Bonjour <strong>" + fullName + "</strong>,</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Nous sommes ravis de vous accueillir sur Orange Digital Learning !</p>\n" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\">Votre compte apprenant a été créé avec succès. Vous pouvez désormais accéder à tous nos cours et commencer votre parcours d'apprentissage.</p>\n" +
+                "<br>" +
+                "<div style=\"background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;\">\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\"><strong>Vos identifiants de connexion:</strong></p>\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\">Email: <strong>" + email + "</strong></p>\n" +
+                "<p style=\"font-size: 14px; margin: 10px 0;\">Mot de passe: <strong>" + password + "</strong></p>\n" +
+                "</div>\n" +
+                "<br>" +
+                "<p style=\"font-size: 14px; margin: 15px 0;\"><strong>Accédez à votre espace d'apprentissage:</strong></p>\n" +
+                "<p style=\"margin: 20px 0;\"><a href=\"" + siteUrl + "\" style=\"background-color: #FF6600; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;\">Se connecter</a></p>\n" +
+                "<br>" +
+                "<p style=\"color: #d32f2f; font-size: 13px; margin: 15px 0; font-weight: bold;\">⚠️ IMPORTANT: Veuillez modifier votre mot de passe après votre première connexion pour des raisons de sécurité.</p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 14px; margin: 15px 0; color: #666;\">Vous pouvez maintenant explorer nos cours, suivre votre progression et obtenir des certificats.</p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 14px; margin: 15px 0; color: #FF6600;\"><strong>Bienvenue dans votre parcours d'apprentissage !</strong></p>\n" +
+                "<br>" +
+                "<p style=\"font-size: 12px; color: #666; margin-top: 30px;\">L'équipe Orange Digital Learning</p>\n" +
+                "</div>";
+    }
+
+    /**
      * Envoie un email de félicitations à l'apprenant pour l'obtention du certificat (validation des labs par l'instructeur).
      */
     public void sendCertificateCongratulationsByLabs(String email, String fullName, String courseTitle) {

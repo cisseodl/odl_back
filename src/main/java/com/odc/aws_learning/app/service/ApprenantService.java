@@ -25,7 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-// import org.springframework.security.crypto.password.PasswordEncoder; // Removed
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.odc.aws_learning.app.service.SendEmailService;
@@ -59,7 +59,7 @@ public class ApprenantService {
     private final com.odc.aws_learning.app.repository.TestimonialRepository testimonialRepository;
     private final SendEmailService sendEmailService;
     private final EmailAsyncService emailAsyncService;
-    // private final PasswordEncoder passwordEncoder; // Removed
+    private final PasswordEncoder passwordEncoder;
     
     @Value("${app.frontend.apprenant.url:https://smart-odc.com}")
     private String frontendUrl;
@@ -67,23 +67,39 @@ public class ApprenantService {
     @Transactional
     public CResponse<?> createApprenantAuthenticated(String emailFromJwt, ApprenantCreateRequest request) {
         User user;
+        boolean isCreatedByAdmin = false; // Indique si l'apprenant est créé par un admin
         
         // Si userId est fourni, utiliser cet ID (pour permettre aux admins de créer un apprenant pour un autre utilisateur)
         if (request.getUserId() != null) {
             user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable avec l'ID: " + request.getUserId()));
+            isCreatedByAdmin = true; // Création par admin via userId
         } else if (request.getUserEmail() != null) {
             // Si userEmail est fourni, utiliser cet email
             user = userRepository.findByEmail(request.getUserEmail())
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable avec l'email: " + request.getUserEmail()));
+            isCreatedByAdmin = true; // Création par admin via userEmail
         } else {
-            // Sinon, utiliser l'email du JWT (comportement par défaut)
+            // Sinon, utiliser l'email du JWT (comportement par défaut - auto-inscription)
             user = userRepository.findByEmail(emailFromJwt)
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+            isCreatedByAdmin = false; // Auto-inscription par l'apprenant lui-même
         }
 
         if (apprenantRepository.findByUserId(user.getId()).isPresent()) {
             return CResponse.error("Cet utilisateur est déjà un apprenant.");
+        }
+
+        // Si l'apprenant est créé par un admin et que l'utilisateur n'a pas de mot de passe, lui attribuer le mot de passe par défaut
+        String plainPassword = null;
+        if (isCreatedByAdmin && (user.getPassword() == null || user.getPassword().trim().isEmpty())) {
+            System.out.println("=== Attribution du mot de passe par défaut pour apprenant créé par admin ===");
+            String defaultPassword = "apprenant@odl";
+            plainPassword = defaultPassword;
+            user.setPassword(passwordEncoder.encode(defaultPassword));
+            userRepository.save(user);
+            userRepository.flush(); // S'assurer que le mot de passe est bien persisté
+            System.out.println("✅ Mot de passe par défaut 'apprenant@odl' sauvegardé pour l'apprenant");
         }
 
         Apprenant apprenant = new Apprenant();
@@ -135,7 +151,7 @@ public class ApprenantService {
         // Envoyer un email de bienvenue à l'apprenant après création de compte (auto-inscription ou création par admin)
         // IMPORTANT: L'email est envoyé de manière asynchrone pour ne pas bloquer la création du compte
         // Si l'email échoue, on log l'erreur mais on ne fait pas échouer la création
-        sendWelcomeEmailAsync(user, savedApprenant, frontendUrl);
+        sendWelcomeEmailAsync(user, savedApprenant, frontendUrl, plainPassword);
 
         return CResponse.success(savedApprenant, "Apprenant créé avec succès.");
     }
@@ -143,8 +159,9 @@ public class ApprenantService {
     /**
      * Envoie un email de bienvenue de manière asynchrone avec retry
      * Cette méthode est appelée après la création réussie d'un apprenant
+     * @param plainPassword Le mot de passe en clair si l'apprenant a été créé par un admin (null si auto-inscription)
      */
-    private void sendWelcomeEmailAsync(User user, Apprenant apprenant, String frontendUrl) {
+    private void sendWelcomeEmailAsync(User user, Apprenant apprenant, String frontendUrl, String plainPassword) {
         try {
             // Vérifier que l'email est valide
             if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
@@ -163,13 +180,26 @@ public class ApprenantService {
             System.out.println("Email destinataire: " + user.getEmail());
             System.out.println("Nom complet: " + fullName);
             System.out.println("Frontend URL: " + frontendUrl);
+            System.out.println("Mot de passe fourni: " + (plainPassword != null ? "Oui" : "Non"));
             
             // Générer le template d'email
-            String emailMessage = sendEmailService.mailTemplateApprenantCreated(
-                fullName,
-                user.getEmail(),
-                frontendUrl
-            );
+            String emailMessage;
+            if (plainPassword != null) {
+                // Si un mot de passe a été attribué (création par admin), utiliser le template avec mot de passe
+                emailMessage = sendEmailService.mailTemplateApprenantCreatedWithPassword(
+                    fullName,
+                    user.getEmail(),
+                    plainPassword,
+                    frontendUrl
+                );
+            } else {
+                // Sinon, utiliser le template standard (auto-inscription)
+                emailMessage = sendEmailService.mailTemplateApprenantCreated(
+                    fullName,
+                    user.getEmail(),
+                    frontendUrl
+                );
+            }
             
             String subject = "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé";
             

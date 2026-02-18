@@ -4,7 +4,6 @@ import com.odc.aws_learning.auth.base.entity.BaseEntity;
 import com.odc.aws_learning.auth.entities.User;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonBackReference; // Added
 
@@ -19,7 +18,11 @@ public class Notification extends BaseEntity {
 
     private String message;
     private String type; // e.g., "COURSE_UPDATE", "NEW_MESSAGE", "REMINDER"
+    
+    @Column(name = "is_read", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isRead;
+    
+    @Column(name = "is_archived", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isArchived;
     // Removed redundant createdAt field - inherited from BaseEntity
     private String link; // Added missing field declaration
@@ -36,6 +39,9 @@ public class Notification extends BaseEntity {
 
     public Notification() {
         super();
+        // Initialiser les champs boolean pour éviter les erreurs SQL
+        this.isRead = false;
+        this.isArchived = false;
     }
 
     public User getUser() {
