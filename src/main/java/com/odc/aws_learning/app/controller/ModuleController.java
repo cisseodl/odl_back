@@ -70,8 +70,8 @@ public class ModuleController {
                 return CResponse.error("Le courseId est requis.");
             }
             
-            if (moduleAndCoursePayload.getModules() == null || moduleAndCoursePayload.getModules().isEmpty()) {
-                return CResponse.error("Au moins un module est requis.");
+            if (moduleAndCoursePayload.getModules() == null) {
+                return CResponse.error("Le payload modules ne peut pas être null.");
             }
             
             CResponse<?> response = moduleService.saveModule(moduleAndCoursePayload, pdfFile);
