@@ -220,12 +220,17 @@ public class CoursesController {
             }
             Courses course = courseOptional.get();
             
+            // Cours sans formateur assigné (fréquent après import / vidage de la DB)
+            if (course.getInstructor() == null) {
+                return CResponse.error("Ce cours n'a pas de formateur assigné. Modifiez le cours (éditer) et assignez-vous comme formateur pour pouvoir le publier.");
+            }
+            
             // Si l'utilisateur est un instructeur (pas admin), vérifier qu'il est propriétaire du cours
             boolean isInstructor = currentUser.getAdmin() == null && currentUser.getInstructor() != null;
-            boolean isOwner = course.getInstructor() != null && course.getInstructor().getId().equals(currentUser.getId());
+            boolean isOwner = course.getInstructor().getId().equals(currentUser.getId());
             
             if (isInstructor && !isOwner) {
-                return CResponse.error("Vous n'êtes pas autorisé à modifier ce cours.");
+                return CResponse.error("Vous n'êtes pas autorisé à modifier ce cours. Seul le formateur assigné peut le publier.");
             }
             // Seul l'instructeur propriétaire peut publier (passer en PUBLIE) ; l'admin ne peut pas publier
             boolean canPublish = isInstructor && isOwner;
