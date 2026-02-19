@@ -1,0 +1,22 @@
+# AWS CodeBuild - produit un bundle (JAR + Procfile + .platform + .ebextensions) pour EB
+# Avec CodePipeline : l'artifact contient tout, EB reçoit le bon bundle à chaque déploiement.
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+  build:
+    commands:
+      - echo "Build JAR..."
+      - mvn clean package -DskipTests -B
+      - echo "Preparation du bundle (JAR + Procfile + .platform + .ebextensions)..."
+      - mkdir -p deploy_bundle
+      - cp target/awsodclearning.jar deploy_bundle/
+      - cp Procfile deploy_bundle/
+      - cp -r .ebextensions deploy_bundle/
+      - cp -r .platform deploy_bundle/
+artifacts:
+  files:
+    - '**/*'
+  base-directory: deploy_bundle

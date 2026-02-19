@@ -210,6 +210,37 @@
 					<useFile>false</useFile>
 				</configuration>
 			</plugin>
+			<!-- Crée target/odl-back-deploy.zip (JAR + Procfile + .platform + .ebextensions) pour EB -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>build-eb-deploy-zip</id>
+						<phase>package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<property name="deploy.dir" value="${project.build.directory}/eb-deploy"/>
+								<mkdir dir="${deploy.dir}"/>
+								<copy file="${project.build.directory}/${project.build.finalName}.jar" tofile="${deploy.dir}/awsodclearning.jar"/>
+								<copy file="${project.basedir}/Procfile" todir="${deploy.dir}"/>
+								<copy todir="${deploy.dir}/.ebextensions">
+									<fileset dir="${project.basedir}/.ebextensions"/>
+								</copy>
+								<copy todir="${deploy.dir}/.platform">
+									<fileset dir="${project.basedir}/.platform"/>
+								</copy>
+								<zip destfile="${project.build.directory}/odl-back-deploy.zip" basedir="${deploy.dir}"/>
+								<delete dir="${deploy.dir}"/>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
