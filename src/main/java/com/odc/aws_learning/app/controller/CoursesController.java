@@ -245,7 +245,12 @@ public class CoursesController {
         } catch (IllegalArgumentException e) {
             return CResponse.error(e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Validation refusée.");
         } catch (RuntimeException e) {
-            return CResponse.error(e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Une erreur inattendue s'est produite.");
+            log.error("Erreur lors de la validation du cours {}: {}", id, e.getMessage(), e);
+            String msg = e.getMessage();
+            if (msg == null || msg.isBlank()) {
+                msg = "Une erreur inattendue s'est produite (" + e.getClass().getSimpleName() + "). Consultez les logs serveur.";
+            }
+            return CResponse.error(msg);
         }
     }
 

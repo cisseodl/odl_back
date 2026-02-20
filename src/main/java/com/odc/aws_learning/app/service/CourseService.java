@@ -709,8 +709,11 @@ public class CourseService {
                 break;
         }
 
-        Courses savedCourse = coursesRepository.save(course);
-        return courseMapper.toDto(savedCourse);
+        coursesRepository.save(course);
+        // Recharger avec relations (instructor, categorie) pour éviter LazyInitializationException au mapping
+        Courses reloaded = coursesRepository.findByIdWithRelations(courseId)
+                .orElseThrow(() -> new RuntimeException("Cours introuvable après mise à jour"));
+        return courseMapper.toDto(reloaded);
     }
 
     public void deleteCourse(Long id) {
