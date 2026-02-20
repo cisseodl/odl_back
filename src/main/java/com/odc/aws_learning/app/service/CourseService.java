@@ -74,9 +74,10 @@ public class CourseService {
     private final CertificateService certificateService;
     private final CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository;
     private final NotificationService notificationService;
+    private final EnrollmentNotificationSender enrollmentNotificationSender;
     private final SendEmailService sendEmailService;
 
-    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CertificateService certificateService, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, SendEmailService sendEmailService) {
+    public CourseService(CoursesRepository coursesRepository, CourseMapper courseMapper, InstructorMapper instructorMapper, ReviewRepository reviewRepository, UserProgressRepository userProgressRepository, UserRepository userRepository, CategorieRepository categorieRepository, InstructorProfileRepository instructorProfileRepository, DetailsCourseRepo detailsCourseRepo, ModuleRepository moduleRepository, LessonRepository lessonRepository, CertificateRepository certificateRepository, CertificateService certificateService, CourseEnrollmentExpectationsRepository courseEnrollmentExpectationsRepository, NotificationService notificationService, EnrollmentNotificationSender enrollmentNotificationSender, SendEmailService sendEmailService) {
         this.coursesRepository = coursesRepository;
         this.courseMapper = courseMapper;
         this.instructorMapper = instructorMapper;
@@ -93,6 +94,7 @@ public class CourseService {
         this.certificateService = certificateService;
         this.courseEnrollmentExpectationsRepository = courseEnrollmentExpectationsRepository;
         this.notificationService = notificationService;
+        this.enrollmentNotificationSender = enrollmentNotificationSender;
         this.sendEmailService = sendEmailService;
     }
 
@@ -901,25 +903,17 @@ public class CourseService {
             
             logger.info("=== FIN INSCRIPTION AU COURS (SUCCÈS) ===");
             
-            // IMPORTANT: Retourner la réponse AVANT d'envoyer la notification
-            // Cela garantit que la transaction principale est commitée avant l'envoi de la notification
-            // Envoyer une notification au formateur du cours dans une transaction séparée (après le commit)
-            // Cela évite que l'erreur de notification ne fasse échouer l'inscription
+            // Notification au formateur dans une transaction séparée (REQUIRES_NEW via EnrollmentNotificationSender)
+            // pour éviter que toute erreur ne marque la transaction d'inscription comme rollback-only
             if (course.getInstructor() != null) {
-                logger.info("Envoi de notification asynchrone au formateur ID: {}", course.getInstructor().getId());
-                // Appeler de manière asynchrone pour ne pas bloquer la transaction
-                // Utiliser un try-catch séparé pour isoler complètement l'erreur
                 try {
-                    sendNotificationAsync(course.getInstructor().getId(), user, course);
-                } catch (Exception notificationError) {
-                    // Ne pas faire échouer l'inscription si la notification échoue
-                    // Cette erreur ne doit PAS affecter la transaction principale
-                    logger.warn("⚠️ Erreur lors de la création de la notification pour le formateur (non bloquante): {}", notificationError.getMessage(), notificationError);
+                    enrollmentNotificationSender.sendEnrollmentNotification(course.getInstructor().getId(), user, course);
+                } catch (Exception e) {
+                    logger.warn("⚠️ Notification formateur (non bloquante): {}", e.getMessage());
                 }
             } else {
                 logger.warn("⚠️ Aucun formateur associé au cours");
             }
-            
             return successResponse;
         } catch (Exception e) {
             logger.error("❌❌❌ ERREUR LORS DE L'INSCRIPTION AU COURS ❌❌❌", e);
@@ -927,42 +921,6 @@ public class CourseService {
             logger.error("Message: {}", e.getMessage());
             logger.error("Cause: {}", (e.getCause() != null ? e.getCause().getMessage() : "N/A"));
             return CResponse.error("Erreur lors de l'inscription: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Envoyer une notification de manière asynchrone dans une transaction séparée
-     * pour éviter que l'erreur de notification ne fasse échouer l'inscription
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = {Exception.class})
-    private void sendNotificationAsync(Long instructorId, User learner, Courses course) {
-        try {
-            logger.info("[sendNotificationAsync] Début de l'envoi de notification pour instructeur ID: {}", instructorId);
-            String learnerName = learner.getFullName() != null ? learner.getFullName() : learner.getEmail();
-            String courseTitle = course.getTitle() != null ? course.getTitle() : "le cours";
-            String notificationMessage = learnerName + " s'est inscrit à votre cours: " + courseTitle;
-            String notificationLink = "/instructor/courses/" + course.getId();
-            
-            logger.info("[sendNotificationAsync] Création de la notification...");
-            CResponse<?> notificationResponse = notificationService.createNotification(
-                instructorId,
-                notificationMessage,
-                "enrollment",
-                notificationLink
-            );
-            
-            if (notificationResponse != null && notificationResponse.isSuccess()) {
-                logger.info("[sendNotificationAsync] ✅ Notification créée avec succès");
-            } else {
-                logger.warn("[sendNotificationAsync] ⚠️ Notification créée mais réponse indique un échec: {}", 
-                    (notificationResponse != null ? notificationResponse.getMessage() : "null"));
-            }
-        } catch (Exception e) {
-            // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
-            // L'annotation noRollbackFor garantit que cette exception ne marquera pas la transaction comme rollback-only
-            logger.error("[sendNotificationAsync] ❌ Erreur lors de la création de la notification pour le formateur (asynchrone): {}", e.getMessage(), e);
-            logger.error("[sendNotificationAsync] Type d'erreur: {}", e.getClass().getName());
-            // Ne pas re-lancer l'exception pour éviter qu'elle affecte la transaction principale
         }
     }
 
