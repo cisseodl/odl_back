@@ -243,9 +243,9 @@ public class CoursesController {
             CourseDto updatedCourse = courseService.validateCourse(id, request, canPublish);
             return CResponse.success(updatedCourse, "Le statut du cours a été mis à jour.");
         } catch (IllegalArgumentException e) {
-            return CResponse.error(e.getMessage());
+            return CResponse.error(e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Validation refusée.");
         } catch (RuntimeException e) {
-            return CResponse.error(e.getMessage());
+            return CResponse.error(e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Une erreur inattendue s'est produite.");
         }
     }
 
