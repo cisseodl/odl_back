@@ -710,9 +710,12 @@ public class CourseService {
         }
 
         coursesRepository.save(course);
-        // Recharger avec relations (instructor, categorie) pour éviter LazyInitializationException au mapping
-        Courses reloaded = coursesRepository.findByIdWithRelations(courseId)
+        // Recharger avec relations + modules pour éviter NPE/LazyInitializationException au mapping
+        Courses reloaded = coursesRepository.findByIdWithRelationsAndModules(courseId)
                 .orElseThrow(() -> new RuntimeException("Cours introuvable après mise à jour"));
+        if (reloaded.getModules() == null) {
+            reloaded.setModules(new ArrayList<>());
+        }
         return courseMapper.toDto(reloaded);
     }
 

@@ -93,4 +93,12 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
            "LEFT JOIN FETCH c.categorie " +
            "WHERE c.id = :id")
     java.util.Optional<Courses> findByIdWithRelations(@Param("id") Long id);
+
+    /** Charge un cours avec instructor, categorie et modules (pour mapping DTO sans NPE / lazy). */
+    @Query("SELECT DISTINCT c FROM Courses c " +
+           "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.categorie " +
+           "LEFT JOIN FETCH c.modules " +
+           "WHERE c.id = :id")
+    java.util.Optional<Courses> findByIdWithRelationsAndModules(@Param("id") Long id);
 }
