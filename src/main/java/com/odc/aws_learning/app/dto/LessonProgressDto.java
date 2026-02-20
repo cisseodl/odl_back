@@ -2,9 +2,9 @@ package com.odc.aws_learning.app.dto;
 
 import com.odc.aws_learning.app.constante.LessonType;
 
-import com.odc.aws_learning.app.constante.LessonType;
-
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LessonProgressDto {
     private Long lessonId;
@@ -13,6 +13,10 @@ public class LessonProgressDto {
     private Integer lessonDuration;
     private boolean completed;
     private LocalDateTime completedAt;
+    /** IDs des quiz associés à cette leçon (pour afficher "Quiz" dans le dash apprenant). */
+    private List<Long> quizIds = new ArrayList<>();
+    /** IDs des labs associés à cette leçon (pour afficher "Lab" / "TD" dans le dash apprenant). */
+    private List<Long> labIds = new ArrayList<>();
 
     public LessonProgressDto() {
     }
@@ -74,6 +78,22 @@ public class LessonProgressDto {
         this.completedAt = completedAt;
     }
 
+    public List<Long> getQuizIds() {
+        return quizIds;
+    }
+
+    public void setQuizIds(List<Long> quizIds) {
+        this.quizIds = quizIds != null ? quizIds : new ArrayList<>();
+    }
+
+    public List<Long> getLabIds() {
+        return labIds;
+    }
+
+    public void setLabIds(List<Long> labIds) {
+        this.labIds = labIds != null ? labIds : new ArrayList<>();
+    }
+
     public static LessonProgressDtoBuilder builder() {
         return new LessonProgressDtoBuilder();
     }
@@ -85,6 +105,8 @@ public class LessonProgressDto {
         private Integer lessonDuration;
         private boolean completed;
         private LocalDateTime completedAt;
+        private List<Long> quizIds = new ArrayList<>();
+        private List<Long> labIds = new ArrayList<>();
 
         LessonProgressDtoBuilder() {
         }
@@ -119,8 +141,21 @@ public class LessonProgressDto {
             return this;
         }
 
+        public LessonProgressDtoBuilder quizIds(List<Long> quizIds) {
+            this.quizIds = quizIds != null ? quizIds : new ArrayList<>();
+            return this;
+        }
+
+        public LessonProgressDtoBuilder labIds(List<Long> labIds) {
+            this.labIds = labIds != null ? labIds : new ArrayList<>();
+            return this;
+        }
+
         public LessonProgressDto build() {
-            return new LessonProgressDto(lessonId, lessonTitle, lessonType, lessonDuration, completed, completedAt);
+            LessonProgressDto dto = new LessonProgressDto(lessonId, lessonTitle, lessonType, lessonDuration, completed, completedAt);
+            dto.setQuizIds(quizIds);
+            dto.setLabIds(labIds);
+            return dto;
         }
 
         public String toString() {

@@ -10,7 +10,9 @@ import com.odc.aws_learning.app.entity.Courses;
 import com.odc.aws_learning.app.entity.Module;
 import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
+import com.odc.aws_learning.app.repository.LabDefinitionRepository;
 import com.odc.aws_learning.app.repository.ModuleRepository;
+import com.odc.aws_learning.app.repository.QuizRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.auth.entities.User;
@@ -19,8 +21,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,8 @@ public class LearnerLessonService {
     private final ModuleRepository moduleRepository;
     private final CoursesRepository coursesRepository;
     private final DetailsCourseRepo detailsCourseRepo;
+    private final QuizRepository quizRepository;
+    private final LabDefinitionRepository labDefinitionRepository;
 
 
     public CResponse<?> completeLesson(Long courseId, Long lessonId, User currentUser) {
@@ -44,10 +51,16 @@ public class LearnerLessonService {
 
         Optional<Lesson> lessonOptional = lessonRepository.findById(lessonId);
         if (lessonOptional.isEmpty()) {
-            return CResponse.error("Lesson not found");
+            return CResponse.error("Leçon introuvable.");
         }
         Lesson lesson = lessonOptional.get();
+        if (lesson.getModule() == null) {
+            return CResponse.error("Leçon sans module associé.");
+        }
         Courses course = lesson.getModule().getCourse();
+        if (course == null) {
+            return CResponse.error("Module sans cours associé.");
+        }
 
         // Check if the course is already completed for the user
         Optional<DetailsCourse> detailsCourseOptional = detailsCourseRepo.findByCourseIdAndLearnerId(course.getId(), user.getId());
@@ -57,15 +70,14 @@ public class LearnerLessonService {
 
         // Check if the lesson actually belongs to the specified course
         if (!course.getId().equals(courseId)) {
-            return CResponse.error("Lesson does not belong to the specified course");
+            return CResponse.error("Cette leçon n'appartient pas au cours demandé (courseId=" + courseId + ", lesson.courseId=" + course.getId() + ").");
         }
 
-        // Check if user has already completed this lesson
+        // If user has already completed this lesson, return success (idempotent) so the UI doesn't show 400
         Optional<UserProgress> existingProgress = userProgressRepository.findByUserAndLesson(user, lesson);
         if (existingProgress.isPresent()) {
-            // If already complete, just check if course is complete without saving again
             checkAndMarkCourseAsCompleted(user, course);
-            return CResponse.error("Lesson already completed by this user");
+            return CResponse.success(existingProgress.get(), "Leçon déjà marquée comme terminée.");
         }
 
         UserProgress userProgress = new UserProgress();
@@ -116,20 +128,33 @@ public class LearnerLessonService {
 
         double progressPercentage = (totalLessons > 0) ? ((double) completedLessons.size() / totalLessons) * 100 : 0;
 
-        List<LessonProgressDto> lessonProgressDtos = new java.util.ArrayList<>();
+        // Quiz et labs par lessonId pour affichage apprenant (lab / TD / quiz associés à chaque leçon)
+        Map<Long, List<Long>> quizIdsByLessonId = quizRepository.findByCourseIdAndActivateTrueWithLesson(courseId).stream()
+                .filter(q -> q.getLesson() != null)
+                .collect(Collectors.groupingBy(q -> q.getLesson().getId(),
+                        Collectors.mapping(com.odc.aws_learning.app.entity.Quiz::getId, Collectors.toList())));
+        Map<Long, List<Long>> labIdsByLessonId = labDefinitionRepository.findByCourseIdViaLesson(courseId).stream()
+                .filter(l -> l.getLesson() != null)
+                .collect(Collectors.groupingBy(l -> l.getLesson().getId(),
+                        Collectors.mapping(com.odc.aws_learning.app.entity.LabDefinition::getId, Collectors.toList())));
+
+        List<LessonProgressDto> lessonProgressDtos = new ArrayList<>();
         for (Module module : modules) {
             List<Lesson> lessonsInModule = lessonRepository.findByModuleId(module.getId());
             for (Lesson lesson : lessonsInModule) {
                 boolean completed = completedLessons.stream().anyMatch(up -> up.getLesson().getId().equals(lesson.getId()));
+                Long lid = lesson.getId();
                 lessonProgressDtos.add(LessonProgressDto.builder()
-                        .lessonId(lesson.getId())
+                        .lessonId(lid)
                         .lessonTitle(lesson.getTitle())
                         .lessonType(lesson.getType())
                         .lessonDuration(lesson.getDuration())
                         .completed(completed)
                         .completedAt(completed ? completedLessons.stream()
-                                .filter(up -> up.getLesson().getId().equals(lesson.getId()))
+                                .filter(up -> up.getLesson().getId().equals(lid))
                                 .findFirst().get().getCompletedAt() : null)
+                        .quizIds(quizIdsByLessonId.getOrDefault(lid, new ArrayList<>()))
+                        .labIds(labIdsByLessonId.getOrDefault(lid, new ArrayList<>()))
                         .build());
             }
         }
