@@ -44,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.hibernate.Hibernate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -656,6 +657,9 @@ public class CourseService {
     }
 
     public CourseDto validateCourse(Long courseId, com.odc.aws_learning.app.dto.CourseValidationRequest request, boolean isInstructorOwner) {
+        if (request == null || request.getAction() == null) {
+            throw new IllegalArgumentException("L'action de validation (APPROVE, REJECT, WITHDRAW) est requise.");
+        }
         Courses course = coursesRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found with id: " + courseId));
 
@@ -713,8 +717,15 @@ public class CourseService {
         // Recharger avec relations + modules pour éviter NPE/LazyInitializationException au mapping
         Courses reloaded = coursesRepository.findByIdWithRelationsAndModules(courseId)
                 .orElseThrow(() -> new RuntimeException("Cours introuvable après mise à jour"));
-        if (reloaded.getModules() == null) {
+        List<Module> modules = reloaded.getModules();
+        if (modules == null) {
             reloaded.setModules(new ArrayList<>());
+        } else {
+            for (Module m : modules) {
+                if (m != null) {
+                    Hibernate.initialize(m.getLessons());
+                }
+            }
         }
         return courseMapper.toDto(reloaded);
     }

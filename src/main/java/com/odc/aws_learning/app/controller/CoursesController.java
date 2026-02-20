@@ -215,6 +215,9 @@ public class CoursesController {
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<CourseDto> validateCourse(@PathVariable Long id, @RequestBody com.odc.aws_learning.app.dto.CourseValidationRequest request) {
         try {
+            if (request == null || request.getAction() == null) {
+                return CResponse.error("L'action de validation (APPROVE, REJECT, WITHDRAW) est requise.");
+            }
             User currentUser = getCurrentUser();
             if (currentUser == null) {
                 return CResponse.error("Utilisateur non authentifié");

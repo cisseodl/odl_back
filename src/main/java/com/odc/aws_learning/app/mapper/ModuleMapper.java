@@ -22,7 +22,9 @@ public interface ModuleMapper {
             return "0h 0min";
         }
         long totalSeconds = lessons.stream()
-                .mapToLong(com.odc.aws_learning.app.entity.Lesson::getDuration)
+                .map(com.odc.aws_learning.app.entity.Lesson::getDuration)
+                .filter(d -> d != null)
+                .mapToLong(Integer::longValue)
                 .sum();
 
         long minutes = totalSeconds / 60;
