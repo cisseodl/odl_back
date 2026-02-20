@@ -411,8 +411,8 @@ public class CourseService {
 
     public List<CourseDto> getCoursesByInstructorId(Long instructorId) {
         try {
-            // Utiliser la méthode avec FETCH pour charger les relations (formation, categorie)
-            List<Courses> courses = coursesRepository.findByInstructor_IdWithRelations(instructorId);
+            // Cours dont l'instructeur est propriétaire OU cours sans formateur (pour qu'un instructeur puisse s'assigner en modifiant/sauvegardant)
+            List<Courses> courses = coursesRepository.findByInstructor_IdOrInstructorNullWithRelations(instructorId);
             return courses.stream()
                     .map(course -> {
                         try {
@@ -567,9 +567,16 @@ public class CourseService {
             existingCourse.setCertificationMode(request.getCertificationMode());
         }
 
-        User instructor = userRepository.findById(request.getInstructorId())
-                .orElseThrow(() -> new RuntimeException("Instructor not found"));
-        existingCourse.setInstructor(instructor);
+        // Formateur : explicite dans la requête, ou conservé, ou assignation par l'instructeur connecté (cours sans formateur après import)
+        if (request.getInstructorId() != null) {
+            User instructor = userRepository.findById(request.getInstructorId())
+                    .orElseThrow(() -> new RuntimeException("Instructeur non trouvé avec l'ID: " + request.getInstructorId()));
+            existingCourse.setInstructor(instructor);
+        } else if (existingCourse.getInstructor() == null && currentUser != null && currentUser.getInstructor() != null) {
+            // Cours sans formateur (ex. après import / vidage DB) : l'instructeur qui enregistre s'assigne comme formateur
+            existingCourse.setInstructor(currentUser);
+        }
+        // sinon on garde l'instructeur existant (existingCourse.getInstructor() inchangé)
 
         // Nouvelle hiérarchie : Catégorie -> Cours
         // Si categoryId est fourni, l'utiliser
@@ -654,14 +661,13 @@ public class CourseService {
 
         switch (request.getAction()) {
             case APPROVE:
-                // Si l'instructeur est propriétaire, il peut valider directement (BROUILLON -> PUBLIE)
-                // Sinon, le flux normal : BROUILLON -> IN_REVIEW -> PUBLIE
+                // isInstructorOwner = true uniquement pour l'instructeur propriétaire du cours (jamais pour l'admin).
+                // Donc : seul l'instructeur peut passer le cours en PUBLIE ; l'admin ne fait que mettre en révision si besoin.
                 if (course.getStatus() == com.odc.aws_learning.app.constante.CourseStatus.BROUILLON) {
                     if (isInstructorOwner) {
-                        // L'instructeur propriétaire peut publier directement son cours
                         course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.PUBLIE);
                     } else {
-                        // Sinon, passer en révision (pour validation par admin)
+                        // Admin ou autre : on ne publie pas, on met en révision ; l'instructeur publiera plus tard
                         course.setStatus(com.odc.aws_learning.app.constante.CourseStatus.IN_REVIEW);
                     }
                     course.setRejectionReason(null);

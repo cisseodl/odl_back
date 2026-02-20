@@ -83,8 +83,10 @@ public class CoursesController {
             }
         }
 
-        // Si l'utilisateur est un instructeur, définir son ID (par rôle pour éviter LazyInitializationException).
-        // Si c'est un admin, l'ID de l'instructeur doit être dans la requête.
+        // Condition : on ne peut pas créer de cours sans être connecté en tant qu'admin ou instructeur.
+        // - Instructeur : le cours lui est automatiquement assigné (instructor_id = lui).
+        // - Admin : crée à la place de l'instructeur (charge, urgence, demande) et DOIT indiquer l'instructeur assigné.
+        // La PUBLICATION reste réservée à l'instructeur propriétaire (voir validateCourse).
         boolean isInstructor = currentUser.getInstructor() != null
                 || (authentication != null && authentication.getAuthorities().stream()
                         .anyMatch(a -> "ROLE_INSTRUCTOR".equals(a.getAuthority())));
@@ -204,6 +206,11 @@ public class CoursesController {
         return CResponse.success("Le cours a été supprimé avec succès.");
     }
 
+    /**
+     * Validation / publication d'un cours (APPROVE, REJECT, WITHDRAW).
+     * Règle métier : SEUL L'INSTRUCTEUR PROPRIÉTAIRE peut PUBLIER (passer en PUBLIE).
+     * L'admin peut créer des cours et assigner un formateur, mais ne peut pas publier à sa place.
+     */
     @PostMapping("/{id}/validate")
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public CResponse<CourseDto> validateCourse(@PathVariable Long id, @RequestBody com.odc.aws_learning.app.dto.CourseValidationRequest request) {
@@ -213,7 +220,6 @@ public class CoursesController {
                 return CResponse.error("Utilisateur non authentifié");
             }
             
-            // Vérifier que l'instructeur ne peut valider que ses propres cours
             Optional<Courses> courseOptional = coursesRepository.findById(id);
             if (courseOptional.isEmpty()) {
                 return CResponse.error("Cours non trouvé");

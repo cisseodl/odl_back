@@ -46,7 +46,7 @@ public class CertificateController {
     private final UserRepository userRepository;
 
     @GetMapping("/download/{quizId}")
-    @PreAuthorize("hasAnyRole('USER', 'LEARNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
     public ResponseEntity<?> downloadCertificate(@PathVariable Long quizId) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
@@ -130,10 +130,15 @@ public class CertificateController {
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
-            return userOptional.orElse(null);
+        if (authentication == null || !authentication.isAuthenticated()) return null;
+        String email = null;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            email = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else if (authentication.getPrincipal() instanceof String && !"anonymousUser".equals(authentication.getPrincipal())) {
+            email = (String) authentication.getPrincipal();
+        }
+        if (email != null && !email.isEmpty()) {
+            return userRepository.findByEmailWithInstructor(email).orElse(null);
         }
         return null;
     }

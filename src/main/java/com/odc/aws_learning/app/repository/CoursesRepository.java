@@ -31,6 +31,13 @@ public interface CoursesRepository extends JpaRepository<Courses, Long> {
            "WHERE c.instructor.id = :instructorId")
     List<Courses> findByInstructor_IdWithRelations(@Param("instructorId") Long instructorId);
 
+    /** Cours de l'instructeur OU cours sans formateur (instructor_id null), pour permettre à un instructeur de s'assigner après import / vidage DB */
+    @Query("SELECT DISTINCT c FROM Courses c " +
+           "LEFT JOIN FETCH c.instructor " +
+           "LEFT JOIN FETCH c.categorie " +
+           "WHERE (c.instructor.id = :instructorId OR c.instructor IS NULL)")
+    List<Courses> findByInstructor_IdOrInstructorNullWithRelations(@Param("instructorId") Long instructorId);
+
     long countByInstructorIdAndStatus(Long instructorId, CourseStatus status);
 
     long countByCreatedAtAfter(LocalDateTime date);

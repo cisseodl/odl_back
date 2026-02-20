@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Optional; // Added
-
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
@@ -63,10 +61,15 @@ public class DashboardController {
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
-            return userOptional.orElse(null);
+        if (authentication == null || !authentication.isAuthenticated()) return null;
+        String email = null;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            email = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else if (authentication.getPrincipal() instanceof String && !"anonymousUser".equals(authentication.getPrincipal())) {
+            email = (String) authentication.getPrincipal();
+        }
+        if (email != null && !email.isEmpty()) {
+            return userRepository.findByEmailWithInstructor(email).orElse(null);
         }
         return null;
     }
