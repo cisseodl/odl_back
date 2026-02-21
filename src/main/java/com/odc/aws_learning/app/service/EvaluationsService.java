@@ -59,12 +59,22 @@ public class EvaluationsService {
     /**
      * @param courseLevelOnly si true, ne retourne que les évaluations de niveau cours (lesson null),
      *                        i.e. examens de fin de cours, pas les quiz/TD associés à une leçon
+     * @param currentUser si non null et instructeur, ne retourne que les évaluations de cet instructeur
      */
-    public CResponse<?> getAll(boolean courseLevelOnly) {
+    public CResponse<?> getAll(boolean courseLevelOnly, User currentUser) {
         try {
-            List<Evaluations> evaluations = courseLevelOnly
-                    ? evaluationsRepository.findAllCourseLevelWithCourseAndInstructor()
-                    : evaluationsRepository.findAllWithLessonModuleAndCourse();
+            boolean filterByInstructor = currentUser != null && currentUser.getInstructor() != null;
+            Long instructorUserId = filterByInstructor ? currentUser.getId() : null;
+            List<Evaluations> evaluations;
+            if (courseLevelOnly) {
+                evaluations = filterByInstructor && instructorUserId != null
+                        ? evaluationsRepository.findAllCourseLevelWithCourseAndInstructorByInstructorId(instructorUserId)
+                        : evaluationsRepository.findAllCourseLevelWithCourseAndInstructor();
+            } else {
+                evaluations = filterByInstructor && instructorUserId != null
+                        ? evaluationsRepository.findAllWithLessonModuleAndCourseByInstructorId(instructorUserId)
+                        : evaluationsRepository.findAllWithLessonModuleAndCourse();
+            }
             return CResponse.success(evaluations, "Les evaluations");
         } catch (Exception e) {
             return CResponse.error("Erreur de récupération");
@@ -192,14 +202,16 @@ public class EvaluationsService {
             evaluation.setInstructor(instructor);
             evaluation.setStatus("ACTIVE");
             
-            // QUIZ = évaluation de fin de cours (certification) : pas de leçon. TP = TD lié à une leçon.
-            if (request.getType() == Evaluations.EvaluationType.QUIZ) {
-                evaluation.setLesson(null); // Garantir qu'un QUIZ est toujours "examen de fin de cours"
-            } else if (request.getType() == Evaluations.EvaluationType.TP && request.getLessonId() != null) {
+            // Quiz associé à une leçon (lessonId fourni) → affiché dans liste Quiz. Évaluation niveau cours (pas de lessonId) → liste Évaluations.
+            if (request.getLessonId() != null) {
                 Optional<Lesson> lessonOptional = lessonRepository.findById(request.getLessonId());
                 if (lessonOptional.isPresent()) {
                     evaluation.setLesson(lessonOptional.get());
+                } else {
+                    evaluation.setLesson(null);
                 }
+            } else {
+                evaluation.setLesson(null); // Examen de fin de cours (niveau cours)
             }
             
             if (request.getType() == Evaluations.EvaluationType.TP) {

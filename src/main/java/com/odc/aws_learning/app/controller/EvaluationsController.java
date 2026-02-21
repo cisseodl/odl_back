@@ -73,7 +73,8 @@ public class EvaluationsController {
     @GetMapping("/get-all")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
     public CResponse<?> getAll(@RequestParam(value = "courseLevelOnly", defaultValue = "false") boolean courseLevelOnly) {
-        return evaluationsService.getAll(courseLevelOnly);
+        User currentUser = getCurrentUser();
+        return evaluationsService.getAll(courseLevelOnly, currentUser);
     }
 
     /**

@@ -280,25 +280,23 @@ public class ApprenantService {
             if (user.getInstructor() == null) {
                 return CResponse.error("Accès refusé : réservé aux instructeurs.");
             }
-            Long instructorId = user.getInstructor().getId();
-            System.out.println("[ApprenantService] Recherche des apprenants pour l'instructeur ID: " + instructorId);
+            // courses.instructor_id référence users.id (Courses.instructor = User), pas instructors.id
+            Long instructorUserId = user.getId();
+            System.out.println("[ApprenantService] Recherche des apprenants pour l'instructeur (user id): " + instructorUserId);
             
             List<Long> learnerIds = null;
             try {
-                // Essayer d'abord avec la requête native directe (plus simple et fiable)
-                learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorIdDirect(instructorId);
+                learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorIdDirect(instructorUserId);
                 System.out.println("[ApprenantService] Nombre de learnerIds trouvés (requête native directe): " + (learnerIds != null ? learnerIds.size() : 0));
             } catch (Exception e1) {
                 System.out.println("[ApprenantService] Erreur avec requête native directe: " + e1.getMessage());
                 try {
-                    // Si la requête native directe échoue, essayer la requête native avec JOIN instructor
-                    learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorIdNative(instructorId);
+                    learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorIdNative(instructorUserId);
                     System.out.println("[ApprenantService] Nombre de learnerIds trouvés (requête native JOIN): " + (learnerIds != null ? learnerIds.size() : 0));
                 } catch (Exception e2) {
                     System.out.println("[ApprenantService] Erreur avec requête native JOIN: " + e2.getMessage());
                     try {
-                        // Si les requêtes natives échouent, essayer la requête JPQL
-                        learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorId(instructorId);
+                        learnerIds = detailsCourseRepo.findDistinctLearnerIdsByInstructorId(instructorUserId);
                         System.out.println("[ApprenantService] Nombre de learnerIds trouvés (requête JPQL): " + (learnerIds != null ? learnerIds.size() : 0));
                     } catch (Exception e3) {
                         System.out.println("[ApprenantService] Erreur avec requête JPQL: " + e3.getMessage());
@@ -311,7 +309,7 @@ public class ApprenantService {
                 System.out.println("[ApprenantService] IDs des apprenants: " + learnerIds);
             }
             if (learnerIds == null || learnerIds.isEmpty()) {
-                System.out.println("[ApprenantService] Aucun apprenant trouvé pour l'instructeur ID: " + instructorId);
+                System.out.println("[ApprenantService] Aucun apprenant trouvé pour l'instructeur (user id): " + instructorUserId);
                 return CResponse.success(Collections.emptyList(), "Aucun apprenant inscrit à vos cours.");
             }
             List<Apprenant> apprenants = apprenantRepository.findByUser_IdInWithUserAndCohorte(learnerIds);

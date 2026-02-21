@@ -32,11 +32,11 @@ public interface DetailsCourseRepo extends JpaRepository<DetailsCourse, Long> {
            "WHERE i.id = :instructorId")
     List<Long> findDistinctLearnerIdsByInstructorId(@Param("instructorId") Long instructorId);
     
-    /** Version alternative avec requête native pour plus de fiabilité */
+    /** Version alternative native : courses.instructor_id référence users.id (entité Courses.instructor = User). */
     @Query(value = "SELECT DISTINCT dc.learner_id FROM details_course dc " +
            "INNER JOIN courses c ON dc.course_id = c.id " +
-           "INNER JOIN instructors i ON c.instructor_id = i.id " +
-           "WHERE i.id = :instructorId AND dc.learner_id IS NOT NULL", 
+           "INNER JOIN users u ON c.instructor_id = u.id " +
+           "WHERE u.id = :instructorId AND dc.learner_id IS NOT NULL", 
            nativeQuery = true)
     List<Long> findDistinctLearnerIdsByInstructorIdNative(@Param("instructorId") Long instructorId);
     

@@ -43,6 +43,19 @@ public interface EvaluationsRepository extends JpaRepository<Evaluations, Long> 
     List<Evaluations> findAllWithLessonModuleAndCourse();
 
     /**
+     * Idem mais limité à l'instructeur (liste Quiz créés par cet instructeur).
+     * instructorId = User.id (Evaluations.instructor est un User).
+     */
+    @Query("SELECT DISTINCT e FROM Evaluations e " +
+           "LEFT JOIN FETCH e.lesson lesson " +
+           "LEFT JOIN FETCH lesson.module module " +
+           "LEFT JOIN FETCH module.course course " +
+           "LEFT JOIN FETCH e.course course2 " +
+           "LEFT JOIN FETCH e.instructor " +
+           "WHERE e.instructor.id = :instructorId")
+    List<Evaluations> findAllWithLessonModuleAndCourseByInstructorId(@Param("instructorId") Long instructorId);
+
+    /**
      * Évaluations de niveau cours uniquement (examen de fin de cours, pas les quiz/TD associés à une leçon).
      * Utilisé pour la liste "Évaluations" du dash instructeur (quiz associé à une leçon → liste Quiz, pas ici).
      */
@@ -51,4 +64,13 @@ public interface EvaluationsRepository extends JpaRepository<Evaluations, Long> 
            "LEFT JOIN FETCH e.instructor " +
            "WHERE e.lesson IS NULL")
     List<Evaluations> findAllCourseLevelWithCourseAndInstructor();
+
+    /**
+     * Idem mais limité à l'instructeur (liste Évaluations créées par cet instructeur).
+     */
+    @Query("SELECT DISTINCT e FROM Evaluations e " +
+           "LEFT JOIN FETCH e.course course2 " +
+           "LEFT JOIN FETCH e.instructor " +
+           "WHERE e.lesson IS NULL AND e.instructor.id = :instructorId")
+    List<Evaluations> findAllCourseLevelWithCourseAndInstructorByInstructorId(@Param("instructorId") Long instructorId);
 }
