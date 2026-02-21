@@ -56,9 +56,15 @@ public class EvaluationsService {
         }
     }
 
-    public CResponse<?> getAll() {
+    /**
+     * @param courseLevelOnly si true, ne retourne que les évaluations de niveau cours (lesson null),
+     *                        i.e. examens de fin de cours, pas les quiz/TD associés à une leçon
+     */
+    public CResponse<?> getAll(boolean courseLevelOnly) {
         try {
-            List<Evaluations> evaluations = evaluationsRepository.findAllWithLessonModuleAndCourse();
+            List<Evaluations> evaluations = courseLevelOnly
+                    ? evaluationsRepository.findAllCourseLevelWithCourseAndInstructor()
+                    : evaluationsRepository.findAllWithLessonModuleAndCourse();
             return CResponse.success(evaluations, "Les evaluations");
         } catch (Exception e) {
             return CResponse.error("Erreur de récupération");

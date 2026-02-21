@@ -66,10 +66,14 @@ public class EvaluationsController {
         return evaluationsService.createEvaluation(quiz_answer);
     }
 
+    /**
+     * get-all : courseLevelOnly=true → uniquement évaluations de niveau cours (examen, lesson null).
+     * courseLevelOnly=false ou absent → toutes les évaluations (pour la liste Quiz qui filtre côté client).
+     */
     @GetMapping("/get-all")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'APPRENANT', 'INSTRUCTOR')")
-    public CResponse<?> getAll() {
-        return evaluationsService.getAll();
+    public CResponse<?> getAll(@RequestParam(value = "courseLevelOnly", defaultValue = "false") boolean courseLevelOnly) {
+        return evaluationsService.getAll(courseLevelOnly);
     }
 
     /**

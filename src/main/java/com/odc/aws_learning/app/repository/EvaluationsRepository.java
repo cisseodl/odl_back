@@ -41,4 +41,14 @@ public interface EvaluationsRepository extends JpaRepository<Evaluations, Long> 
            "LEFT JOIN FETCH e.course course2 " +
            "LEFT JOIN FETCH e.instructor")
     List<Evaluations> findAllWithLessonModuleAndCourse();
+
+    /**
+     * Évaluations de niveau cours uniquement (examen de fin de cours, pas les quiz/TD associés à une leçon).
+     * Utilisé pour la liste "Évaluations" du dash instructeur (quiz associé à une leçon → liste Quiz, pas ici).
+     */
+    @Query("SELECT DISTINCT e FROM Evaluations e " +
+           "LEFT JOIN FETCH e.course course2 " +
+           "LEFT JOIN FETCH e.instructor " +
+           "WHERE e.lesson IS NULL")
+    List<Evaluations> findAllCourseLevelWithCourseAndInstructor();
 }
