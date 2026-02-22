@@ -52,6 +52,12 @@ public class EvaluationAttempt extends BaseEntity {
     
     @Column(nullable = true, length = 2000)
     private String instructorFeedback; // Commentaires de l'instructeur
+
+    @Column(name = "certificate_display_name", nullable = true, length = 255)
+    private String certificateDisplayName; // Nom complet pour le certificat (saisi avant l'examen)
+
+    @Column(name = "certificate_email", nullable = true, length = 255)
+    private String certificateEmail; // Email pour l'envoi du certificat
     
     public EvaluationAttempt() {
         super();
@@ -99,6 +105,14 @@ public class EvaluationAttempt extends BaseEntity {
     public String getInstructorFeedback() {
         return instructorFeedback;
     }
+
+    public String getCertificateDisplayName() {
+        return certificateDisplayName;
+    }
+
+    public String getCertificateEmail() {
+        return certificateEmail;
+    }
     
     // Setters
     public void setEvaluation(Evaluations evaluation) {
@@ -143,6 +157,14 @@ public class EvaluationAttempt extends BaseEntity {
     
     public void setInstructorFeedback(String instructorFeedback) {
         this.instructorFeedback = instructorFeedback;
+    }
+
+    public void setCertificateDisplayName(String certificateDisplayName) {
+        this.certificateDisplayName = certificateDisplayName;
+    }
+
+    public void setCertificateEmail(String certificateEmail) {
+        this.certificateEmail = certificateEmail;
     }
     
     @Override

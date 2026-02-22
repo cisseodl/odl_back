@@ -10,4 +10,8 @@ public class EvaluationSubmissionRequest {
     private String submittedText;   // Pour les TPs : réponse texte (optionnel)
     private Map<Long, Long> answers; // Pour les QUIZ: questionId -> responseId
     private Map<Long, String> textAnswers; // Pour les QUIZ avec réponses libres: questionId -> réponse texte
+    /** Nom complet affiché sur le certificat (examen de fin de cours) */
+    private String certificateDisplayName;
+    /** Email pour l'envoi du certificat (examen de fin de cours) */
+    private String certificateEmail;
 }

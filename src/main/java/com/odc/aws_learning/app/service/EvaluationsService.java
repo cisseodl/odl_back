@@ -272,14 +272,24 @@ public class EvaluationsService {
             // Vérifier si l'apprenant est inscrit au cours
             // TODO: Ajouter vérification d'inscription si nécessaire
             
-            // Vérifier s'il existe déjà une tentative
+            // Vérifier s'il existe déjà une tentative (autoriser une nouvelle si la dernière a échoué)
             List<EvaluationAttempt> existingAttempts = evaluationAttemptRepository
                     .findByEvaluationIdAndUserIdOrderByCreatedAtDesc(request.getEvaluationId(), learner.getId());
             if (!existingAttempts.isEmpty()) {
-                return CResponse.error("Vous avez déjà soumis cet examen");
+                EvaluationAttempt lastAttempt = existingAttempts.get(0);
+                if (lastAttempt.getStatus() != EvaluationAttempt.AttemptStatus.FAILED) {
+                    return CResponse.error("Vous avez déjà soumis cet examen");
+                }
+                // Si échec, on autorise une nouvelle tentative
             }
             
             EvaluationAttempt attempt = new EvaluationAttempt(evaluation, learner);
+            if (request.getCertificateDisplayName() != null && !request.getCertificateDisplayName().isBlank()) {
+                attempt.setCertificateDisplayName(request.getCertificateDisplayName().trim());
+            }
+            if (request.getCertificateEmail() != null && !request.getCertificateEmail().isBlank()) {
+                attempt.setCertificateEmail(request.getCertificateEmail().trim());
+            }
             
             if (evaluation.getType() == Evaluations.EvaluationType.QUIZ) {
                 // Pour les QUIZ, on ne calcule PAS le score maintenant
@@ -413,22 +423,29 @@ public class EvaluationsService {
      */
     private void checkAndGenerateCertificate(User user, Courses course, Double score) {
         try {
-            // Vérifier si un certificat existe déjà pour ce cours et cet utilisateur
             List<Certificate> existingCertificates = certificateRepository.findAll().stream()
-                .filter(cert -> cert.getUser().getId().equals(user.getId()) 
+                .filter(cert -> cert.getUser().getId().equals(user.getId())
                     && cert.getCourse().getId().equals(course.getId()))
                 .collect(java.util.stream.Collectors.toList());
-            
-            if (!existingCertificates.isEmpty()) {
-                // Certificat déjà généré
-                return;
-            }
-            
-            // Générer le certificat
+            if (!existingCertificates.isEmpty()) return;
             certificateService.generateCertificateForEvaluation(user, course, score);
         } catch (Exception e) {
             System.err.println("Erreur lors de la génération automatique du certificat: " + e.getMessage());
-            // Ne pas faire échouer la soumission/correction si la génération du certificat échoue
+        }
+    }
+
+    /** Génère le certificat à partir de la tentative (nom/email saisis par l'apprenant avant l'examen). */
+    private void checkAndGenerateCertificate(EvaluationAttempt attempt) {
+        try {
+            if (attempt.getScore() == null || attempt.getScore() < 70.0) return;
+            List<Certificate> existingCertificates = certificateRepository.findAll().stream()
+                .filter(cert -> cert.getUser().getId().equals(attempt.getUser().getId())
+                    && cert.getCourse().getId().equals(attempt.getEvaluation().getCourse().getId()))
+                .collect(java.util.stream.Collectors.toList());
+            if (!existingCertificates.isEmpty()) return;
+            certificateService.generateCertificateForEvaluation(attempt);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la génération du certificat (tentative): " + e.getMessage());
         }
     }
     
@@ -547,8 +564,8 @@ public class EvaluationsService {
             // Mettre à jour le statut
             if (score >= 70.0) {
                 attempt.setStatus(EvaluationAttempt.AttemptStatus.PASSED);
-                // Générer le certificat si le score est suffisant
-                checkAndGenerateCertificate(learner, attempt.getEvaluation().getCourse(), score);
+                // Générer le certificat si le score est suffisant (nom/email saisis avant l'examen)
+                checkAndGenerateCertificate(attempt);
             } else {
                 attempt.setStatus(EvaluationAttempt.AttemptStatus.FAILED);
             }

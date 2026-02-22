@@ -128,6 +128,30 @@ public class CertificateController {
         return ResponseEntity.ok(CResponse.success(certificateDtos, "Certificats récupérés avec succès"));
     }
 
+    /** Liste de tous les apprenants certifiés (admin uniquement). */
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CResponse<?>> getAllCertificates() {
+        List<Certificate> certificates = certificateRepository.findAll();
+        List<Map<String, Object>> dtos = certificates.stream().map(cert -> {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", cert.getId());
+            dto.put("uniqueCode", cert.getUniqueCode());
+            dto.put("studentName", cert.getUser().getFullName());
+            dto.put("studentEmail", cert.getUser().getEmail());
+            dto.put("course", cert.getCourse().getTitle());
+            dto.put("courseId", cert.getCourse().getId());
+            dto.put("issuedDate", cert.getIssuedAt() != null ? cert.getIssuedAt().toString() : "");
+            Instant validUntil = cert.getIssuedAt() != null ? cert.getIssuedAt().plus(365, ChronoUnit.DAYS) : null;
+            dto.put("validUntil", validUntil != null ? validUntil.toString() : "");
+            dto.put("status", validUntil != null && validUntil.isAfter(Instant.now()) ? "Valide" : "Expiré");
+            dto.put("certificateUrl", cert.getCertificateUrl());
+            dto.put("avatar", cert.getUser().getAvatar());
+            return dto;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(CResponse.success(dtos, "Liste des attestations (certificats)"));
+    }
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) return null;

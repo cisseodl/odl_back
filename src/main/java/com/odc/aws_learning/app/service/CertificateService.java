@@ -8,6 +8,7 @@ import com.odc.aws_learning.app.entity.Quiz;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.app.entity.Certificate;
 import com.odc.aws_learning.app.entity.Courses;
+import com.odc.aws_learning.app.entity.EvaluationAttempt;
 import com.odc.aws_learning.app.service.UploadFileService;
 import com.odc.aws_learning.auth.entities.User;
 import lombok.RequiredArgsConstructor;
@@ -28,21 +29,18 @@ import java.util.UUID;
 
 
 @Service
+@RequiredArgsConstructor
 public class CertificateService {
 
     private final CertificateRepository certificateRepository;
     private final UploadFileService uploadFileService;
+    private final SendEmailService sendEmailService;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
 
     @Value("${app.server.base-url:https://api.smart-odc.com}")
     private String serverBaseUrl;
-
-    public CertificateService(CertificateRepository certificateRepository, UploadFileService uploadFileService) {
-        this.certificateRepository = certificateRepository;
-        this.uploadFileService = uploadFileService;
-    }
     public CResponse<Certificate> generateCertificate(User user, Courses course, Quiz quiz, UserQuizAttempt attempt) {
         try {
             Document document = new Document(PageSize.A4, 50, 50, 50, 50);
@@ -246,17 +244,12 @@ public class CertificateService {
 
             byte[] pdfBytes = out.toByteArray();
 
-            // Générer un nom de fichier unique pour le certificat
             String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
-
-            // Uploader le PDF vers le stockage local (Elastic Beanstalk)
             try {
                 String localFolderPath = uploadDir + "/certificates";
                 ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
                 String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
                 String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
-                
-                // Enregistrer l'entité Certificate dans la base de données
                 Certificate certificate = new Certificate();
                 certificate.setUniqueCode(UUID.randomUUID().toString());
                 certificate.setUser(user);
@@ -264,13 +257,102 @@ public class CertificateService {
                 certificate.setIssuedAt(java.time.Instant.now());
                 certificate.setCertificateUrl(certificateUrl);
                 certificateRepository.save(certificate);
-
                 return CResponse.success(certificate, "Certificat généré et enregistré avec succès.");
             } catch (IOException ioException) {
                 throw new RuntimeException("Erreur lors de l'upload du certificat vers le stockage local: " + ioException.getMessage(), ioException);
             }
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la génération du certificat PDF", e);
+        }
+    }
+
+    /**
+     * Génère un certificat pour une évaluation réussie (score >= 70%) en utilisant le nom et l'email
+     * saisis par l'apprenant avant l'examen. Envoie un email avec le lien du certificat si certificateEmail est renseigné.
+     */
+    public CResponse<Certificate> generateCertificateForEvaluation(EvaluationAttempt attempt) {
+        User user = attempt.getUser();
+        Courses course = attempt.getEvaluation().getCourse();
+        Double evaluationScore = attempt.getScore();
+        String displayName = (attempt.getCertificateDisplayName() != null && !attempt.getCertificateDisplayName().isBlank())
+            ? attempt.getCertificateDisplayName().trim()
+            : (user.getFullName() != null ? user.getFullName() : user.getEmail());
+        try {
+            Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            PdfWriter.getInstance(document, out);
+            document.open();
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
+            Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.DARK_GRAY);
+            Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(30f);
+            document.add(title);
+            PdfPTable separatorTable = new PdfPTable(1);
+            separatorTable.setWidthPercentage(100);
+            PdfPCell separatorCell = new PdfPCell();
+            separatorCell.setBorderWidthBottom(2f);
+            separatorCell.setBorder(Rectangle.BOTTOM);
+            separatorCell.setFixedHeight(10f);
+            separatorCell.setBorderColor(BaseColor.LIGHT_GRAY);
+            separatorCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            separatorCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            separatorCell.setPhrase(new Phrase(""));
+            separatorTable.addCell(separatorCell);
+            separatorTable.setSpacingAfter(30f);
+            document.add(separatorTable);
+            Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
+            awardedTo.setAlignment(Element.ALIGN_CENTER);
+            document.add(awardedTo);
+            Paragraph name = new Paragraph(displayName, subtitleFont);
+            name.setAlignment(Element.ALIGN_CENTER);
+            name.setSpacingAfter(20f);
+            document.add(name);
+            String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation";
+            Paragraph forCourse = new Paragraph("Pour avoir réussi le cours : " + courseTitle, textFont);
+            forCourse.setAlignment(Element.ALIGN_CENTER);
+            forCourse.setSpacingAfter(15f);
+            document.add(forCourse);
+            Paragraph score = new Paragraph("Score à l'évaluation : " + String.format("%.1f", evaluationScore != null ? evaluationScore : 0) + " / 100", textFont);
+            score.setAlignment(Element.ALIGN_CENTER);
+            score.setSpacingAfter(20f);
+            document.add(score);
+            LocalDate today = LocalDate.now();
+            String dateStr = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Paragraph date = new Paragraph("Date : " + dateStr, textFont);
+            date.setAlignment(Element.ALIGN_CENTER);
+            date.setSpacingAfter(40f);
+            document.add(date);
+            Paragraph signature = new Paragraph("Signature de l'administration", textFont);
+            signature.setAlignment(Element.ALIGN_RIGHT);
+            document.add(signature);
+            document.close();
+            byte[] pdfBytes = out.toByteArray();
+            String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
+            String localFolderPath = uploadDir + "/certificates";
+            ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
+            String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
+            String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
+            Certificate certificate = new Certificate();
+            certificate.setUniqueCode(UUID.randomUUID().toString());
+            certificate.setUser(user);
+            certificate.setCourse(course);
+            certificate.setIssuedAt(java.time.Instant.now());
+            certificate.setCertificateUrl(certificateUrl);
+            certificateRepository.save(certificate);
+            String emailTo = (attempt.getCertificateEmail() != null && !attempt.getCertificateEmail().isBlank()) ? attempt.getCertificateEmail().trim() : null;
+            if (emailTo != null && sendEmailService != null && sendEmailService.isEmailConfigured()) {
+                try {
+                    String message = "Félicitations " + displayName + " !\n\nVous avez réussi l'évaluation. Votre certificat est disponible :\n" + certificateUrl + "\n\nCordialement,\nL'équipe Orange Digital Learning.";
+                    sendEmailService.sendEmail(emailTo, message, "Votre certificat Orange Digital Learning");
+                } catch (Exception e) {
+                    System.err.println("Erreur envoi email certificat: " + e.getMessage());
+                }
+            }
+            return CResponse.success(certificate, "Certificat généré et enregistré avec succès.");
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la génération du certificat PDF (tentative)", e);
         }
     }
 
