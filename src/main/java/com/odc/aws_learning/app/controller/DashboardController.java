@@ -69,7 +69,7 @@ public class DashboardController {
             email = (String) authentication.getPrincipal();
         }
         if (email != null && !email.isEmpty()) {
-            return userRepository.findByEmailWithInstructor(email).orElse(null);
+            return userRepository.findByEmailWithRoles(email).orElse(null);
         }
         return null;
     }
