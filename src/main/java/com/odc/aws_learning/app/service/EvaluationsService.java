@@ -691,4 +691,80 @@ public class EvaluationsService {
             return CResponse.error("Erreur lors de la suppression: " + e.getMessage());
         }
     }
+
+    /**
+     * Mettre à jour une évaluation (titre, description, type, cours, questions avec points).
+     * Pour les QUIZ, les questions existantes sont supprimées et recréées à partir de la requête.
+     */
+    @Transactional
+    public CResponse<?> updateEvaluation(Long id, EvaluationRequest request, User user) {
+        try {
+            Optional<Evaluations> evalOpt = evaluationsRepository.findById(id);
+            if (evalOpt.isEmpty()) {
+                return CResponse.error("Évaluation introuvable");
+            }
+            Evaluations evaluation = evalOpt.get();
+            boolean isAdmin = user.getAdmin() != null;
+            boolean isOwner = evaluation.getInstructor() != null && evaluation.getInstructor().getId().equals(user.getId());
+            if (!isAdmin && !isOwner) {
+                return CResponse.error("Vous n'êtes pas autorisé à modifier cette évaluation");
+            }
+            Optional<Courses> courseOpt = coursesRepository.findById(request.getCourseId());
+            if (courseOpt.isEmpty()) {
+                return CResponse.error("Cours introuvable");
+            }
+            evaluation.setTitle(request.getTitle());
+            evaluation.setDescription(request.getDescription());
+            evaluation.setType(request.getType());
+            evaluation.setCourse(courseOpt.get());
+            if (request.getType() == Evaluations.EvaluationType.TP) {
+                evaluation.setTpInstructions(request.getTpInstructions());
+                evaluation.setTpFileUrl(request.getTpFileUrl());
+            }
+            if (request.getLessonId() != null) {
+                Optional<Lesson> lessonOpt = lessonRepository.findById(request.getLessonId());
+                evaluation.setLesson(lessonOpt.orElse(null));
+            } else {
+                evaluation.setLesson(null);
+            }
+            Evaluations saved = evaluationsRepository.save(evaluation);
+
+            if (request.getType() == Evaluations.EvaluationType.QUIZ && evaluation.getQuestions() != null && !evaluation.getQuestions().isEmpty()) {
+                for (Questions question : evaluation.getQuestions()) {
+                    if (question.getReponses() != null && !question.getReponses().isEmpty()) {
+                        reponsesRepository.deleteAll(question.getReponses());
+                    }
+                    questionsRepository.delete(question);
+                }
+            }
+            if (request.getType() == Evaluations.EvaluationType.QUIZ && request.getQuestions() != null && !request.getQuestions().isEmpty()) {
+                for (com.odc.aws_learning.app.dto.QuestionRequest questionReq : request.getQuestions()) {
+                    Questions question = new Questions();
+                    question.setTitle(questionReq.getTitle());
+                    question.setDescription(questionReq.getDescription());
+                    question.setType(questionReq.getType() != null ? questionReq.getType() : "SINGLE_CHOICE");
+                    question.setStatus("ACTIVE");
+                    question.setEvaluations(saved);
+                    if (questionReq.getPoints() != null && questionReq.getPoints() > 0) {
+                        question.setPoints(questionReq.getPoints());
+                    }
+                    Questions savedQuestion = questionsRepository.save(question);
+                    if (questionReq.getReponses() != null && !questionReq.getReponses().isEmpty()) {
+                        for (com.odc.aws_learning.app.dto.ResponseRequest responseReq : questionReq.getReponses()) {
+                            Reponses response = new Reponses();
+                            response.setTitle(responseReq.getTitle());
+                            response.setDescription(responseReq.getDescription());
+                            response.setStatus("ACTIVE");
+                            response.setIsCorrect(responseReq.getIsCorrect() != null ? responseReq.getIsCorrect() : false);
+                            response.setQuestions(savedQuestion);
+                            reponsesRepository.save(response);
+                        }
+                    }
+                }
+            }
+            return CResponse.success(saved, "Évaluation mise à jour avec succès");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la mise à jour: " + e.getMessage());
+        }
+    }
 }

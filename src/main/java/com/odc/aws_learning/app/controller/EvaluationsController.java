@@ -206,6 +206,20 @@ public class EvaluationsController {
     }
     
     /**
+     * Mettre à jour une évaluation (instructeur ou admin)
+     * PUT /api/evaluations/update/{id}
+     */
+    @PutMapping("/update/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> updateEvaluation(@PathVariable Long id, @org.springframework.web.bind.annotation.RequestBody EvaluationRequest request) {
+        User user = getCurrentUser();
+        if (user == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.updateEvaluation(id, request, user);
+    }
+
+    /**
      * Supprimer une évaluation (TD ou Quiz)
      * DELETE /api/evaluations/delete/{id}
      */
