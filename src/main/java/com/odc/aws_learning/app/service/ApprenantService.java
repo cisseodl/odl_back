@@ -90,16 +90,15 @@ public class ApprenantService {
             return CResponse.error("Cet utilisateur est déjà un apprenant.");
         }
 
-        // Si l'apprenant est créé par un admin et que l'utilisateur n'a pas de mot de passe, lui attribuer le mot de passe par défaut
+        // Quand l'admin crée un apprenant : toujours attribuer le mdp par défaut apprenant@odl et l'envoyer par email
         String plainPassword = null;
-        if (isCreatedByAdmin && (user.getPassword() == null || user.getPassword().trim().isEmpty())) {
-            System.out.println("=== Attribution du mot de passe par défaut pour apprenant créé par admin ===");
+        if (isCreatedByAdmin) {
             String defaultPassword = "apprenant@odl";
             plainPassword = defaultPassword;
             user.setPassword(passwordEncoder.encode(defaultPassword));
             userRepository.save(user);
-            userRepository.flush(); // S'assurer que le mot de passe est bien persisté
-            System.out.println("✅ Mot de passe par défaut 'apprenant@odl' sauvegardé pour l'apprenant");
+            userRepository.flush();
+            System.out.println("✅ Mot de passe par défaut 'apprenant@odl' attribué et sauvegardé pour l'apprenant créé par admin");
         }
 
         Apprenant apprenant = new Apprenant();
