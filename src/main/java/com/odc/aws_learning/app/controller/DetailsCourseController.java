@@ -4,6 +4,9 @@ import com.odc.aws_learning.auth.base.response.CResponse;
 import com.odc.aws_learning.app.entity.DetailsCourse;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.repository.CoursesRepository;
+import com.odc.aws_learning.app.repository.LessonRepository;
+import com.odc.aws_learning.app.repository.ModuleRepository;
+import com.odc.aws_learning.app.repository.UserProgressRepository;
 import com.odc.aws_learning.app.constante.Enumeration;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -28,6 +31,9 @@ public class DetailsCourseController {
     private final DetailsCourseRepo detailsCourseRepo;
     private final CoursesRepository coursesRepository;
     private final UserRepository userRepository;
+    private final UserProgressRepository userProgressRepository;
+    private final LessonRepository lessonRepository;
+    private final ModuleRepository moduleRepository;
 
     /**
      * Récupère tous les détails d'inscription pour un cours spécifique
@@ -39,12 +45,14 @@ public class DetailsCourseController {
         try {
             List<DetailsCourse> detailsCourses = detailsCourseRepo.findAllByCourseId(courseId);
             
-            // Mapper les entités vers des Maps pour éviter les problèmes de sérialisation JSON
+            // Mapper les entités vers des Maps avec progression (leçons complétées / total)
             List<Map<String, Object>> detailsList = detailsCourses.stream().map(dc -> {
                 Map<String, Object> detailMap = new HashMap<>();
+                Long learnerId = dc.getLearner() != null ? dc.getLearner().getId() : null;
+                Long cId = dc.getCourse() != null ? dc.getCourse().getId() : null;
                 detailMap.put("id", dc.getId());
-                detailMap.put("courseId", dc.getCourse() != null ? dc.getCourse().getId() : null);
-                detailMap.put("learnerId", dc.getLearner() != null ? dc.getLearner().getId() : null);
+                detailMap.put("courseId", cId);
+                detailMap.put("learnerId", learnerId);
                 detailMap.put("learnerName", dc.getLearner() != null ? 
                     (dc.getLearner().getFullName() != null ? dc.getLearner().getFullName() : dc.getLearner().getEmail()) : null);
                 detailMap.put("learnerEmail", dc.getLearner() != null ? dc.getLearner().getEmail() : null);
@@ -53,6 +61,25 @@ public class DetailsCourseController {
                 detailMap.put("activate", dc.isActivate());
                 detailMap.put("createdAt", dc.getCreatedAt());
                 detailMap.put("lastModifiedAt", dc.getLastModifiedAt());
+                // Progression : leçons complétées / total leçons (pour le dash instructeur)
+                if (learnerId != null && cId != null) {
+                    long totalLessons = lessonRepository.countByModule_Course_Id(cId);
+                    long completedLessons = userProgressRepository.findByUserIdAndLessonModuleCourseId(learnerId, cId).stream()
+                            .filter(up -> up.getCompletedAt() != null).count();
+                    int progress = totalLessons > 0 ? (int) ((completedLessons * 100) / totalLessons) : 0;
+                    int totalModules = moduleRepository.findByCourseId(cId).size();
+                    detailMap.put("progress", progress);
+                    detailMap.put("completedLessons", (int) completedLessons);
+                    detailMap.put("totalLessons", (int) totalLessons);
+                    detailMap.put("completedModules", totalModules > 0 ? (int) Math.min((completedLessons * totalModules) / Math.max(1, totalLessons), totalModules) : 0);
+                    detailMap.put("totalModules", totalModules);
+                } else {
+                    detailMap.put("progress", 0);
+                    detailMap.put("completedLessons", 0);
+                    detailMap.put("totalLessons", 0);
+                    detailMap.put("completedModules", 0);
+                    detailMap.put("totalModules", 0);
+                }
                 return detailMap;
             }).collect(Collectors.toList());
             

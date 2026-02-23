@@ -11,7 +11,6 @@ public class CourseCreationRequest {
     @NotBlank
     private String title;
     private String subtitle;
-    @NotBlank
     private String description;
     private String imagePath;
     @NotNull

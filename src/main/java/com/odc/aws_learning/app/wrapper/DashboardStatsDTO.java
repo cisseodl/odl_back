@@ -58,6 +58,7 @@ public class DashboardStatsDTO {
     @Builder
     public static class StudentStats {
         private long coursesJoined;
+        private long completedCourses;
         private long certificatesObtained;
         private double averageScore;
         private long totalQuizAttempts;

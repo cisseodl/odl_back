@@ -96,4 +96,20 @@ public class ApprenantWithUserDto {
         
         return builder.build();
     }
+
+    /** DTO minimal pour un User sans fiche Apprenant (ex. inscrit via smart-odc.com) afin qu'il apparaisse dans la liste admin. */
+    public static ApprenantWithUserDto fromUser(User user) {
+        if (user == null) return null;
+        return ApprenantWithUserDto.builder()
+                .id(null)
+                .userId(user.getId())
+                .fullName(user.getFullName())
+                .userEmail(user.getEmail())
+                .phone(user.getPhone())
+                .avatar(user.getAvatar())
+                .userActivate(user.getActivate())
+                .username(user.getFullName())
+                .activate(true)
+                .build();
+    }
 }

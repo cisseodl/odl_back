@@ -10,7 +10,9 @@ import com.odc.aws_learning.auth.repository.UserRepository;
 import com.odc.aws_learning.app.repository.ApprenantRepository; // Added
 import com.odc.aws_learning.auth.repository.InstructorRepository; // Added
 import com.odc.aws_learning.app.repository.DetailsCourseRepo; // Added
+import com.odc.aws_learning.app.repository.CertificateRepository;
 import com.odc.aws_learning.app.entity.DetailsCourse; // Added
+import com.odc.aws_learning.app.entity.Certificate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +23,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Added
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +40,7 @@ public class UserService implements UserDetailsService {
     private final ApprenantRepository apprenantRepository; // Injected
     private final InstructorRepository instructorRepository; // Injected
     private final DetailsCourseRepo detailsCourseRepo; // Injected
+    private final CertificateRepository certificateRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -235,13 +240,27 @@ public class UserService implements UserDetailsService {
         }
     }
 
+    @Transactional(readOnly = true)
     public CResponse<?> getUserCertificates(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        // Return a list of Certificate DTOs or relevant info
-        List<String> certificateUrls = user.getCertificates().stream()
-                .map(certificate -> certificate.getCertificateUrl() + ", Code:" + certificate.getUniqueCode())
-                .collect(Collectors.toList());
-        return CResponse.success(certificateUrls, "User certificates fetched successfully");
+        List<Certificate> certificates = certificateRepository.findByUser_Id(user.getId());
+        List<Map<String, Object>> dtos = certificates.stream().map(cert -> {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", cert.getId());
+            dto.put("uniqueCode", cert.getUniqueCode());
+            dto.put("studentName", user.getFullName() != null ? user.getFullName() : user.getEmail());
+            dto.put("studentEmail", user.getEmail());
+            dto.put("course", cert.getCourse() != null ? cert.getCourse().getTitle() : "");
+            dto.put("courseId", cert.getCourse() != null ? cert.getCourse().getId() : null);
+            dto.put("issuedDate", cert.getIssuedAt() != null ? cert.getIssuedAt().toString() : "");
+            Instant validUntil = cert.getIssuedAt() != null ? cert.getIssuedAt().plus(365, ChronoUnit.DAYS) : null;
+            dto.put("validUntil", validUntil != null ? validUntil.toString() : "");
+            dto.put("status", validUntil != null && validUntil.isAfter(Instant.now()) ? "Valide" : "Expiré");
+            dto.put("certificateUrl", cert.getCertificateUrl());
+            dto.put("avatar", user.getAvatar());
+            return dto;
+        }).collect(Collectors.toList());
+        return CResponse.success(dtos, "User certificates fetched successfully");
     }
 
     @Transactional

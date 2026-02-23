@@ -32,11 +32,13 @@ public class DashboardService {
         Long userId = user.getId();
 
         long coursesJoined = detailsCourseRepo.countByLearnerId(userId);
+        long completedCourses = detailsCourseRepo.countByLearner_IdAndCompleted(userId, true);
         long certificatesObtained = certificateRepository.countByUser(user);
         Double avgScore = userQuizAttemptRepository.averageScorePercentageByUserId(userId);
 
         DashboardStatsDTO.StudentStats studentStats = DashboardStatsDTO.StudentStats.builder()
                 .coursesJoined(coursesJoined)
+                .completedCourses(completedCourses)
                 .certificatesObtained(certificatesObtained)
                 .averageScore(avgScore != null ? avgScore : 0.0)
                 .totalQuizAttempts(userQuizAttemptRepository.countByUserId(userId))

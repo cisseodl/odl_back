@@ -21,6 +21,8 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     long countByCourseIdIn(List<Long> courseIds); // Added for instructor analytics
 
     long countByUser(User user);
+
+    List<Certificate> findByUser_Id(Long userId);
     
     @Query("SELECT COUNT(c) FROM Certificate c WHERE c.course.instructor.id = :instructorId")
     long countByCourse_Instructor_Id(@Param("instructorId") Long instructorId);

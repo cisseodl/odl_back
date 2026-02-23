@@ -252,6 +252,19 @@ public class ApprenantService {
                     })
                     .filter(dto -> dto != null)
                     .collect(Collectors.toList());
+
+            // Inclure les utilisateurs sans fiche Apprenant (ex. inscrits via smart-odc.com) pour qu'ils apparaissent dans Utilisateurs -> Apprenants
+            try {
+                List<User> allUsersWithRelations = userRepository.findAllWithRelations();
+                List<ApprenantWithUserDto> fromUsers = allUsersWithRelations.stream()
+                        .filter(u -> u.getAdmin() == null && u.getInstructor() == null && u.getApprenant() == null)
+                        .map(ApprenantWithUserDto::fromUser)
+                        .filter(dto -> dto != null)
+                        .collect(Collectors.toList());
+                apprenantDtos.addAll(fromUsers);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de l'ajout des utilisateurs sans fiche Apprenant: " + e.getMessage());
+            }
             
             return CResponse.success(apprenantDtos, "Liste des apprenants.");
         } catch (Exception e) {
