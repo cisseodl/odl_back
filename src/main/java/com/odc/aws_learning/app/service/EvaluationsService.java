@@ -398,12 +398,16 @@ public class EvaluationsService {
             String submittedText = null;
             
             if (answers != null) {
+                Long rawVal = null;
                 if (answers.containsKey(answerKeyById)) {
-                    selectedResponseId = answers.get(answerKeyById);
+                    rawVal = answers.get(answerKeyById);
                 } else if (answers.containsKey(answerKeyByIndex)) {
                     Object val = answers.get(answerKeyByIndex);
-                    selectedResponseId = val instanceof Number ? ((Number) val).longValue() : null;
+                    if (val instanceof Number) {
+                        rawVal = ((Number) val).longValue();
+                    }
                 }
+                selectedResponseId = rawVal;
             }
             if (textAnswers != null && selectedResponseId == null) {
                 if (textAnswers.containsKey(answerKeyById)) {
