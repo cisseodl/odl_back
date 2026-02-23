@@ -241,7 +241,12 @@ public class ApprenantService {
             }
             
             // Convertir en DTO pour éviter les problèmes de sérialisation JSON
+            // Exclure les formateurs (instructeurs) : ne pas les afficher dans Utilisateurs -> Apprenants
             List<ApprenantWithUserDto> apprenantDtos = apprenants.stream()
+                    .filter(apprenant -> {
+                        if (apprenant.getUser() == null) return true;
+                        return apprenant.getUser().getInstructor() == null;
+                    })
                     .map(apprenant -> {
                         try {
                             return ApprenantWithUserDto.fromApprenant(apprenant);
