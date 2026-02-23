@@ -100,4 +100,37 @@ public class FileController {
                 .header("Content-Disposition", "inline; filename=\"" + filename + "\"")
                 .body(bytes);
     }
+
+    /**
+     * GET /api/files/courses/{filename}
+     * Sert l'image du cours depuis S3 (même préfixe que l'upload dans CoursesController).
+     * Accessible sans auth pour afficher les images sur les cartes cours.
+     */
+    @GetMapping("/courses/{filename:.+}")
+    public ResponseEntity<?> getCourseImage(@PathVariable String filename) {
+        if (filename == null || filename.isBlank() || filename.contains("..")) {
+            return ResponseEntity.notFound().build();
+        }
+        String[] possibleKeys = {
+            "uploads/courses/" + filename,
+            "./uploads/courses/" + filename,
+            "courses/" + filename
+        };
+        byte[] bytes = null;
+        for (String s3Key : possibleKeys) {
+            bytes = uploadFileService.getFileBytesFromS3(s3Key);
+            if (bytes != null && bytes.length > 0) break;
+        }
+        if (bytes == null || bytes.length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        String contentType = "image/jpeg";
+        if (filename.toLowerCase().endsWith(".png")) contentType = "image/png";
+        else if (filename.toLowerCase().endsWith(".gif")) contentType = "image/gif";
+        else if (filename.toLowerCase().endsWith(".webp")) contentType = "image/webp";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header("Content-Disposition", "inline; filename=\"" + filename + "\"")
+                .body(bytes);
+    }
 }
