@@ -66,21 +66,31 @@ public class CertificateService {
         } catch (Exception ignored) { /* logo optionnel */ }
     }
 
+    /** Espace vertical pour centrer le contenu (mode paysage : hauteur page 595pt). */
+    private void addVerticalSpacer(Document document, boolean landscape) {
+        float space = landscape ? 95f : 60f;
+        Paragraph spacer = new Paragraph(" ");
+        spacer.setSpacingBefore(space);
+        spacer.setSpacingAfter(0f);
+        try { document.add(spacer); } catch (DocumentException ignored) { }
+    }
+
     public CResponse<Certificate> generateCertificate(User user, Courses course, Quiz quiz, UserQuizAttempt attempt) {
         try {
-            Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+            Document document = new Document(PageSize.A4.rotate(), 50, 50, 50, 50);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
             PdfWriter.getInstance(document, out);
             document.open();
 
             addLogoIfPresent(document);
+            addVerticalSpacer(document, true);
 
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
             Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
 
-            Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
+            Paragraph title = new Paragraph("Certificat d'achèvement du cours", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
             document.add(title);
@@ -98,6 +108,12 @@ public class CertificateService {
             separatorTable.addCell(separatorCell);
             separatorTable.setSpacingAfter(30f);
             document.add(separatorTable);
+
+            Font felicitationsFont = new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, BaseColor.BLACK);
+            Paragraph felicitations = new Paragraph("Félicitations !", felicitationsFont);
+            felicitations.setAlignment(Element.ALIGN_CENTER);
+            felicitations.setSpacingAfter(15f);
+            document.add(felicitations);
 
             String fullName = user.getFullName() != null ? user.getFullName() : user.getEmail();
             Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
@@ -178,18 +194,19 @@ public class CertificateService {
      */
     public CResponse<Certificate> generateCertificateForEvaluation(User user, Courses course, Double evaluationScore) {
         try {
-            Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+            Document document = new Document(PageSize.A4.rotate(), 50, 50, 50, 50);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
             PdfWriter.getInstance(document, out);
             document.open();
 
             addLogoIfPresent(document);
+            addVerticalSpacer(document, true);
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
             Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
 
-            Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
+            Paragraph title = new Paragraph("Certificat d'achèvement du cours", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
             document.add(title);
@@ -207,6 +224,12 @@ public class CertificateService {
             separatorTable.addCell(separatorCell);
             separatorTable.setSpacingAfter(30f);
             document.add(separatorTable);
+
+            Font felicitationsFont = new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, BaseColor.BLACK);
+            Paragraph felicitations = new Paragraph("Félicitations !", felicitationsFont);
+            felicitations.setAlignment(Element.ALIGN_CENTER);
+            felicitations.setSpacingAfter(15f);
+            document.add(felicitations);
 
             String fullName = user.getFullName() != null ? user.getFullName() : user.getEmail();
             Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
@@ -274,15 +297,16 @@ public class CertificateService {
             ? attempt.getCertificateDisplayName().trim()
             : (user.getFullName() != null ? user.getFullName() : user.getEmail());
         try {
-            Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+            Document document = new Document(PageSize.A4.rotate(), 50, 50, 50, 50);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             PdfWriter.getInstance(document, out);
             document.open();
             addLogoIfPresent(document);
+            addVerticalSpacer(document, true);
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
             Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
-            Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
+            Paragraph title = new Paragraph("Certificat d'achèvement du cours", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
             document.add(title);
@@ -299,6 +323,11 @@ public class CertificateService {
             separatorTable.addCell(separatorCell);
             separatorTable.setSpacingAfter(30f);
             document.add(separatorTable);
+            Font felicitationsFont = new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, BaseColor.BLACK);
+            Paragraph felicitations = new Paragraph("Félicitations !", felicitationsFont);
+            felicitations.setAlignment(Element.ALIGN_CENTER);
+            felicitations.setSpacingAfter(15f);
+            document.add(felicitations);
             Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
             awardedTo.setAlignment(Element.ALIGN_CENTER);
             document.add(awardedTo);
@@ -356,18 +385,19 @@ public class CertificateService {
      */
     public CResponse<Certificate> generateCertificateForLabsCompletion(User user, Courses course) {
         try {
-            Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+            Document document = new Document(PageSize.A4.rotate(), 50, 50, 50, 50);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
             PdfWriter.getInstance(document, out);
             document.open();
 
             addLogoIfPresent(document);
+            addVerticalSpacer(document, true);
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
             Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
 
-            Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
+            Paragraph title = new Paragraph("Certificat d'achèvement du cours", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
             document.add(title);
@@ -385,6 +415,12 @@ public class CertificateService {
             separatorTable.addCell(separatorCell);
             separatorTable.setSpacingAfter(30f);
             document.add(separatorTable);
+
+            Font felicitationsFont = new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, BaseColor.BLACK);
+            Paragraph felicitations = new Paragraph("Félicitations !", felicitationsFont);
+            felicitations.setAlignment(Element.ALIGN_CENTER);
+            felicitations.setSpacingAfter(15f);
+            document.add(felicitations);
 
             String fullName = user.getFullName() != null ? user.getFullName() : user.getEmail();
             Paragraph awardedTo = new Paragraph("Décerné à ", textFont);

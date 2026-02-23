@@ -1,6 +1,7 @@
 package com.odc.aws_learning.app.controller;
 
 import com.odc.aws_learning.app.dto.LabDefinitionRequest;
+import com.odc.aws_learning.app.dto.LabSubmissionForInstructorDto;
 import com.odc.aws_learning.app.entity.LabDefinition;
 import com.odc.aws_learning.app.entity.LabSession;
 import com.odc.aws_learning.app.service.LabService;
@@ -214,6 +215,17 @@ public class LabController {
         }
         
         CResponse<List<LabSession>> response = labService.getUserSessions(currentUser.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Liste des soumissions "Ma réalisation" (rapports de lab) pour les cours de l'instructeur.
+     * GET /api/labs/instructor/{instructorId}/submissions
+     */
+    @GetMapping("/instructor/{instructorId}/submissions")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public ResponseEntity<CResponse<List<LabSubmissionForInstructorDto>>> getInstructorSubmissions(@PathVariable Long instructorId) {
+        CResponse<List<LabSubmissionForInstructorDto>> response = labService.getSubmissionsForInstructor(instructorId);
         return ResponseEntity.ok(response);
     }
     

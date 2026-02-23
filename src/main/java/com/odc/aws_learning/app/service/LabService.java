@@ -1,6 +1,7 @@
 package com.odc.aws_learning.app.service;
 
 import com.odc.aws_learning.app.dto.LabDefinitionRequest;
+import com.odc.aws_learning.app.dto.LabSubmissionForInstructorDto;
 import com.odc.aws_learning.app.entity.LabDefinition;
 import com.odc.aws_learning.app.entity.LabSession;
 import com.odc.aws_learning.app.entity.LabSessionStatus;
@@ -21,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger; // Added
 import org.slf4j.LoggerFactory; // Added
@@ -468,6 +470,22 @@ public class LabService {
         } catch (Exception e) {
             log.error("Erreur lors de la récupération des sessions: {}", e.getMessage(), e);
             return CResponse.error("Erreur lors de la récupération des sessions: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Liste des soumissions "Ma réalisation" (rapports de lab) pour les cours d'un instructeur.
+     */
+    public CResponse<List<LabSubmissionForInstructorDto>> getSubmissionsForInstructor(Long instructorId) {
+        try {
+            List<LabSession> sessions = labSessionRepository.findSubmittedByInstructorId(instructorId);
+            List<LabSubmissionForInstructorDto> dtos = sessions.stream()
+                    .map(LabSubmissionForInstructorDto::from)
+                    .collect(Collectors.toList());
+            return CResponse.success(dtos, "Réalisations labs récupérées avec succès");
+        } catch (Exception e) {
+            log.error("Erreur récupération réalisations labs instructeur: {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
         }
     }
 }

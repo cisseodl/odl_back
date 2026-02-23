@@ -16,6 +16,7 @@ import com.odc.aws_learning.app.repository.CertificateRepository;
 import com.odc.aws_learning.app.repository.CourseSatisfactionRepository;
 import com.odc.aws_learning.app.entity.CourseSatisfaction;
 import com.odc.aws_learning.app.repository.LessonRepository;
+import com.odc.aws_learning.app.dto.EvaluationAttemptForInstructorDto;
 import com.odc.aws_learning.app.dto.EvaluationRequest;
 import com.odc.aws_learning.app.dto.EvaluationSubmissionRequest;
 import com.odc.aws_learning.app.dto.EvaluationCorrectionRequest;
@@ -505,7 +506,10 @@ public class EvaluationsService {
     public CResponse<?> getPendingEvaluationsForInstructor(Long instructorId) {
         try {
             List<EvaluationAttempt> pending = evaluationAttemptRepository.findPendingAttemptsByInstructor(instructorId);
-            return CResponse.success(pending, "Évaluations en attente récupérées avec succès");
+            List<EvaluationAttemptForInstructorDto> dtos = pending.stream()
+                    .map(EvaluationAttemptForInstructorDto::from)
+                    .collect(Collectors.toList());
+            return CResponse.success(dtos, "Évaluations en attente récupérées avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
         }
@@ -517,7 +521,10 @@ public class EvaluationsService {
     public CResponse<?> getCorrectedEvaluationsForInstructor(Long instructorId) {
         try {
             List<EvaluationAttempt> corrected = evaluationAttemptRepository.findCorrectedAttemptsByInstructor(instructorId);
-            return CResponse.success(corrected, "Évaluations corrigées récupérées avec succès");
+            List<EvaluationAttemptForInstructorDto> dtos = corrected.stream()
+                    .map(EvaluationAttemptForInstructorDto::from)
+                    .collect(Collectors.toList());
+            return CResponse.success(dtos, "Évaluations corrigées récupérées avec succès");
         } catch (Exception e) {
             return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
         }

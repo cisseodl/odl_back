@@ -5,6 +5,9 @@ import com.odc.aws_learning.app.entity.LabSessionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -63,4 +66,13 @@ public interface LabSessionRepository extends JpaRepository<LabSession, Long> {
      * @return Liste des sessions avec ces statuts
      */
     List<LabSession> findByStatusIn(List<LabSessionStatus> statuses);
+
+    /**
+     * Soumissions de labs (rapports "Ma réalisation") pour les cours d'un instructeur.
+     * LabSession -> LabDefinition -> Lesson -> Module -> Course -> Instructor
+     */
+    @Query("SELECT ls FROM LabSession ls WHERE ls.status = 'SUBMITTED' AND ls.reportUrl IS NOT NULL " +
+           "AND ls.labDefinition.lesson IS NOT NULL AND ls.labDefinition.lesson.module.course.instructor.id = :instructorId " +
+           "ORDER BY ls.createdAt DESC")
+    List<LabSession> findSubmittedByInstructorId(@Param("instructorId") Long instructorId);
 }
