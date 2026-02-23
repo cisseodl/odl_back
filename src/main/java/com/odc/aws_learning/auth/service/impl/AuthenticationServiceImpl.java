@@ -84,22 +84,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
            User savedUser = userRepository.save(user);
            userRepository.flush();
 
-           // Créer le profil Apprenant pour que l'inscrit ait le rôle APPRENANT et apparaisse dans la liste (admin + dash apprenant)
-           Apprenant apprenant = new Apprenant(savedUser);
-           apprenant.setEmail(savedUser.getEmail());
-           apprenant.setActivate(true);
-           if (savedUser.getFullName() != null && !savedUser.getFullName().trim().isEmpty()) {
-               String[] parts = savedUser.getFullName().trim().split("\\s+", 2);
-               apprenant.setPrenom(parts[0]);
-               apprenant.setNom(parts.length > 1 ? parts[1] : "");
+           // Ne pas créer le profil Apprenant si demande explicite (création par admin : le profil sera créé via "Créer profil apprenant" avec mdp par défaut et email)
+           boolean skipApprenant = Boolean.TRUE.equals(request.getSkipApprenantProfile());
+           if (!skipApprenant) {
+               // Créer le profil Apprenant pour que l'inscrit ait le rôle APPRENANT et apparaisse dans la liste (admin + dash apprenant)
+               Apprenant apprenant = new Apprenant(savedUser);
+               apprenant.setEmail(savedUser.getEmail());
+               apprenant.setActivate(true);
+               if (savedUser.getFullName() != null && !savedUser.getFullName().trim().isEmpty()) {
+                   String[] parts = savedUser.getFullName().trim().split("\\s+", 2);
+                   apprenant.setPrenom(parts[0]);
+                   apprenant.setNom(parts.length > 1 ? parts[1] : "");
+               }
+               Apprenant savedApprenant = apprenantRepository.save(apprenant);
+               apprenantRepository.flush();
+               savedUser.setApprenant(savedApprenant);
+               userRepository.save(savedUser);
+               userRepository.flush();
            }
-           Apprenant savedApprenant = apprenantRepository.save(apprenant);
-           apprenantRepository.flush();
-           savedUser.setApprenant(savedApprenant);
-           userRepository.save(savedUser);
-           userRepository.flush();
 
-           // Recharger avec rôles pour que le token contienne ROLE_APPRENANT
+           // Recharger avec rôles pour que le token contienne les rôles actuels (APPRENANT si profil créé, sinon USER)
            savedUser = userRepository.findByEmailWithRoles(savedUser.getEmail())
                    .orElseThrow(() -> new RuntimeException("Erreur lors de la sauvegarde de l'utilisateur"));
 

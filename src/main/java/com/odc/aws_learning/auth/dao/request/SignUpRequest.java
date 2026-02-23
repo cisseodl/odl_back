@@ -22,6 +22,8 @@ public class SignUpRequest {
     // private Boolean admin; // Removed
     // private Boolean activate; // Managed by User entity
     private String avatar;
+    /** Si true, ne pas créer le profil Apprenant (création par admin : le profil sera créé via "Créer profil apprenant"). */
+    private Boolean skipApprenantProfile;
     // private Role role; // Removed
 
     public SignUpRequest() {
@@ -82,5 +84,13 @@ public class SignUpRequest {
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public Boolean getSkipApprenantProfile() {
+        return skipApprenantProfile;
+    }
+
+    public void setSkipApprenantProfile(Boolean skipApprenantProfile) {
+        this.skipApprenantProfile = skipApprenantProfile;
     }
 }
