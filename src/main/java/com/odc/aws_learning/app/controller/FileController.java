@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileController {
 
     private final UploadFileService uploadFileService;
+
+    @Value("${file.upload-dir:./uploads}")
+    private String uploadDir;
 
     private final String BUCKET_NAME = "odl-learning-assets-prod";
     private final String REGION = "us-east-1";
@@ -109,21 +113,31 @@ public class FileController {
     @GetMapping("/courses/{filename:.+}")
     public ResponseEntity<?> getCourseImage(@PathVariable String filename) {
         if (filename == null || filename.isBlank() || filename.contains("..")) {
+            log.warn("getCourseImage: filename invalide ou vide");
             return ResponseEntity.notFound().build();
         }
+        // Même clé que CoursesController: uploadDir + "/courses" + "/" + savedFileName
+        String folderPath = uploadDir + "/courses";
         String[] possibleKeys = {
+            folderPath + "/" + filename,
             "uploads/courses/" + filename,
             "./uploads/courses/" + filename,
             "courses/" + filename
         };
         byte[] bytes = null;
+        String usedKey = null;
         for (String s3Key : possibleKeys) {
             bytes = uploadFileService.getFileBytesFromS3(s3Key);
-            if (bytes != null && bytes.length > 0) break;
+            if (bytes != null && bytes.length > 0) {
+                usedKey = s3Key;
+                break;
+            }
         }
         if (bytes == null || bytes.length == 0) {
+            log.warn("getCourseImage: image non trouvée dans S3 pour filename={}, clés essayées: {}", filename, possibleKeys);
             return ResponseEntity.notFound().build();
         }
+        log.debug("getCourseImage: servi filename={} depuis S3 key={}", filename, usedKey);
         String contentType = "image/jpeg";
         if (filename.toLowerCase().endsWith(".png")) contentType = "image/png";
         else if (filename.toLowerCase().endsWith(".gif")) contentType = "image/gif";
