@@ -23,6 +23,8 @@ public class Questions extends BaseEntity {
     private String status;
     private String imagePath;
     private String type;
+    /** Points attribués à cette question (pour le calcul du score pondéré). Si null ou 0, compte comme 1 point. */
+    private Integer points;
 
     @OneToMany(mappedBy = "questions", cascade = CascadeType.ALL, orphanRemoval = true) // Add cascade/orphanRemoval as it's a @OneToMany
     // @JsonIgnoreProperties(value = {"questions"}, allowSetters = true) // Replaced by @JsonManagedReference
@@ -93,6 +95,14 @@ public class Questions extends BaseEntity {
         this.type = type;
     }
 
+    public Integer getPoints() {
+        return points;
+    }
+
+    public void setPoints(Integer points) {
+        this.points = points;
+    }
+
     public List<Reponses> getReponses() {
         return reponses;
     }
@@ -128,14 +138,15 @@ public class Questions extends BaseEntity {
                Objects.equals(status, questions.status) &&
                Objects.equals(imagePath, questions.imagePath) &&
                Objects.equals(type, questions.type) &&
+               Objects.equals(points, questions.points) &&
                Objects.equals(reponses, questions.reponses) &&
                Objects.equals(evaluations, questions.evaluations) &&
-               Objects.equals(answers, questions.answers); // Added
+               Objects.equals(answers, questions.answers);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), title, description, status, imagePath, type, reponses, evaluations, answers); // Added
+        return Objects.hash(super.hashCode(), title, description, status, imagePath, type, points, reponses, evaluations, answers);
     }
 
     @Override
@@ -146,6 +157,7 @@ public class Questions extends BaseEntity {
                ", status='" + status + '\'' +
                ", imagePath='" + imagePath + '\'' +
                ", type='" + type + '\'' +
+               ", points=" + points +
                ", reponses=" + (reponses != null ? reponses.size() : "null") +
                ", evaluations=" + (evaluations != null ? evaluations.getId() : "null") +
                ", answers=" + (answers != null ? answers.size() : "null") + // Added

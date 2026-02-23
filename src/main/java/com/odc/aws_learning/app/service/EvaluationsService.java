@@ -230,6 +230,9 @@ public class EvaluationsService {
                     question.setType(questionReq.getType() != null ? questionReq.getType() : "SINGLE_CHOICE");
                     question.setStatus("ACTIVE");
                     question.setEvaluations(saved);
+                    if (questionReq.getPoints() != null && questionReq.getPoints() > 0) {
+                        question.setPoints(questionReq.getPoints());
+                    }
                     
                     Questions savedQuestion = questionsRepository.save(question);
                     
@@ -369,41 +372,68 @@ public class EvaluationsService {
     }
     
     /**
-     * Calculer le score pour une évaluation QUIZ
+     * Calculer le score pour une évaluation QUIZ.
+     * Les réponses peuvent être envoyées avec la clé = ID de la question ou clé = index (0, 1, 2...).
+     * Si des points sont définis par question, le score = (points obtenus / points totaux) * 100,
+     * sinon (nombre de bonnes réponses / nombre de questions) * 100.
      */
     private Double calculateQuizScore(Evaluations evaluation, Map<Long, Long> answers, Map<Long, String> textAnswers) {
         if (evaluation.getQuestions() == null || evaluation.getQuestions().isEmpty()) {
             return 0.0;
         }
         
-        int totalQuestions = evaluation.getQuestions().size();
+        List<Questions> questionList = evaluation.getQuestions();
+        int totalQuestions = questionList.size();
         int correctAnswers = 0;
+        int totalPoints = 0;
+        int obtainedPoints = 0;
+        boolean usePoints = false;
         
-        for (Questions question : evaluation.getQuestions()) {
-            boolean isCorrect = false;
+        for (int i = 0; i < questionList.size(); i++) {
+            Questions question = questionList.get(i);
+            // Clé possible : ID de la question (backend) ou index (front envoie 0, 1, 2...)
+            Long answerKeyById = question.getId();
+            Long answerKeyByIndex = Long.valueOf(i);
+            Long selectedResponseId = null;
+            String submittedText = null;
             
-            if (answers != null && answers.containsKey(question.getId())) {
-                // Réponse à choix multiple
-                Long selectedResponseId = answers.get(question.getId());
-                if (question.getReponses() != null) {
-                    for (Reponses response : question.getReponses()) {
-                        if (response.getId().equals(selectedResponseId) && response.getIsCorrect() != null && response.getIsCorrect()) {
-                            isCorrect = true;
-                            break;
-                        }
+            if (answers != null) {
+                if (answers.containsKey(answerKeyById)) {
+                    selectedResponseId = answers.get(answerKeyById);
+                } else if (answers.containsKey(answerKeyByIndex)) {
+                    Object val = answers.get(answerKeyByIndex);
+                    selectedResponseId = val instanceof Number ? ((Number) val).longValue() : null;
+                }
+            }
+            if (textAnswers != null && selectedResponseId == null) {
+                if (textAnswers.containsKey(answerKeyById)) {
+                    submittedText = textAnswers.get(answerKeyById);
+                } else if (textAnswers.containsKey(answerKeyByIndex)) {
+                    submittedText = textAnswers.get(answerKeyByIndex);
+                }
+            }
+            
+            boolean isCorrect = false;
+            int questionPoints = (question.getPoints() != null && question.getPoints() > 0) ? question.getPoints() : 1;
+            if (totalPoints >= 0 && questionPoints > 0) {
+                totalPoints += questionPoints;
+                usePoints = usePoints || (question.getPoints() != null && question.getPoints() > 0);
+            }
+            
+            if (selectedResponseId != null && question.getReponses() != null) {
+                for (Reponses response : question.getReponses()) {
+                    if (response.getId().equals(selectedResponseId) && Boolean.TRUE.equals(response.getIsCorrect())) {
+                        isCorrect = true;
+                        break;
                     }
                 }
-            } else if (textAnswers != null && textAnswers.containsKey(question.getId())) {
-                // Réponse texte (comparaison simple - peut être améliorée)
-                String submittedAnswer = textAnswers.get(question.getId()).trim().toLowerCase();
-                if (question.getReponses() != null) {
-                    for (Reponses response : question.getReponses()) {
-                        if (response.getIsCorrect() != null && response.getIsCorrect()) {
-                            String correctAnswer = response.getTitle() != null ? response.getTitle().trim().toLowerCase() : "";
-                            if (submittedAnswer.equals(correctAnswer)) {
-                                isCorrect = true;
-                                break;
-                            }
+            } else if (submittedText != null && submittedText.trim().length() > 0 && question.getReponses() != null) {
+                String submitted = submittedText.trim().toLowerCase();
+                for (Reponses response : question.getReponses()) {
+                    if (Boolean.TRUE.equals(response.getIsCorrect()) && response.getTitle() != null) {
+                        if (submitted.equals(response.getTitle().trim().toLowerCase())) {
+                            isCorrect = true;
+                            break;
                         }
                     }
                 }
@@ -411,11 +441,14 @@ public class EvaluationsService {
             
             if (isCorrect) {
                 correctAnswers++;
+                obtainedPoints += questionPoints;
             }
         }
         
-        // Calculer le pourcentage
-        return (double) (correctAnswers * 100) / totalQuestions;
+        if (usePoints && totalPoints > 0) {
+            return (double) (obtainedPoints * 100) / totalPoints;
+        }
+        return totalQuestions > 0 ? (double) (correctAnswers * 100) / totalQuestions : 0.0;
     }
     
     /**
