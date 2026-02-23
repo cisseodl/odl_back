@@ -616,6 +616,23 @@ public class EvaluationsService {
     }
 
     /**
+     * Récupère la dernière tentative de l'utilisateur pour une évaluation (examen).
+     */
+    @Transactional(readOnly = true)
+    public CResponse<?> getLatestAttemptForExam(Long evaluationId, User user) {
+        try {
+            List<EvaluationAttempt> attempts = evaluationAttemptRepository
+                    .findByEvaluationIdAndUserIdOrderByCreatedAtDesc(evaluationId, user.getId());
+            if (attempts == null || attempts.isEmpty()) {
+                return CResponse.error("Aucune tentative trouvée pour cet examen");
+            }
+            return CResponse.success(attempts.get(0), "Dernière tentative récupérée");
+        } catch (Exception e) {
+            return CResponse.error("Erreur lors de la récupération: " + e.getMessage());
+        }
+    }
+
+    /**
      * Récupère les résultats d'un examen (après soumission de la satisfaction)
      */
     @Transactional(readOnly = true)

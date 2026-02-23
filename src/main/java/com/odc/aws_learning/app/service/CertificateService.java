@@ -4,6 +4,8 @@ import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
+
+import java.io.InputStream;
 import com.odc.aws_learning.app.entity.Quiz;
 import com.odc.aws_learning.app.entity.UserQuizAttempt;
 import com.odc.aws_learning.app.entity.Certificate;
@@ -41,6 +43,29 @@ public class CertificateService {
 
     @Value("${app.server.base-url:https://api.smart-odc.com}")
     private String serverBaseUrl;
+
+    /** Charte ODL : orange (#FF7900) en accent uniquement (titre, ligne, signature marque), texte en noir, fond blanc */
+    private static final BaseColor ORANGE = new BaseColor(255, 121, 0);
+
+    /**
+     * Ajoute le logo ODL en haut du certificat s'il est présent dans classpath (static/logo.png ou logo.png).
+     */
+    private void addLogoIfPresent(Document document) {
+        try {
+            InputStream is = getClass().getResourceAsStream("/static/logo.png");
+            if (is == null) is = getClass().getResourceAsStream("/logo.png");
+            if (is != null) {
+                byte[] bytes = is.readAllBytes();
+                is.close();
+                Image img = Image.getInstance(bytes);
+                img.scaleToFit(140, 70);
+                img.setAlignment(Element.ALIGN_CENTER);
+                img.setSpacingAfter(15f);
+                document.add(img);
+            }
+        } catch (Exception ignored) { /* logo optionnel */ }
+    }
+
     public CResponse<Certificate> generateCertificate(User user, Courses course, Quiz quiz, UserQuizAttempt attempt) {
         try {
             Document document = new Document(PageSize.A4, 50, 50, 50, 50);
@@ -49,25 +74,24 @@ public class CertificateService {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // Polices
-            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
-            Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
-            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.DARK_GRAY);
+            addLogoIfPresent(document);
 
-            // Titre centré
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
+            Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
+
             Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
             document.add(title);
 
-            // Ligne de séparation
             PdfPTable separatorTable = new PdfPTable(1);
             separatorTable.setWidthPercentage(100);
             PdfPCell separatorCell = new PdfPCell();
             separatorCell.setBorderWidthBottom(2f);
             separatorCell.setBorder(Rectangle.BOTTOM);
             separatorCell.setFixedHeight(10f);
-            separatorCell.setBorderColor(BaseColor.LIGHT_GRAY);
+            separatorCell.setBorderColor(ORANGE);
             separatorCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             separatorCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
             separatorCell.setPhrase(new Phrase(""));
@@ -75,7 +99,6 @@ public class CertificateService {
             separatorTable.setSpacingAfter(30f);
             document.add(separatorTable);
 
-            // Contenu principal
             String fullName = user.getFullName() != null ? user.getFullName() : user.getEmail();
             Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
             awardedTo.setAlignment(Element.ALIGN_CENTER);
@@ -86,24 +109,11 @@ public class CertificateService {
             name.setSpacingAfter(20f);
             document.add(name);
 
-            String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation"; // Utiliser le titre du cours
-            Paragraph forCourse = new Paragraph(
-                    "Pour avoir réussi le cours : " + courseTitle,
-                    textFont
-            );
+            String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation";
+            Paragraph forCourse = new Paragraph("Pour avoir réussi le cours : " + courseTitle, textFont);
             forCourse.setAlignment(Element.ALIGN_CENTER);
-            forCourse.setSpacingAfter(15f);
+            forCourse.setSpacingAfter(25f);
             document.add(forCourse);
-
-            int scoreObtenu = attempt.getScore() != null ? attempt.getScore().intValue() : 0;
-            int scoreTotal = attempt.getScoreTotal() != null ? attempt.getScoreTotal() : 0;
-            Paragraph score = new Paragraph(
-                    "Score : " + scoreObtenu + " / " + scoreTotal,
-                    textFont
-            );
-            score.setAlignment(Element.ALIGN_CENTER);
-            score.setSpacingAfter(20f);
-            document.add(score);
 
             LocalDate today = LocalDate.now();
             String dateStr = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
@@ -112,8 +122,8 @@ public class CertificateService {
             date.setSpacingAfter(40f);
             document.add(date);
 
-            // Zone de signature
-            Paragraph signature = new Paragraph("Signature de l'administration", textFont);
+            Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
+            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
 
@@ -126,9 +136,9 @@ public class CertificateService {
 
             // Uploader le PDF vers le stockage local (Elastic Beanstalk)
             try {
-                String localFolderPath = uploadDir + "/certificates";
+                String s3Folder = "certificates";
                 ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-                String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
+                String savedFileName = uploadFileService.uploadInputStream(bis, s3Folder, certificateFileName, pdfBytes.length, "application/pdf");
                 String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
                 
                 // Enregistrer l'entité Certificate dans la base de données
@@ -174,25 +184,23 @@ public class CertificateService {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // Polices
-            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
+            addLogoIfPresent(document);
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
-            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.DARK_GRAY);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
 
-            // Titre centré
             Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
             document.add(title);
 
-            // Ligne de séparation
             PdfPTable separatorTable = new PdfPTable(1);
             separatorTable.setWidthPercentage(100);
             PdfPCell separatorCell = new PdfPCell();
             separatorCell.setBorderWidthBottom(2f);
             separatorCell.setBorder(Rectangle.BOTTOM);
             separatorCell.setFixedHeight(10f);
-            separatorCell.setBorderColor(BaseColor.LIGHT_GRAY);
+            separatorCell.setBorderColor(ORANGE);
             separatorCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             separatorCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
             separatorCell.setPhrase(new Phrase(""));
@@ -200,7 +208,6 @@ public class CertificateService {
             separatorTable.setSpacingAfter(30f);
             document.add(separatorTable);
 
-            // Contenu principal
             String fullName = user.getFullName() != null ? user.getFullName() : user.getEmail();
             Paragraph awardedTo = new Paragraph("Décerné à ", textFont);
             awardedTo.setAlignment(Element.ALIGN_CENTER);
@@ -212,21 +219,10 @@ public class CertificateService {
             document.add(name);
 
             String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation";
-            Paragraph forCourse = new Paragraph(
-                    "Pour avoir réussi le cours : " + courseTitle,
-                    textFont
-            );
+            Paragraph forCourse = new Paragraph("Pour avoir réussi le cours : " + courseTitle, textFont);
             forCourse.setAlignment(Element.ALIGN_CENTER);
-            forCourse.setSpacingAfter(15f);
+            forCourse.setSpacingAfter(25f);
             document.add(forCourse);
-
-            Paragraph score = new Paragraph(
-                    "Score à l'évaluation : " + String.format("%.1f", evaluationScore) + " / 100",
-                    textFont
-            );
-            score.setAlignment(Element.ALIGN_CENTER);
-            score.setSpacingAfter(20f);
-            document.add(score);
 
             LocalDate today = LocalDate.now();
             String dateStr = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
@@ -235,8 +231,8 @@ public class CertificateService {
             date.setSpacingAfter(40f);
             document.add(date);
 
-            // Zone de signature
-            Paragraph signature = new Paragraph("Signature de l'administration", textFont);
+            Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
+            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
 
@@ -246,9 +242,9 @@ public class CertificateService {
 
             String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
             try {
-                String localFolderPath = uploadDir + "/certificates";
+                String s3Folder = "certificates";
                 ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-                String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
+                String savedFileName = uploadFileService.uploadInputStream(bis, s3Folder, certificateFileName, pdfBytes.length, "application/pdf");
                 String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
                 Certificate certificate = new Certificate();
                 certificate.setUniqueCode(UUID.randomUUID().toString());
@@ -282,9 +278,10 @@ public class CertificateService {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             PdfWriter.getInstance(document, out);
             document.open();
-            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
+            addLogoIfPresent(document);
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
-            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.DARK_GRAY);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
             Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30f);
@@ -295,7 +292,7 @@ public class CertificateService {
             separatorCell.setBorderWidthBottom(2f);
             separatorCell.setBorder(Rectangle.BOTTOM);
             separatorCell.setFixedHeight(10f);
-            separatorCell.setBorderColor(BaseColor.LIGHT_GRAY);
+            separatorCell.setBorderColor(ORANGE);
             separatorCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             separatorCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
             separatorCell.setPhrase(new Phrase(""));
@@ -312,27 +309,24 @@ public class CertificateService {
             String courseTitle = course.getTitle() != null ? course.getTitle() : "Cours de formation";
             Paragraph forCourse = new Paragraph("Pour avoir réussi le cours : " + courseTitle, textFont);
             forCourse.setAlignment(Element.ALIGN_CENTER);
-            forCourse.setSpacingAfter(15f);
+            forCourse.setSpacingAfter(25f);
             document.add(forCourse);
-            Paragraph score = new Paragraph("Score à l'évaluation : " + String.format("%.1f", evaluationScore != null ? evaluationScore : 0) + " / 100", textFont);
-            score.setAlignment(Element.ALIGN_CENTER);
-            score.setSpacingAfter(20f);
-            document.add(score);
             LocalDate today = LocalDate.now();
             String dateStr = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             Paragraph date = new Paragraph("Date : " + dateStr, textFont);
             date.setAlignment(Element.ALIGN_CENTER);
             date.setSpacingAfter(40f);
             document.add(date);
-            Paragraph signature = new Paragraph("Signature de l'administration", textFont);
+            Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
+            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
             document.close();
             byte[] pdfBytes = out.toByteArray();
             String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
-            String localFolderPath = uploadDir + "/certificates";
+            String s3Folder = "certificates";
             ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-            String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
+            String savedFileName = uploadFileService.uploadInputStream(bis, s3Folder, certificateFileName, pdfBytes.length, "application/pdf");
             String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
             Certificate certificate = new Certificate();
             certificate.setUniqueCode(UUID.randomUUID().toString());
@@ -368,9 +362,10 @@ public class CertificateService {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
+            addLogoIfPresent(document);
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, ORANGE);
             Font subtitleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.NORMAL, BaseColor.BLACK);
-            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.DARK_GRAY);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
 
             Paragraph title = new Paragraph("CERTIFICAT DE RÉUSSITE", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
@@ -383,7 +378,7 @@ public class CertificateService {
             separatorCell.setBorderWidthBottom(2f);
             separatorCell.setBorder(Rectangle.BOTTOM);
             separatorCell.setFixedHeight(10f);
-            separatorCell.setBorderColor(BaseColor.LIGHT_GRAY);
+            separatorCell.setBorderColor(ORANGE);
             separatorCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             separatorCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
             separatorCell.setPhrase(new Phrase(""));
@@ -417,7 +412,8 @@ public class CertificateService {
             date.setSpacingAfter(40f);
             document.add(date);
 
-            Paragraph signature = new Paragraph("Signature de l'administration", textFont);
+            Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
+            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
 
@@ -427,9 +423,9 @@ public class CertificateService {
             String certificateFileName = "certificate_" + UUID.randomUUID().toString() + ".pdf";
 
             try {
-                String localFolderPath = uploadDir + "/certificates";
+                String s3Folder = "certificates";
                 ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-                String savedFileName = uploadFileService.uploadInputStream(bis, localFolderPath, certificateFileName, pdfBytes.length, "application/pdf");
+                String savedFileName = uploadFileService.uploadInputStream(bis, s3Folder, certificateFileName, pdfBytes.length, "application/pdf");
                 String certificateUrl = serverBaseUrl + "/awsodclearning/api/files/certificates/" + savedFileName;
 
                 Certificate certificate = new Certificate();

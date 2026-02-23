@@ -71,4 +71,33 @@ public class FileController {
 
         return ResponseEntity.ok(CResponse.success(fileUrl, "URL récupérée avec succès"));
     }
+
+    /**
+     * GET /api/files/certificates/{filename}
+     * Sert le PDF du certificat depuis S3 (lien dans l'email de certification).
+     * Accessible sans auth pour que le lien du mail fonctionne.
+     */
+    @GetMapping("/certificates/{filename:.+}")
+    public ResponseEntity<?> getCertificateFile(@PathVariable String filename) {
+        if (filename == null || filename.isBlank() || filename.contains("..")) {
+            return ResponseEntity.notFound().build();
+        }
+        String s3Key = "certificates/" + filename;
+        byte[] bytes = uploadFileService.getFileBytesFromS3(s3Key);
+        if (bytes == null || bytes.length == 0) {
+            s3Key = "uploads/certificates/" + filename;
+            bytes = uploadFileService.getFileBytesFromS3(s3Key);
+        }
+        if (bytes == null || bytes.length == 0) {
+            s3Key = "./uploads/certificates/" + filename;
+            bytes = uploadFileService.getFileBytesFromS3(s3Key);
+        }
+        if (bytes == null || bytes.length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"" + filename + "\"")
+                .body(bytes);
+    }
 }

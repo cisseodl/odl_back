@@ -195,6 +195,20 @@ public class EvaluationsController {
      * Récupère les résultats d'un examen (après soumission de la satisfaction)
      * GET /api/evaluations/attempts/{attemptId}/results
      */
+    /**
+     * Récupère la dernière tentative de l'utilisateur pour cet examen (page résultats sans attemptId dans l'URL).
+     * GET /api/evaluations/attempts/latest?evaluationId=7
+     */
+    @GetMapping("/attempts/latest")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
+    public CResponse<?> getLatestAttemptForExam(@RequestParam Long evaluationId) {
+        User learner = getCurrentUser();
+        if (learner == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.getLatestAttemptForExam(evaluationId, learner);
+    }
+
     @GetMapping("/attempts/{attemptId}/results")
     @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
     public CResponse<?> getExamResults(@PathVariable Long attemptId) {

@@ -3,6 +3,7 @@ package com.odc.aws_learning.app.service;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -63,5 +64,23 @@ public class UploadFileService {
         }
 
         return filename;
+    }
+
+    /**
+     * Récupère un fichier depuis S3 (ex. pour servir un certificat PDF).
+     * @param s3Key clé S3 complète (ex. "certificates/certificate_xxx.pdf")
+     * @return contenu du fichier ou null si absent
+     */
+    public byte[] getFileBytesFromS3(String s3Key) {
+        try {
+            if (s3Key == null || s3Key.isBlank()) return null;
+            if (!s3Client.doesObjectExist(bucketName, s3Key)) return null;
+            S3Object obj = s3Client.getObject(bucketName, s3Key);
+            try (InputStream is = obj.getObjectContent()) {
+                return is.readAllBytes();
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
