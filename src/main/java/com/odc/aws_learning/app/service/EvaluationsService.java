@@ -291,8 +291,10 @@ public class EvaluationsService {
             if (request.getCertificateDisplayName() != null && !request.getCertificateDisplayName().isBlank()) {
                 attempt.setCertificateDisplayName(request.getCertificateDisplayName().trim());
             }
-            if (request.getCertificateEmail() != null && !request.getCertificateEmail().isBlank()) {
-                attempt.setCertificateEmail(request.getCertificateEmail().trim());
+            // L'email utilisé pour le certificat doit toujours être celui du compte apprenant,
+            // pour éviter plusieurs certificats avec des emails différents sur le même compte.
+            if (learner.getEmail() != null && !learner.getEmail().isBlank()) {
+                attempt.setCertificateEmail(learner.getEmail().trim());
             }
             
             if (evaluation.getType() == Evaluations.EvaluationType.QUIZ) {

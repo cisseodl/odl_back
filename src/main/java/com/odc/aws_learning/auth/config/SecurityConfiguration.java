@@ -32,12 +32,15 @@ public class SecurityConfiguration {
     private final CorsHeaderFilter corsHeaderFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserService userService;
+    private final Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(http401UnauthorizedEntryPoint))
                 .authorizeHttpRequests(request -> request
                         // Autoriser toutes les requêtes OPTIONS (preflight CORS)
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
