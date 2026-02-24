@@ -131,6 +131,66 @@ public class ModuleService {
         }
     }
 
+    /**
+     * Ajoute un seul module à un cours sans toucher aux modules existants.
+     * À utiliser pour "ajouter un module" afin d'éviter ConstraintViolationException
+     * (supprimer les modules existants échoue s'ils sont référencés par LearnerModule, UserProgress, etc.).
+     */
+    @Transactional
+    public CResponse<?> addModuleToCourse(ModuleAndCoursePayload payload) {
+        try {
+            if (payload.getCourseId() == null || payload.getModules() == null || payload.getModules().isEmpty()) {
+                return CResponse.error("courseId et au moins un module sont requis.");
+            }
+            Optional<Courses> courseOpt = coursesRepository.findById(payload.getCourseId());
+            if (courseOpt.isEmpty()) {
+                return CResponse.error("Cours introuvable avec l'ID: " + payload.getCourseId());
+            }
+            Courses course = courseOpt.get();
+            Hibernate.initialize(course.getModules());
+            List<Module> existingModules = course.getModules() != null ? course.getModules() : new ArrayList<>();
+            int nextOrder = existingModules.isEmpty() ? 1 : existingModules.stream()
+                    .mapToInt(m -> m.getModuleOrder() != null ? m.getModuleOrder() : 0)
+                    .max().orElse(0) + 1;
+
+            com.odc.aws_learning.app.dto.ModuleCreationRequest moduleRequest = payload.getModules().get(0);
+            Module newModule = new Module();
+            newModule.setCreatedAt(LocalDateTime.now());
+            newModule.setLastModifiedAt(LocalDateTime.now());
+            newModule.setTitle(moduleRequest.getTitle());
+            newModule.setDescription(moduleRequest.getDescription());
+            newModule.setModuleOrder(moduleRequest.getModuleOrder() != null ? moduleRequest.getModuleOrder() : nextOrder);
+            newModule.setActivate(true);
+            newModule.setCourse(course);
+
+            if (moduleRequest.getLessons() != null && !moduleRequest.getLessons().isEmpty()) {
+                List<Lesson> lessonsForModule = new ArrayList<>();
+                for (com.odc.aws_learning.app.dto.LessonCreationRequest lessonRequest : moduleRequest.getLessons()) {
+                    Lesson newLesson = new Lesson();
+                    newLesson.setCreatedAt(LocalDateTime.now());
+                    newLesson.setLastModifiedAt(LocalDateTime.now());
+                    newLesson.setTitle(lessonRequest.getTitle());
+                    newLesson.setLessonOrder(lessonRequest.getLessonOrder());
+                    newLesson.setType(lessonRequest.getType());
+                    newLesson.setContentUrl(lessonRequest.getContentUrl());
+                    newLesson.setDuration(lessonRequest.getDuration());
+                    newLesson.setActivate(true);
+                    newLesson.setModule(newModule);
+                    lessonsForModule.add(newLesson);
+                }
+                newModule.setLessons(lessonsForModule);
+            }
+            existingModules.add(newModule);
+            course.setModules(existingModules);
+            coursesRepository.save(course);
+
+            return CResponse.success(newModule.getId(), "Module ajouté avec succès.");
+        } catch (Exception e) {
+            log.error("Erreur lors de l'ajout du module : {}", e.getMessage(), e);
+            return CResponse.error("Erreur lors de l'ajout du module : " + e.getMessage());
+        }
+    }
+
     // L'ancienne méthode removeOldModuleToCourse n'est plus nécessaire avec orphanRemoval=true et clear()
     // Je la laisse commentée si jamais elle est utile pour d'autres scénarios, mais elle ne sera pas appelée.
     // void removeOldModuleToCourse(Long courseId) { ... }

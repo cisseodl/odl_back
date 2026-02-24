@@ -83,6 +83,25 @@ public class ModuleController {
         }
     }
 
+    /** Ajoute un seul module sans remplacer les existants (évite la contrainte FK sur LearnerModule/UserProgress). */
+    @PostMapping("/add")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    public CResponse<?> addModule(@RequestBody ModuleAndCoursePayload payload) {
+        try {
+            if (payload.getCourseId() == null) {
+                return CResponse.error("Le courseId est requis.");
+            }
+            if (payload.getModules() == null || payload.getModules().size() != 1) {
+                return CResponse.error("Le payload doit contenir exactement un module.");
+            }
+            return moduleService.addModuleToCourse(payload);
+        } catch (Exception e) {
+            System.err.println("ERREUR dans addModule: " + e.getMessage());
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de l'ajout du module: " + e.getMessage());
+        }
+    }
+
     // Endpoint public : permet la consultation des modules sans authentification
     // Les modules et leçons sont visibles pour tous, mais certaines actions nécessitent l'authentification
 
