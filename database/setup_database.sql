@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Script de Configuration de la Base de Données MySQL pour ODL
--- Projet : Orange Digital Learning (ODL)
+-- Projet : Orange Digital Center (ODL)
 -- ============================================================================
 -- Ce script crée la base de données et configure l'utilisateur nécessaire
 -- pour le fonctionnement de l'application backend Spring Boot.

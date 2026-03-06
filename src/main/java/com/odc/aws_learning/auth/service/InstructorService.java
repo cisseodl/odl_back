@@ -138,7 +138,7 @@ public class InstructorService {
                     dashboardUrl
                 );
             }
-            String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
+            String subject = "Bienvenue sur Orange Digital Center - Votre compte formateur a été créé";
             
             System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
             System.out.println("Email destinataire: " + user.getEmail());
@@ -227,7 +227,7 @@ public class InstructorService {
             
             String emailMessage = sendEmailService.mailTemplateInstructorCreated(
                 fullName, user.getEmail(), plainPassword, dashboardUrl);
-            String subject = "Bienvenue sur Orange Digital Learning - Votre compte formateur a été créé";
+            String subject = "Bienvenue sur Orange Digital Center - Votre compte formateur a été créé";
             
             System.out.println("=== ENVOI D'EMAIL DE BIENVENUE AU FORMATEUR (ASYNC) ===");
             System.out.println("Email destinataire: " + user.getEmail());

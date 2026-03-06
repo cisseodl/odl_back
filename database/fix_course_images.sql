@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Script de Correction des Images des Cours - ODL
--- Projet : Orange Digital Learning (ODL)
+-- Projet : Orange Digital Center (ODL)
 -- ============================================================================
 -- Ce script corrige les chemins d'images dans la base de données
 -- pour utiliser les vrais noms de fichiers copiés dans uploads/cours/

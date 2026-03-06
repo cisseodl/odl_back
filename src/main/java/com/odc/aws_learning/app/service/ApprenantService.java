@@ -200,7 +200,7 @@ public class ApprenantService {
                 );
             }
             
-            String subject = "Bienvenue sur Orange Digital Learning - Votre compte apprenant a été créé";
+            String subject = "Bienvenue sur la plateforme d'E-Learning d'Orange Digital Center - Votre compte apprenant a été créé";
             
             // Envoyer l'email de manière asynchrone avec retry automatique
             emailAsyncService.sendEmailAsync(

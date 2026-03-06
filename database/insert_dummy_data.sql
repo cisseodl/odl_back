@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Script d'Insertion de Données de Test pour ODL
--- Projet : Orange Digital Learning (ODL)
+-- Projet : Orange Digital Center (ODL)
 -- ============================================================================
 -- Ce script insère des données de test pour permettre de visualiser
 -- le fonctionnement de l'application sur le dashboard.

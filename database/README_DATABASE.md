@@ -166,5 +166,5 @@ Lancez le backend Spring Boot. Si tout est correct :
 
 ---
 
-*Document créé pour le projet ODL - Orange Digital Learning*
+*Document créé pour le projet ODL - Orange Digital Center*
 

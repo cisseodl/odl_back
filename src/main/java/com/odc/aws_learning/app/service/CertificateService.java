@@ -139,7 +139,7 @@ public class CertificateService {
             document.add(date);
 
             Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
-            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
+            Paragraph signature = new Paragraph("Orange Digital Center", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
 
@@ -255,7 +255,7 @@ public class CertificateService {
             document.add(date);
 
             Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
-            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
+            Paragraph signature = new Paragraph("Orange Digital Center", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
 
@@ -347,7 +347,7 @@ public class CertificateService {
             date.setSpacingAfter(40f);
             document.add(date);
             Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
-            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
+            Paragraph signature = new Paragraph("Orange Digital Center", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
             document.close();
@@ -367,8 +367,8 @@ public class CertificateService {
             String emailTo = (attempt.getCertificateEmail() != null && !attempt.getCertificateEmail().isBlank()) ? attempt.getCertificateEmail().trim() : null;
             if (emailTo != null && sendEmailService != null && sendEmailService.isEmailConfigured()) {
                 try {
-                    String message = "Félicitations " + displayName + " !\n\nVous avez réussi l'évaluation. Votre certificat est disponible :\n" + certificateUrl + "\n\nCordialement,\nL'équipe Orange Digital Learning.";
-                    sendEmailService.sendEmail(emailTo, message, "Votre certificat Orange Digital Learning");
+                    String message = "Félicitations " + displayName + " !\n\nVous avez réussi l'évaluation. Votre certificat est disponible :\n" + certificateUrl + "\n\nCordialement,\nL'équipe Orange Digital Center.";
+                    sendEmailService.sendEmail(emailTo, message, "Votre certificat Orange Digital Center");
                 } catch (Exception e) {
                     System.err.println("Erreur envoi email certificat: " + e.getMessage());
                 }
@@ -449,7 +449,7 @@ public class CertificateService {
             document.add(date);
 
             Font signatureFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, ORANGE);
-            Paragraph signature = new Paragraph("Orange Digital Learning", signatureFont);
+            Paragraph signature = new Paragraph("Orange Digital Center", signatureFont);
             signature.setAlignment(Element.ALIGN_RIGHT);
             document.add(signature);
 

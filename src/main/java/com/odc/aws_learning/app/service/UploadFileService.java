@@ -32,7 +32,8 @@ public class UploadFileService {
         metadata.setContentLength(file.getSize());
 
         try (InputStream is = file.getInputStream()) {
-            s3Client.putObject(new PutObjectRequest(bucketName, key, is, metadata));
+            s3Client.pu
+            tObject(new PutObjectRequest(bucketName, key, is, metadata));
         }
         return filename;
     }

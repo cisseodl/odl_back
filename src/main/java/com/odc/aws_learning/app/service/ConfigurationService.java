@@ -32,11 +32,11 @@ public class ConfigurationService {
         Configuration config = configurationRepository.findTopByOrderByIdDesc();
         if (config == null) {
             ConfigurationDto defaultDto = new ConfigurationDto();
-            defaultDto.setHomepageText("Commencez à prendre avec Orange Digital Learning ODL.");
+            defaultDto.setHomepageText("Commencez à prendre avec notre plateforme d'E-Learning d'Orange Digital Center.");
             // Ne pas retourner d'URL d'image fictive - laisser null pour utiliser l'image de fallback côté frontend
             defaultDto.setHomepageImageUrl(null);
             defaultDto.setLoginImageUrl(null);
-            defaultDto.setAboutText("Découvrez notre mission et notre équipe chez ODL.");
+            defaultDto.setAboutText("Découvrez notre mission et notre équipe chez ODC.");
             defaultDto.setAboutImageUrl(null);
             return CResponse.success(defaultDto, "Configuration par défaut");
         }

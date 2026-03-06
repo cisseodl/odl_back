@@ -166,5 +166,5 @@ Ouvrez ces URLs dans votre navigateur :
 
 ---
 
-*Guide créé pour le projet ODL - Orange Digital Learning*
+*Guide créé pour le projet ODL - Orange Digital Center*
 

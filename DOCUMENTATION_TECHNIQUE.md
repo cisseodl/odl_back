@@ -201,7 +201,7 @@ odc_learning_api-master/
 
 ### Base URL
 ```
-http://localhost:8080/awsodclearning
+https://api.smart-odc.com/
 ```
 
 ### Endpoints par Module

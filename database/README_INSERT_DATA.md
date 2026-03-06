@@ -191,5 +191,5 @@ Après avoir inséré les données :
 
 ---
 
-*Guide créé pour le projet ODL - Orange Digital Learning*
+*Guide créé pour le projet ODL - Orange Digital Center*
 

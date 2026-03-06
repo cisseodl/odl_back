@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================================
 # Script Linux/Mac pour lancer MySQL 8.0 avec Docker
-# Projet : Orange Digital Learning (ODL)
+# Projet : Orange Digital Center (ODL)
 # ============================================================================
 
 echo "Lancement de MySQL 8.0 dans Docker..."

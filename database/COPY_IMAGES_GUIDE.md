@@ -199,5 +199,5 @@ id | title                              | image_path
 
 ---
 
-*Guide créé pour le projet ODL - Orange Digital Learning*
+*Guide créé pour le projet ODL - Orange Digital Center*
 

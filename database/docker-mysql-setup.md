@@ -296,5 +296,5 @@ docker exec -it mysql-odl mysql -u root -proot -e "SELECT 1;"
 
 ---
 
-*Guide créé pour le projet ODL - Orange Digital Learning*
+*Guide créé pour le projet ODL - Orange Digital Center*
 

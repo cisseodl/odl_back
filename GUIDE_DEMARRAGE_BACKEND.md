@@ -350,5 +350,5 @@ Assurez-vous que :
 
 ---
 
-*Guide créé pour le projet ODL - Orange Digital Learning*
+*Guide créé pour le projet ODL - Orange Digital Center*
 

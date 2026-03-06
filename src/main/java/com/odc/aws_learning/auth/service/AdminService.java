@@ -93,7 +93,7 @@ public class AdminService {
             sendEmailService.sendEmailWithAttachment(
                 existingUser.getEmail(),
                 emailMessage,
-                "Votre compte administrateur a été créé - Orange Digital Learning"
+                "Votre compte administrateur a été créé - Orange Digital Center"
             );
         } catch (Exception e) {
             // Ne pas faire échouer la création si l'email échoue

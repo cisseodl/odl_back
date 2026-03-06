@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Script de Mise à Jour des Images des Cours - ODL
--- Projet : Orange Digital Learning (ODL)
+-- Projet : Orange Digital Center (ODL)
 -- ============================================================================
 -- Ce script met à jour les chemins d'images des cours dans la base de données
 -- pour utiliser les vraies images copiées dans le dossier uploads/cours/

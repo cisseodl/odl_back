@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================================
 REM Script Windows pour lancer MySQL 8.0 avec Docker
-REM Projet : Orange Digital Learning (ODL)
+REM Projet : Orange Digital Center (ODL)
 REM ============================================================================
 
 echo Lancement de MySQL 8.0 dans Docker...
