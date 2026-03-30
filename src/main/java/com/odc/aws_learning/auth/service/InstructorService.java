@@ -32,9 +32,7 @@ public class InstructorService {
     private final UserRepository userRepository; // To manage User entity
     private final SendEmailService sendEmailService;
     private final EmailAsyncService emailAsyncService;
-    private final com.odc.aws_learning.app.service.AuditService auditService;
-    private final com.odc.aws_learning.app.service.NotificationService notificationService;
-    private final com.odc.aws_learning.auth.repository.AdminRepository adminRepository;
+    private final InstructorSideEffectsService sideEffectsService;
     private final PasswordEncoder passwordEncoder;
     
     @Value("${app.frontend.url:https://admin.smart-odc.com}")
@@ -102,7 +100,7 @@ public class InstructorService {
             // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
             try {
                 logger.info("Envoi du log d'activité de manière asynchrone...");
-                logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
+                sideEffectsService.logActivity(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
             } catch (Exception e) {
                 logger.warn("⚠️ Erreur lors de la création du log d'activité (non bloquante): {}", e.getMessage(), e);
             }
@@ -110,7 +108,7 @@ public class InstructorService {
             // Créer une notification pour l'admin dans une transaction séparée
             try {
                 logger.info("Envoi des notifications aux admins de manière asynchrone...");
-                sendAdminNotificationsAsync(user);
+                sideEffectsService.sendAdminNotifications(user);
             } catch (Exception e) {
                 logger.warn("⚠️ Erreur lors de la création de la notification (non bloquante): {}", e.getMessage(), e);
             }
@@ -207,14 +205,14 @@ public class InstructorService {
 
             // Créer un log d'activité dans une transaction séparée pour éviter rollback-only
             try {
-                logActivityAsync(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
+                sideEffectsService.logActivity(user.getId(), savedInstructor.getId(), user.getFullName(), user.getEmail());
             } catch (Exception e) {
                 System.err.println("Erreur lors de la création du log d'activité: " + e.getMessage());
             }
             
             // Créer une notification pour l'admin dans une transaction séparée
             try {
-                sendAdminNotificationsAsync(user);
+                sideEffectsService.sendAdminNotifications(user);
             } catch (Exception e) {
                 System.err.println("Erreur lors de la création de la notification: " + e.getMessage());
             }
@@ -254,50 +252,6 @@ public class InstructorService {
             System.err.println("Erreur lors de la création de l'instructeur: " + e.getMessage());
             e.printStackTrace();
             return CResponse.error("Erreur lors de la création de l'instructeur: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Envoyer des notifications aux admins dans une transaction séparée
-     * pour éviter que l'erreur de notification ne fasse échouer la création de l'instructeur
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    private void sendAdminNotificationsAsync(User user) {
-        try {
-            // Récupérer tous les admins pour leur envoyer une notification
-            List<com.odc.aws_learning.auth.entities.Admin> admins = adminRepository.findAll();
-            for (com.odc.aws_learning.auth.entities.Admin admin : admins) {
-                User adminUser = admin.getUser();
-                if (adminUser != null && !adminUser.getId().equals(user.getId())) {
-                    notificationService.createNotification(
-                        adminUser.getId(),
-                        "Nouvel instructeur créé: " + (user.getFullName() != null ? user.getFullName() : user.getEmail()),
-                        "registration",
-                        "/admin/users/instructeurs"
-                    );
-                }
-            }
-        } catch (Exception e) {
-            // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
-            System.err.println("Erreur lors de l'envoi asynchrone des notifications aux admins: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Créer un log d'activité dans une transaction séparée
-     * pour éviter que l'erreur de log ne fasse échouer la création de l'instructeur
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    private void logActivityAsync(Long userId, Long instructorId, String fullName, String email) {
-        try {
-            auditService.logActivity(userId, "create", "instructor", 
-                "{\"instructorId\":" + instructorId + ",\"userName\":\"" + 
-                (fullName != null ? fullName : email) + "\"}");
-        } catch (Exception e) {
-            // Log l'erreur mais ne pas la propager pour ne pas affecter la transaction principale
-            System.err.println("Erreur lors de l'enregistrement asynchrone du log d'activité: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
