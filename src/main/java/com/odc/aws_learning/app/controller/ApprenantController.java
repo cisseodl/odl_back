@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag; // Ajout de l'import Tag
 
 import java.security.Principal; // Added for Principal
+import java.util.List;
 
 @Tag(name = "Apprenant Management", description = "Endpoints for creating and managing apprenants") // Ajout de l'annotation Swagger Tag
 @RequestMapping("/api/apprenants")
@@ -61,14 +62,30 @@ public class ApprenantController {
 
     /**
      * Récupérer tous les apprenants (ADMIN et APPRENANT uniquement).
+     * Pagination optionnelle : ?page=0&size=50 (défaut size=50 si page fourni).
      */
     @GetMapping(
             value = "/get-all",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     @PreAuthorize("hasAnyRole('ADMIN', 'APPRENANT')")
-    public CResponse<?> getAll() {
+    public CResponse<?> getAll(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "50") int size) {
+        if (page != null) {
+            return apprenantService.getAllApprenantsPaginated(page, size);
+        }
         return apprenantService.getAllApprenants();
+    }
+
+    /**
+     * Statistiques batch pour plusieurs apprenants (évite N appels /stats).
+     * GET /api/apprenants/stats/batch?ids=1,2,3
+     */
+    @GetMapping(value = "/stats/batch", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public CResponse<?> getStatsBatch(@RequestParam("ids") List<Long> ids) {
+        return apprenantService.getApprenantStatsBatch(ids);
     }
 
     /**

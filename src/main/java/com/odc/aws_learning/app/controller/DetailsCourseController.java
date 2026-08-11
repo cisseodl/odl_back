@@ -6,7 +6,9 @@ import com.odc.aws_learning.app.repository.DetailsCourseRepo;
 import com.odc.aws_learning.app.repository.CoursesRepository;
 import com.odc.aws_learning.app.repository.LessonRepository;
 import com.odc.aws_learning.app.repository.ModuleRepository;
+import com.odc.aws_learning.app.repository.EvaluationAttemptRepository;
 import com.odc.aws_learning.app.repository.UserProgressRepository;
+import com.odc.aws_learning.app.repository.UserQuizAttemptRepository;
 import com.odc.aws_learning.app.constante.Enumeration;
 import com.odc.aws_learning.auth.entities.User;
 import com.odc.aws_learning.auth.repository.UserRepository;
@@ -32,6 +34,8 @@ public class DetailsCourseController {
     private final CoursesRepository coursesRepository;
     private final UserRepository userRepository;
     private final UserProgressRepository userProgressRepository;
+    private final EvaluationAttemptRepository evaluationAttemptRepository;
+    private final UserQuizAttemptRepository userQuizAttemptRepository;
     private final LessonRepository lessonRepository;
     private final ModuleRepository moduleRepository;
 
@@ -73,6 +77,10 @@ public class DetailsCourseController {
                     detailMap.put("totalLessons", (int) totalLessons);
                     detailMap.put("completedModules", totalModules > 0 ? (int) Math.min((completedLessons * totalModules) / Math.max(1, totalLessons), totalModules) : 0);
                     detailMap.put("totalModules", totalModules);
+                    evaluationAttemptRepository.findMaxScoreByCourseAndUser(cId, learnerId)
+                            .ifPresent(score -> detailMap.put("bestExamScore", score));
+                    userQuizAttemptRepository.findFirstByUser_IdAndQuiz_Course_IdOrderByScoreDesc(learnerId, cId)
+                            .ifPresent(attempt -> detailMap.put("bestQuizScore", attempt.getScore()));
                 } else {
                     detailMap.put("progress", 0);
                     detailMap.put("completedLessons", 0);

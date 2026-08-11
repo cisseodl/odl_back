@@ -78,6 +78,31 @@ public class EvaluationsController {
     }
 
     /**
+     * Récupère la dernière tentative de l'utilisateur pour cet examen.
+     * GET /api/evaluations/attempts/latest?evaluationId=7
+     * (Placé avant /{id} pour éviter tout conflit de routing)
+     */
+    @GetMapping("/attempts/latest")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
+    public CResponse<?> getLatestAttemptForExam(@RequestParam Long evaluationId) {
+        User learner = getCurrentUser();
+        if (learner == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.getLatestAttemptForExam(evaluationId, learner);
+    }
+
+    @GetMapping("/attempts/{attemptId}/results")
+    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
+    public CResponse<?> getExamResults(@PathVariable Long attemptId) {
+        User learner = getCurrentUser();
+        if (learner == null) {
+            return CResponse.error("Utilisateur non authentifié");
+        }
+        return evaluationsService.getExamResults(attemptId, learner);
+    }
+
+    /**
      * Récupère une évaluation par id avec questions et réponses (dashboard instructeur).
      * GET /api/evaluations/{id}
      */
@@ -191,34 +216,6 @@ public class EvaluationsController {
         );
     }
 
-    /**
-     * Récupère les résultats d'un examen (après soumission de la satisfaction)
-     * GET /api/evaluations/attempts/{attemptId}/results
-     */
-    /**
-     * Récupère la dernière tentative de l'utilisateur pour cet examen (page résultats sans attemptId dans l'URL).
-     * GET /api/evaluations/attempts/latest?evaluationId=7
-     */
-    @GetMapping("/attempts/latest")
-    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
-    public CResponse<?> getLatestAttemptForExam(@RequestParam Long evaluationId) {
-        User learner = getCurrentUser();
-        if (learner == null) {
-            return CResponse.error("Utilisateur non authentifié");
-        }
-        return evaluationsService.getLatestAttemptForExam(evaluationId, learner);
-    }
-
-    @GetMapping("/attempts/{attemptId}/results")
-    @PreAuthorize("hasAnyRole('USER', 'APPRENANT', 'ADMIN')")
-    public CResponse<?> getExamResults(@PathVariable Long attemptId) {
-        User learner = getCurrentUser();
-        if (learner == null) {
-            return CResponse.error("Utilisateur non authentifié");
-        }
-        return evaluationsService.getExamResults(attemptId, learner);
-    }
-    
     /**
      * Mettre à jour une évaluation (instructeur ou admin)
      * PUT /api/evaluations/update/{id}

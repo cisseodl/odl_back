@@ -34,6 +34,10 @@ public interface ApprenantRepository extends JpaRepository<Apprenant,Long> {
     // Méthode avec JOIN FETCH pour charger les relations user et cohorte
     @Query("SELECT DISTINCT a FROM Apprenant a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.cohorte")
     List<Apprenant> findAllWithUserAndCohorteJoinFetch();
+
+    @EntityGraph(attributePaths = {"user", "cohorte"})
+    @Query("SELECT a FROM Apprenant a JOIN a.user u WHERE u.instructor IS NULL")
+    Page<Apprenant> findAllLearnersPaginated(Pageable pageable);
     
     // Méthode pour charger un Apprenant avec ses relations par ID
     @EntityGraph(attributePaths = {"user", "cohorte"})

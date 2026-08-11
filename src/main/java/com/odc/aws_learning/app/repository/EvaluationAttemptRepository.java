@@ -26,8 +26,8 @@ public interface EvaluationAttemptRepository extends JpaRepository<EvaluationAtt
     @Query("SELECT ea FROM EvaluationAttempt ea WHERE ea.evaluation.course.id = :courseId AND ea.user.id = :userId AND ea.status = 'PASSED'")
     List<EvaluationAttempt> findPassedAttemptsByCourseAndUser(@Param("courseId") Long courseId, @Param("userId") Long userId);
     
-    @Query("SELECT MAX(ea.score) FROM EvaluationAttempt ea WHERE ea.evaluation.id = :evaluationId AND ea.user.id = :userId")
-    Optional<Double> findMaxScoreByEvaluationAndUser(@Param("evaluationId") Long evaluationId, @Param("userId") Long userId);
+    @Query("SELECT MAX(ea.score) FROM EvaluationAttempt ea WHERE ea.evaluation.course.id = :courseId AND ea.user.id = :userId")
+    Optional<Double> findMaxScoreByCourseAndUser(@Param("courseId") Long courseId, @Param("userId") Long userId);
     
     @Query("SELECT ea FROM EvaluationAttempt ea WHERE ea.evaluation.instructor.id = :instructorId AND ea.status = 'PENDING'")
     List<EvaluationAttempt> findPendingAttemptsByInstructor(@Param("instructorId") Long instructorId);

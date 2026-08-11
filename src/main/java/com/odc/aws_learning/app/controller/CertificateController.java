@@ -23,6 +23,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -128,28 +129,45 @@ public class CertificateController {
         return ResponseEntity.ok(CResponse.success(certificateDtos, "Certificats récupérés avec succès"));
     }
 
-    /** Liste de tous les apprenants certifiés (admin uniquement). */
+    /** Liste de tous les apprenants certifiés (admin uniquement). Pagination : ?page=0&size=50 */
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CResponse<?>> getAllCertificates() {
-        List<Certificate> certificates = certificateRepository.findAll();
-        List<Map<String, Object>> dtos = certificates.stream().map(cert -> {
-            Map<String, Object> dto = new HashMap<>();
-            dto.put("id", cert.getId());
-            dto.put("uniqueCode", cert.getUniqueCode());
-            dto.put("studentName", cert.getUser().getFullName());
-            dto.put("studentEmail", cert.getUser().getEmail());
-            dto.put("course", cert.getCourse().getTitle());
-            dto.put("courseId", cert.getCourse().getId());
-            dto.put("issuedDate", cert.getIssuedAt() != null ? cert.getIssuedAt().toString() : "");
-            Instant validUntil = cert.getIssuedAt() != null ? cert.getIssuedAt().plus(365, ChronoUnit.DAYS) : null;
-            dto.put("validUntil", validUntil != null ? validUntil.toString() : "");
-            dto.put("status", validUntil != null && validUntil.isAfter(Instant.now()) ? "Valide" : "Expiré");
-            dto.put("certificateUrl", cert.getCertificateUrl());
-            dto.put("avatar", cert.getUser().getAvatar());
-            return dto;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(CResponse.success(dtos, "Liste des attestations (certificats)"));
+    public ResponseEntity<CResponse<?>> getAllCertificates(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        int effectiveSize = Math.min(Math.max(size, 1), 200);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), effectiveSize,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "issuedAt"));
+        org.springframework.data.domain.Page<Certificate> certPage = certificateRepository.findAll(pageable);
+
+        List<Map<String, Object>> dtos = certPage.getContent().stream().map(this::mapCertificateToDto).collect(Collectors.toList());
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("content", dtos);
+        payload.put("totalElements", certPage.getTotalElements());
+        payload.put("totalPages", certPage.getTotalPages());
+        payload.put("page", certPage.getNumber());
+        payload.put("size", certPage.getSize());
+
+        return ResponseEntity.ok(CResponse.success(payload, "Liste des attestations (certificats)"));
+    }
+
+    private Map<String, Object> mapCertificateToDto(Certificate cert) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", cert.getId());
+        dto.put("uniqueCode", cert.getUniqueCode());
+        dto.put("studentName", cert.getUser().getFullName());
+        dto.put("studentEmail", cert.getUser().getEmail());
+        dto.put("course", cert.getCourse().getTitle());
+        dto.put("courseId", cert.getCourse().getId());
+        dto.put("issuedDate", cert.getIssuedAt() != null ? cert.getIssuedAt().toString() : "");
+        Instant validUntil = cert.getIssuedAt() != null ? cert.getIssuedAt().plus(365, ChronoUnit.DAYS) : null;
+        dto.put("validUntil", validUntil != null ? validUntil.toString() : "");
+        dto.put("status", validUntil != null && validUntil.isAfter(Instant.now()) ? "Valide" : "Expiré");
+        dto.put("certificateUrl", cert.getCertificateUrl());
+        dto.put("avatar", cert.getUser().getAvatar());
+        return dto;
     }
 
     private User getCurrentUser() {

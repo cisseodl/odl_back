@@ -3,6 +3,7 @@ package com.odc.aws_learning.app.service;
 import com.odc.aws_learning.auth.dao.request.ApprenantCreateRequest;
 import com.odc.aws_learning.app.entity.Apprenant;
 import com.odc.aws_learning.app.entity.Cohorte;
+import com.odc.aws_learning.app.entity.DetailsCourse;
 import com.odc.aws_learning.app.repository.ApprenantRepository;
 import com.odc.aws_learning.app.repository.CohorteRepository;
 import com.odc.aws_learning.app.repository.DetailsCourseRepo;
@@ -32,8 +33,11 @@ import com.odc.aws_learning.app.service.SendEmailService;
 import com.odc.aws_learning.app.service.EmailAsyncService;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -277,6 +281,66 @@ public class ApprenantService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public CResponse<?> getAllApprenantsPaginated(int page, int size) {
+        try {
+            int effectiveSize = Math.min(Math.max(size, 1), 200);
+            Pageable paging = PageRequest.of(Math.max(page, 0), effectiveSize);
+            Page<Apprenant> apprenantPage = apprenantRepository.findAllLearnersPaginated(paging);
+
+            List<ApprenantWithUserDto> apprenantDtos = apprenantPage.getContent().stream()
+                    .map(apprenant -> {
+                        try {
+                            return ApprenantWithUserDto.fromApprenant(apprenant);
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    })
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("content", apprenantDtos);
+            payload.put("totalElements", apprenantPage.getTotalElements());
+            payload.put("totalPages", apprenantPage.getTotalPages());
+            payload.put("page", apprenantPage.getNumber());
+            payload.put("size", apprenantPage.getSize());
+
+            return CResponse.success(payload, "Liste paginée des apprenants.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur lors de la récupération paginée: " + e.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public CResponse<?> getApprenantStatsBatch(List<Long> apprenantIds) {
+        try {
+            if (apprenantIds == null || apprenantIds.isEmpty()) {
+                return CResponse.success(Collections.emptyMap(), "Aucun identifiant fourni.");
+            }
+            Map<Long, Map<String, Object>> statsById = new HashMap<>();
+            for (Long id : apprenantIds.stream().distinct().limit(200).collect(Collectors.toList())) {
+                Optional<Apprenant> apprenantOptional = apprenantRepository.findByIdWithUserAndCohorte(id);
+                if (apprenantOptional.isEmpty() || apprenantOptional.get().getUser() == null) {
+                    continue;
+                }
+                User user = apprenantOptional.get().getUser();
+                Long userId = user.getId();
+                Map<String, Object> stats = new HashMap<>();
+                stats.put("coursesEnrolled", detailsCourseRepo.countByLearnerId(userId));
+                stats.put("completedCourses", detailsCourseRepo.findByLearnerId(userId).stream()
+                        .filter(DetailsCourse::isCompleted).count());
+                stats.put("totalCertificates", certificateRepository.countByUser(user));
+                statsById.put(id, stats);
+            }
+            return CResponse.success(statsById, "Statistiques batch récupérées.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CResponse.error("Erreur stats batch: " + e.getMessage());
+        }
+    }
+
     /**
      * Récupère les apprenants inscrits aux cours de l'instructeur connecté.
      * Réservé aux rôles INSTRUCTOR et ADMIN (ADMIN reçoit tous les apprenants pour compatibilité).
@@ -342,6 +406,21 @@ public class ApprenantService {
                     })
                     .filter(dto -> dto != null)
                     .collect(Collectors.toList());
+
+            Set<Long> foundUserIds = apprenants.stream()
+                    .filter(a -> a.getUser() != null)
+                    .map(a -> a.getUser().getId())
+                    .collect(Collectors.toSet());
+            for (Long learnerId : learnerIds) {
+                if (!foundUserIds.contains(learnerId)) {
+                    userRepository.findById(learnerId).ifPresent(learnerUser -> {
+                        ApprenantWithUserDto dto = ApprenantWithUserDto.fromUser(learnerUser);
+                        if (dto != null) {
+                            dtos.add(dto);
+                        }
+                    });
+                }
+            }
             return CResponse.success(dtos, "Apprenants inscrits à vos cours.");
         } catch (Exception e) {
             System.err.println("[ApprenantService] Erreur générale lors de la récupération des apprenants: " + e.getMessage());
