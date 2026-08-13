@@ -90,8 +90,15 @@ public class ApprenantService {
             isCreatedByAdmin = false; // Auto-inscription par l'apprenant lui-même
         }
 
-        if (apprenantRepository.findByUserId(user.getId()).isPresent()) {
-            return CResponse.error("Cet utilisateur est déjà un apprenant.");
+        Optional<Apprenant> existingApprenant = apprenantRepository.findByUserId(user.getId());
+        if (existingApprenant.isPresent()) {
+            if (isCreatedByAdmin) {
+                return CResponse.error("Cet utilisateur est déjà un apprenant.");
+            }
+            // Auto-inscription : le profil a déjà été créé lors du signup, compléter les champs supplémentaires
+            Apprenant updated = applyRequestToApprenant(existingApprenant.get(), request);
+            Apprenant savedApprenant = apprenantRepository.save(updated);
+            return CResponse.success(savedApprenant, "Profil apprenant complété avec succès.");
         }
 
         // Quand l'admin crée un apprenant : toujours attribuer le mdp par défaut apprenant@odl et l'envoyer par email
@@ -284,33 +291,86 @@ public class ApprenantService {
     @Transactional(readOnly = true)
     public CResponse<?> getAllApprenantsPaginated(int page, int size) {
         try {
-            int effectiveSize = Math.min(Math.max(size, 1), 200);
-            Pageable paging = PageRequest.of(Math.max(page, 0), effectiveSize);
-            Page<Apprenant> apprenantPage = apprenantRepository.findAllLearnersPaginated(paging);
+            CResponse<?> allResponse = getAllApprenants();
+            if (!allResponse.isSuccess()) {
+                return allResponse;
+            }
 
-            List<ApprenantWithUserDto> apprenantDtos = apprenantPage.getContent().stream()
-                    .map(apprenant -> {
-                        try {
-                            return ApprenantWithUserDto.fromApprenant(apprenant);
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    })
-                    .filter(dto -> dto != null)
-                    .collect(Collectors.toList());
+            @SuppressWarnings("unchecked")
+            List<ApprenantWithUserDto> all = (List<ApprenantWithUserDto>) allResponse.getData();
+            if (all == null) {
+                all = Collections.emptyList();
+            }
+
+            int effectiveSize = Math.min(Math.max(size, 1), 200);
+            int effectivePage = Math.max(page, 0);
+            int totalElements = all.size();
+            int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / effectiveSize);
+            int fromIndex = Math.min(effectivePage * effectiveSize, totalElements);
+            int toIndex = Math.min(fromIndex + effectiveSize, totalElements);
+            List<ApprenantWithUserDto> pageContent = fromIndex < toIndex
+                    ? all.subList(fromIndex, toIndex)
+                    : Collections.emptyList();
 
             Map<String, Object> payload = new HashMap<>();
-            payload.put("content", apprenantDtos);
-            payload.put("totalElements", apprenantPage.getTotalElements());
-            payload.put("totalPages", apprenantPage.getTotalPages());
-            payload.put("page", apprenantPage.getNumber());
-            payload.put("size", apprenantPage.getSize());
+            payload.put("content", pageContent);
+            payload.put("totalElements", totalElements);
+            payload.put("totalPages", totalPages);
+            payload.put("page", effectivePage);
+            payload.put("size", effectiveSize);
 
             return CResponse.success(payload, "Liste paginée des apprenants.");
         } catch (Exception e) {
             e.printStackTrace();
             return CResponse.error("Erreur lors de la récupération paginée: " + e.getMessage());
         }
+    }
+
+    /** Applique les champs d'une requête de création/mise à jour sur une entité Apprenant existante. */
+    private Apprenant applyRequestToApprenant(Apprenant apprenant, ApprenantCreateRequest request) {
+        if (request.getActivate() != null) {
+            apprenant.setActivate(request.getActivate());
+        }
+        if (request.getUsername() != null && !request.getUsername().trim().isEmpty()) {
+            String[] nameParts = request.getUsername().trim().split("\\s+", 2);
+            if (nameParts.length >= 2) {
+                apprenant.setPrenom(nameParts[0]);
+                apprenant.setNom(nameParts[1]);
+            } else {
+                apprenant.setPrenom(nameParts[0]);
+                apprenant.setNom("");
+            }
+        }
+        if (request.getNumero() != null) {
+            apprenant.setNumero(request.getNumero());
+        }
+        if (request.getProfession() != null) {
+            apprenant.setProfession(request.getProfession());
+        }
+        if (request.getNiveauEtude() != null) {
+            apprenant.setNiveauEtude(request.getNiveauEtude());
+        }
+        if (request.getFiliere() != null) {
+            apprenant.setFiliere(request.getFiliere());
+        }
+        if (request.getAttentes() != null) {
+            apprenant.setAttentes(request.getAttentes());
+        }
+        Boolean conditionsAcceptedValue = request.getConditionsAccepted();
+        if (conditionsAcceptedValue == null) {
+            @SuppressWarnings("deprecation")
+            Boolean oldSatisfaction = request.getSatisfaction();
+            conditionsAcceptedValue = oldSatisfaction;
+        }
+        if (conditionsAcceptedValue != null) {
+            apprenant.setConditionsAccepted(conditionsAcceptedValue);
+        }
+        if (request.getCohorteId() != null) {
+            Cohorte cohorte = cohorteRepository.findById(request.getCohorteId())
+                    .orElseThrow(() -> new RuntimeException("Cohorte introuvable"));
+            apprenant.setCohorte(cohorte);
+        }
+        return apprenant;
     }
 
     @Transactional(readOnly = true)
