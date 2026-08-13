@@ -281,6 +281,12 @@ public class EvaluationsService {
                     .findByEvaluationIdAndUserIdOrderByCreatedAtDesc(request.getEvaluationId(), learner.getId());
             if (!existingAttempts.isEmpty()) {
                 EvaluationAttempt lastAttempt = existingAttempts.get(0);
+                if (lastAttempt.getStatus() == EvaluationAttempt.AttemptStatus.PENDING
+                        && evaluation.getType() == Evaluations.EvaluationType.QUIZ) {
+                    // Tentative en attente de satisfaction : renvoyer la tentative existante au lieu de bloquer
+                    return CResponse.success(lastAttempt,
+                            "Évaluation déjà soumise. Veuillez remplir le formulaire de satisfaction pour voir vos résultats.");
+                }
                 if (lastAttempt.getStatus() != EvaluationAttempt.AttemptStatus.FAILED) {
                     return CResponse.error("Vous avez déjà soumis cet examen");
                 }
